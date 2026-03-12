@@ -1,6 +1,6 @@
 experiment_id,scheme,topology_id,mean_success_at_1,mean_latency_ms,mean_discovery_bytes,mean_manifest_hit_at_5
-exp_main_v1,exact,as3967_medium,0.3375,50.368825,215.705,0.585
-exp_main_v1,flood,as3967_medium,0.6225,126.68863,1815.03,0.9125
-exp_main_v1,flat_iroute,as3967_medium,0.4975,113.897495,1288.5075,0.8375
-exp_main_v1,oracle,as3967_medium,0.7925,73.020992,507.665,0.98
-exp_main_v1,hiroute,as3967_medium,0.705,90.48271,851.24,0.955
+exp_main_v1,exact,rf_3967_exodus,1.0,52.141667,0.0,1.0
+exp_main_v1,oracle,rf_3967_exodus,0.575,81.691667,85.875,0.575
+exp_main_v1,hiroute,rf_3967_exodus,0.65,152.616667,139.066667,0.65
+exp_main_v1,flood,rf_3967_exodus,0.8,141.208333,106.841667,0.8
+exp_main_v1,flat_iroute,rf_3967_exodus,0.8,131.233333,104.725,0.8

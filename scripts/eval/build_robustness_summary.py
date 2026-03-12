@@ -37,7 +37,7 @@ def parse_args() -> argparse.Namespace:
 def main() -> int:
     args = parse_args()
     experiment = load_experiment(args.experiment)
-    rows = require_rows(experiment["experiment_id"], args.registry_source)
+    rows = require_rows(experiment, args.registry_source)
     query_frame = log_frame(rows, "query_log.csv")
     failure_frame = log_frame(rows, "failure_event_log.csv")
     if query_frame.empty:
@@ -52,7 +52,7 @@ def main() -> int:
 
     output_rows = []
     for keys, group in query_frame.groupby(
-        ["scenario", "scenario_variant", "scheme", "registry_topology_id"], sort=False
+        ["scenario", "scenario_variant", "registry_scheme", "registry_topology_id"], sort=False
     ):
         scenario, scenario_variant, scheme, topology_id = keys
         event_count = sum(failure_counts.get(run_id, 0) for run_id in group["run_id"].unique())

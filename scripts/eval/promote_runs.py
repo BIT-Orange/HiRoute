@@ -39,6 +39,26 @@ REQUIRED_ARTIFACTS = [
 ]
 
 
+def expected_topology_ids(experiment: dict[str, object]) -> set[str]:
+    comparison_topologies = experiment.get("comparison_topologies", [])
+    if comparison_topologies:
+        return {str(topology_id) for topology_id in comparison_topologies}
+    topology_id = experiment.get("topology_id")
+    return {str(topology_id)} if topology_id else set()
+
+
+def expected_scenarios(experiment: dict[str, object]) -> set[str]:
+    scenarios = set()
+    scenario = experiment.get("scenario")
+    if scenario:
+        scenarios.add(str(scenario))
+    runner = experiment.get("runner", {})
+    if isinstance(runner, dict):
+        for scenario_name in runner.get("scenario_variants", {}).values():
+            scenarios.add(str(scenario_name))
+    return scenarios
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--experiment", required=True, type=Path)
@@ -52,22 +72,54 @@ def main() -> int:
     promoted_path = repo_root() / "runs" / "registry" / "promoted_runs.csv"
     ensure_csv(promoted_path, FIELDS)
 
-    run_rows = [row for row in read_csv(runs_path) if row["experiment_id"] == experiment["experiment_id"]]
+    expected_dataset_id = str(experiment.get("dataset_id", ""))
+    expected_topologies = expected_topology_ids(experiment)
+    expected_seeds = {str(seed) for seed in experiment.get("seeds", [])}
+    allowed_scenarios = expected_scenarios(experiment)
+
+    run_rows = []
+    for row in read_csv(runs_path):
+        if row["experiment_id"] != experiment["experiment_id"]:
+            continue
+        if expected_dataset_id and row["dataset_id"] != expected_dataset_id:
+            continue
+        if expected_topologies and row["topology_id"] not in expected_topologies:
+            continue
+        if expected_seeds and row["seed"] not in expected_seeds:
+            continue
+        manifest_path = repo_root() / row["run_dir"] / "manifest.yaml"
+        if allowed_scenarios and manifest_path.exists():
+            manifest = load_json_yaml(manifest_path)
+            if manifest.get("scenario", "") not in allowed_scenarios:
+                continue
+        run_rows.append(row)
     if not run_rows:
         print("ERROR: no completed runs found for experiment")
         return 1
 
-    scheme_counts = Counter(row["scheme"] for row in run_rows)
     min_runs = int(experiment["promotion_rule"]["min_runs_per_scheme"])
-    missing = [scheme for scheme in experiment["schemes"] if scheme_counts.get(scheme, 0) < min_runs]
+    if experiment.get("comparison_topologies"):
+        scheme_counts = Counter((row["scheme"], row["topology_id"]) for row in run_rows)
+        missing = [
+            f"{scheme}@{topology_id}"
+            for topology_id in expected_topologies
+            for scheme in experiment["schemes"]
+            if scheme_counts.get((scheme, topology_id), 0) < min_runs
+        ]
+    else:
+        scheme_counts = Counter(row["scheme"] for row in run_rows)
+        missing = [scheme for scheme in experiment["schemes"] if scheme_counts.get(scheme, 0) < min_runs]
     if missing:
         print(f"ERROR: missing enough completed runs for schemes: {', '.join(missing)}")
         return 1
 
     dataset_ids = {row["dataset_id"] for row in run_rows}
     topology_ids = {row["topology_id"] for row in run_rows}
-    if len(dataset_ids) != 1 or len(topology_ids) != 1:
-        print("ERROR: completed runs mix dataset or topology versions")
+    if dataset_ids != {expected_dataset_id}:
+        print("ERROR: completed runs mix dataset versions")
+        return 1
+    if expected_topologies and topology_ids != expected_topologies:
+        print("ERROR: completed runs do not match configured topology set")
         return 1
 
     promoted_rows = []
@@ -77,6 +129,11 @@ def main() -> int:
         if missing_artifacts:
             print(f"ERROR: {row['run_id']} is missing artifacts: {', '.join(missing_artifacts)}")
             return 1
+        if experiment.get("promotion_rule", {}).get("require_clean_git"):
+            manifest = load_json_yaml(run_dir / "manifest.yaml")
+            if manifest.get("code", {}).get("git_dirty", True):
+                print(f"ERROR: {row['run_id']} was produced from a dirty git tree")
+                return 1
         promoted_rows.append(
             {
                 "run_id": row["run_id"],

@@ -27,20 +27,64 @@ def _runs_index() -> dict[str, dict[str, str]]:
     return {row["run_id"]: row for row in read_csv(runs_path)}
 
 
-def registry_rows(experiment_id: str, source: str = "promoted") -> list[dict[str, str]]:
+def expected_topology_ids(experiment: dict[str, Any]) -> set[str]:
+    comparison_topologies = experiment.get("comparison_topologies", [])
+    if comparison_topologies:
+        return {str(topology_id) for topology_id in comparison_topologies}
+    topology_id = experiment.get("topology_id")
+    return {str(topology_id)} if topology_id else set()
+
+
+def expected_scenarios(experiment: dict[str, Any]) -> set[str]:
+    scenarios = set()
+    scenario = experiment.get("scenario")
+    if scenario:
+        scenarios.add(str(scenario))
+    runner = experiment.get("runner", {})
+    for scenario_name in runner.get("scenario_variants", {}).values():
+        scenarios.add(str(scenario_name))
+    return scenarios
+
+
+def registry_rows(experiment: dict[str, Any] | str, source: str = "promoted") -> list[dict[str, str]]:
     filename = "promoted_runs.csv" if source == "promoted" else "runs.csv"
     registry_path = repo_root() / "runs" / "registry" / filename
     if not registry_path.exists():
         return []
+
+    if isinstance(experiment, dict):
+        experiment_id = experiment["experiment_id"]
+        expected_dataset_id = str(experiment.get("dataset_id", ""))
+        expected_topologies = expected_topology_ids(experiment)
+        expected_seeds = {str(seed) for seed in experiment.get("seeds", [])}
+        allowed_scenarios = expected_scenarios(experiment)
+    else:
+        experiment_id = experiment
+        expected_dataset_id = ""
+        expected_topologies = set()
+        expected_seeds = set()
+        allowed_scenarios = set()
 
     run_index = _runs_index()
     rows = []
     for row in read_csv(registry_path):
         if row["experiment_id"] != experiment_id:
             continue
+        if expected_dataset_id and row["dataset_id"] != expected_dataset_id:
+            continue
+        if expected_topologies and row["topology_id"] not in expected_topologies:
+            continue
+        if expected_seeds and row["seed"] not in expected_seeds:
+            continue
         enriched = dict(row)
         if "run_dir" not in enriched or not enriched["run_dir"]:
             enriched["run_dir"] = run_index.get(row["run_id"], {}).get("run_dir", "")
+        if allowed_scenarios and enriched.get("run_dir"):
+            manifest_path = run_dir(enriched) / "manifest.yaml"
+            if manifest_path.exists():
+                manifest = load_json_yaml(manifest_path)
+                if manifest.get("scenario", "") not in allowed_scenarios:
+                    continue
         rows.append(enriched)
     return rows
 
@@ -86,9 +130,9 @@ def log_frame(rows: list[dict[str, str]], filename: str, raw: bool = False) -> p
     return pd.concat(frames, ignore_index=True)
 
 
-def require_rows(experiment_id: str, source: str) -> list[dict[str, str]]:
-    rows = registry_rows(experiment_id, source)
+def require_rows(experiment: dict[str, Any] | str, source: str) -> list[dict[str, str]]:
+    rows = registry_rows(experiment, source)
     if not rows:
+        experiment_id = experiment["experiment_id"] if isinstance(experiment, dict) else experiment
         raise RuntimeError(f"no registry rows available for experiment '{experiment_id}' from source '{source}'")
     return rows
-

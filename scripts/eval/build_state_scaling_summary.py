@@ -39,7 +39,7 @@ def parse_args() -> argparse.Namespace:
 def main() -> int:
     args = parse_args()
     experiment = load_experiment(args.experiment)
-    rows = require_rows(experiment["experiment_id"], args.registry_source)
+    rows = require_rows(experiment, args.registry_source)
     query_frame = log_frame(rows, "query_log.csv")
     state_frame = log_frame(rows, "state_log.csv")
     if query_frame.empty or state_frame.empty:

@@ -35,7 +35,7 @@ def parse_args() -> argparse.Namespace:
 def main() -> int:
     args = parse_args()
     experiment = load_experiment(args.experiment)
-    rows = require_rows(experiment["experiment_id"], args.registry_source)
+    rows = require_rows(experiment, args.registry_source)
     frame = log_frame(rows, "query_log.csv")
     if frame.empty:
         print("ERROR: no canonical query logs found")
@@ -43,7 +43,7 @@ def main() -> int:
 
     frame["discovery_bytes_total"] = frame["discovery_tx_bytes"] + frame["discovery_rx_bytes"]
     output_rows = []
-    for (scheme, topology_id), group in frame.groupby(["scheme", "registry_topology_id"], sort=False):
+    for (scheme, topology_id), group in frame.groupby(["registry_scheme", "registry_topology_id"], sort=False):
         output_rows.append(
             {
                 "experiment_id": experiment["experiment_id"],

@@ -36,28 +36,50 @@ def main() -> int:
         print("ERROR: promoted_runs.csv is missing")
         return 1
 
-    promoted_rows = [
-        row for row in read_csv_rows(promoted_path) if row["experiment_id"] == experiment["experiment_id"]
-    ]
+    expected_dataset_id = str(experiment.get("dataset_id", ""))
+    expected_topologies = set(experiment.get("comparison_topologies", []))
+    if not expected_topologies and experiment.get("topology_id"):
+        expected_topologies = {str(experiment["topology_id"])}
+    expected_seeds = {str(seed) for seed in experiment.get("seeds", [])}
+
+    promoted_rows = []
+    for row in read_csv_rows(promoted_path):
+        if row["experiment_id"] != experiment["experiment_id"]:
+            continue
+        if expected_dataset_id and row["dataset_id"] != expected_dataset_id:
+            continue
+        if expected_topologies and row["topology_id"] not in expected_topologies:
+            continue
+        if expected_seeds and row["seed"] not in expected_seeds:
+            continue
+        promoted_rows.append(row)
     if not promoted_rows:
         print("ERROR: no promoted runs found for experiment")
         return 1
 
-    schemes = Counter(row["scheme"] for row in promoted_rows)
     min_runs = int(experiment.get("promotion_rule", {}).get("min_runs_per_scheme", 1))
-    missing = [scheme for scheme in experiment.get("schemes", []) if schemes.get(scheme, 0) < min_runs]
+    if experiment.get("comparison_topologies"):
+        schemes = Counter((row["scheme"], row["topology_id"]) for row in promoted_rows)
+        missing = [
+            f"{scheme}@{topology_id}"
+            for topology_id in expected_topologies
+            for scheme in experiment.get("schemes", [])
+            if schemes.get((scheme, topology_id), 0) < min_runs
+        ]
+    else:
+        schemes = Counter(row["scheme"] for row in promoted_rows)
+        missing = [scheme for scheme in experiment.get("schemes", []) if schemes.get(scheme, 0) < min_runs]
     if missing:
         print(f"ERROR: promoted runs do not satisfy minimum counts for schemes: {', '.join(missing)}")
         return 1
 
     dataset_ids = {row["dataset_id"] for row in promoted_rows}
     topology_ids = {row["topology_id"] for row in promoted_rows}
-    if len(dataset_ids) != 1:
+    if dataset_ids != {expected_dataset_id}:
         print("ERROR: promoted runs mix dataset versions")
         return 1
-    expected_topologies = set(experiment.get("comparison_topologies", []))
     if expected_topologies:
-        if not expected_topologies.issubset(topology_ids):
+        if topology_ids != expected_topologies:
             print("ERROR: promoted runs do not cover every comparison topology")
             return 1
     elif len(topology_ids) != 1:
