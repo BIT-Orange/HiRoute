@@ -42,6 +42,15 @@ def _read_registry(experiment_id: str, source: str) -> list[dict[str, str]]:
     return [row for row in read_csv(path) if row["experiment_id"] == experiment_id]
 
 
+def _run_dir_map(experiment_id: str) -> dict[str, str]:
+    path = repo_root() / "runs" / "registry" / "runs.csv"
+    return {
+        row["run_id"]: row["run_dir"]
+        for row in read_csv(path)
+        if row["experiment_id"] == experiment_id
+    }
+
+
 def main() -> int:
     args = parse_args()
     experiment = load_json_yaml(ROOT / args.experiment)
@@ -52,8 +61,13 @@ def main() -> int:
 
     grouped_logs: dict[str, list[dict[str, str]]] = defaultdict(list)
     grouped_run_ids: dict[str, list[str]] = defaultdict(list)
+    run_dir_map = _run_dir_map(experiment["experiment_id"])
     for row in run_rows:
-        query_log_path = repo_root() / row["run_dir"] / "query_log.csv"
+        run_dir = row.get("run_dir") or run_dir_map.get(row["run_id"])
+        if not run_dir:
+            print(f"ERROR: missing run_dir for {row['run_id']}")
+            return 1
+        query_log_path = repo_root() / run_dir / "query_log.csv"
         logs = read_csv(query_log_path)
         grouped_logs[row["scheme"]].extend(logs)
         grouped_run_ids[row["scheme"]].append(row["run_id"])
