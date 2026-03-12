@@ -57,6 +57,8 @@ dist/
 /data/interim/**
 /data/processed/**
 !/data/raw/.gitkeep
+!/data/raw/rocketfuel/
+!/data/raw/rocketfuel/raw_manifest.json
 !/data/interim/.gitkeep
 !/data/processed/.gitkeep
 !/data/registry/

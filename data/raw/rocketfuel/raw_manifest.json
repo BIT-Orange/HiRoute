@@ -1,0 +1,16 @@
+{
+  "source": "official",
+  "official_weights_url": "https://research.cs.washington.edu/networking/rocketfuel/maps/weights-dist.tar.gz",
+  "fallback_repo_url": "https://github.com/cawka/ndnSIM-sample-topologies.git",
+  "downloaded_at": "2026-03-12T14:38:27Z",
+  "artifacts": {
+    "rf_3967_exodus": {
+      "weights": "data/raw/rocketfuel/3967/3967.weights.intra",
+      "latencies": "data/raw/rocketfuel/3967/3967.latencies.intra"
+    },
+    "rf_1239_sprint": {
+      "weights": "data/raw/rocketfuel/1239/1239.weights.intra",
+      "latencies": "data/raw/rocketfuel/1239/1239.latencies.intra"
+    }
+  }
+}

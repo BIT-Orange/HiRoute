@@ -65,7 +65,7 @@
 - `ttl_ms`
 - `export_budget`
 
-## `data/processed/ndnsim/topology_mapping.csv`
+## `data/processed/ndnsim/topology_mapping_<topology_id>.csv`
 
 - `node_id`
 - `role`

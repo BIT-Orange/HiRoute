@@ -2,8 +2,8 @@
   "dataset_id": "smartcity_v1",
   "version": "2026-03-12",
   "seed": 42,
-  "domains_total": 4,
-  "zones_per_domain": 3,
+  "domains_total": 8,
+  "zones_per_domain": 4,
   "objects_per_service_per_zone": 3,
   "service_classes": [
     "temperature",
@@ -43,8 +43,8 @@
     }
   },
   "topology": {
-    "topology_id": "as3967_medium",
-    "ingress_nodes": 4,
+    "topology_id": "rf_3967_exodus",
+    "ingress_nodes": 8,
     "relays_per_domain": 1
   }
 }

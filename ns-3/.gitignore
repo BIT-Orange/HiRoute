@@ -84,7 +84,10 @@ massif.*
 \#[^\#/]+\#$
 .lock-wscript
 .lock-wafbuild
-src/ndnSIM
+src/ndnSIM/*
+!src/ndnSIM/examples/
+src/ndnSIM/examples/*
+!src/ndnSIM/examples/hiroute-*.cpp
 configure
 toggle
 

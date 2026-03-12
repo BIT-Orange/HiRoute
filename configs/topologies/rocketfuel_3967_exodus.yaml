@@ -1,0 +1,32 @@
+{
+  "topology_id": "rf_3967_exodus",
+  "topology_source": {
+    "kind": "rocketfuel_imw2002",
+    "asn": "3967",
+    "isp": "Exodus",
+    "weights_path": "data/raw/rocketfuel/3967/3967.weights.intra",
+    "latencies_path": "data/raw/rocketfuel/3967/3967.latencies.intra"
+  },
+  "annotated_topology_path": "data/interim/topologies/rf_3967_exodus.annotated.txt",
+  "graphviz_path": "data/interim/topologies/rf_3967_exodus.dot",
+  "mapping_output_path": "data/processed/ndnsim/topology_mapping_rf_3967_exodus.csv",
+  "report_output_path": "data/processed/ndnsim/topology_mapping_rf_3967_exodus.report.json",
+  "default_bandwidth": "10Mbps",
+  "default_queue": "100",
+  "zones_per_domain": 4,
+  "domain_partition_policy": {
+    "mode": "farthest_seed_bfs",
+    "domains_total": 8
+  },
+  "controller_selection_policy": {
+    "mode": "seed_router"
+  },
+  "ingress_selection_policy": {
+    "mode": "farthest_from_controller",
+    "ingress_candidates_per_domain": 1
+  },
+  "producer_assignment_policy": {
+    "mode": "top_degree_per_domain",
+    "producers_per_domain": 2
+  }
+}

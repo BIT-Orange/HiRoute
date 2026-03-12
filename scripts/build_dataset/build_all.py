@@ -31,6 +31,11 @@ REGISTRY_FIELDS = [
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", default="configs/datasets/smartcity_v1.yaml", type=Path)
+    parser.add_argument(
+        "--topology-config",
+        default="configs/topologies/rocketfuel_3967_exodus.yaml",
+        type=Path,
+    )
     return parser.parse_args()
 
 
@@ -53,13 +58,14 @@ def _replace_registry_row(registry_path: Path, row: dict[str, str]) -> None:
 def main() -> int:
     args = parse_args()
     config = load_json_yaml(ROOT / args.config)
+    topology_config = load_json_yaml(ROOT / args.topology_config)
     _run("scripts/build_dataset/build_objects.py", ["--config", str(args.config)])
     _run("scripts/build_dataset/build_queries_and_qrels.py", ["--config", str(args.config)])
     _run(
         "scripts/build_dataset/build_hierarchy_and_hslsa.py",
         ["--dataset-config", str(args.config), "--hierarchy-config", "configs/hierarchy/hiroute_hkm_v1.yaml"],
     )
-    _run("scripts/build_dataset/build_topology_mapping.py", ["--config", str(args.config)])
+    _run("scripts/build_dataset/build_topology_mapping.py", ["--topology-config", str(args.topology_config)])
 
     row = {
         "dataset_id": config["dataset_id"],
@@ -70,7 +76,7 @@ def main() -> int:
         "qrels_object_csv": "data/processed/eval/qrels_object.csv",
         "qrels_domain_csv": "data/processed/eval/qrels_domain.csv",
         "hslsa_csv": "data/processed/ndnsim/hslsa_export.csv",
-        "topology_mapping_csv": "data/processed/ndnsim/topology_mapping.csv",
+        "topology_mapping_csv": topology_config["mapping_output_path"],
     }
     _replace_registry_row(repo_root() / "data" / "registry" / "dataset_versions.csv", row)
     print(config["dataset_id"])

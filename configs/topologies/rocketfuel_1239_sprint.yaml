@@ -1,0 +1,32 @@
+{
+  "topology_id": "rf_1239_sprint",
+  "topology_source": {
+    "kind": "rocketfuel_imw2002",
+    "asn": "1239",
+    "isp": "Sprint",
+    "weights_path": "data/raw/rocketfuel/1239/1239.weights.intra",
+    "latencies_path": "data/raw/rocketfuel/1239/1239.latencies.intra"
+  },
+  "annotated_topology_path": "data/interim/topologies/rf_1239_sprint.annotated.txt",
+  "graphviz_path": "data/interim/topologies/rf_1239_sprint.dot",
+  "mapping_output_path": "data/processed/ndnsim/topology_mapping_rf_1239_sprint.csv",
+  "report_output_path": "data/processed/ndnsim/topology_mapping_rf_1239_sprint.report.json",
+  "default_bandwidth": "10Mbps",
+  "default_queue": "100",
+  "zones_per_domain": 4,
+  "domain_partition_policy": {
+    "mode": "farthest_seed_bfs",
+    "domains_total": 16
+  },
+  "controller_selection_policy": {
+    "mode": "seed_router"
+  },
+  "ingress_selection_policy": {
+    "mode": "farthest_from_controller",
+    "ingress_candidates_per_domain": 1
+  },
+  "producer_assignment_policy": {
+    "mode": "top_degree_per_domain",
+    "producers_per_domain": 2
+  }
+}

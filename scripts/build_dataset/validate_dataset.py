@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from tools.workflow_support import repo_root
+from tools.workflow_support import load_json_yaml, repo_root
 
 
 REQUIRED = {
@@ -44,24 +44,31 @@ REQUIRED = {
         "cell_id",
         "controller_prefix",
     ],
-    "data/processed/ndnsim/topology_mapping.csv": [
-        "node_id",
-        "role",
-        "domain_id",
-        "controller_prefix",
-    ],
 }
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=repo_root())
+    parser.add_argument(
+        "--topology-config",
+        type=Path,
+        default=Path("configs/topologies/rocketfuel_3967_exodus.yaml"),
+    )
     return parser.parse_args()
 
 
 def main() -> int:
     args = parse_args()
-    for relative_path, columns in REQUIRED.items():
+    required = dict(REQUIRED)
+    topology_config = load_json_yaml(args.root / args.topology_config)
+    required[topology_config["mapping_output_path"]] = [
+        "node_id",
+        "role",
+        "domain_id",
+        "controller_prefix",
+    ]
+    for relative_path, columns in required.items():
         path = args.root / relative_path
         if not path.exists():
             print(f"ERROR: missing {relative_path}")

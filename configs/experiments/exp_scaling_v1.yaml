@@ -1,0 +1,63 @@
+{
+  "experiment_id": "exp_scaling_v1",
+  "dataset_id": "smartcity_v1",
+  "topology_id": "rf_1239_sprint",
+  "comparison_topologies": [
+    "rf_3967_exodus",
+    "rf_1239_sprint"
+  ],
+  "scenario": "mock-hiroute-state-scaling",
+  "schemes": [
+    "flat_iroute",
+    "hiroute",
+    "oracle"
+  ],
+  "seeds": [
+    1,
+    2,
+    3
+  ],
+  "metrics": [
+    "success_at_1",
+    "discovery_bytes",
+    "latency_ms"
+  ],
+  "outputs": [
+    "results/aggregate/state_scaling_summary.csv",
+    "results/figures/fig_state_scaling.pdf"
+  ],
+  "promotion_rule": {
+    "min_runs_per_scheme": 3,
+    "max_missing_logs": 0,
+    "require_clean_git": true
+  },
+  "configs": {
+    "dataset": "configs/datasets/smartcity_v1.yaml",
+    "hierarchy": "configs/hierarchy/hiroute_hkm_v1.yaml",
+    "topology": "configs/topologies/rocketfuel_1239_sprint.yaml",
+    "topology_overlays": {
+      "rf_3967_exodus": "configs/topologies/rocketfuel_3967_exodus.yaml",
+      "rf_1239_sprint": "configs/topologies/rocketfuel_1239_sprint.yaml"
+    },
+    "baselines": {
+      "flat_iroute": "configs/baselines/flat_iroute.yaml",
+      "hiroute": "configs/baselines/hiroute.yaml",
+      "oracle": "configs/baselines/oracle.yaml"
+    }
+  },
+  "inputs": {
+    "objects_csv": "data/processed/ndnsim/objects_master.csv",
+    "queries_csv": "data/processed/ndnsim/queries_master.csv",
+    "qrels_object_csv": "data/processed/eval/qrels_object.csv",
+    "qrels_domain_csv": "data/processed/eval/qrels_domain.csv",
+    "hslsa_csv": "data/processed/ndnsim/hslsa_export.csv",
+    "topology_mapping_csv": "data/processed/ndnsim/topology_mapping_rf_1239_sprint.csv",
+    "topology_mappings": {
+      "rf_3967_exodus": "data/processed/ndnsim/topology_mapping_rf_3967_exodus.csv",
+      "rf_1239_sprint": "data/processed/ndnsim/topology_mapping_rf_1239_sprint.csv"
+    }
+  },
+  "runner": {
+    "type": "mock"
+  }
+}

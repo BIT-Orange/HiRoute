@@ -1,42 +1,29 @@
 {
-  "experiment_id": "exp_main_v1",
+  "experiment_id": "exp_failures_v1",
   "dataset_id": "smartcity_v1",
   "topology_id": "rf_3967_exodus",
-  "scenario": "mock-hiroute-main",
+  "scenario": "mock-hiroute-failures",
   "schemes": [
-    "exact",
     "flood",
     "flat_iroute",
-    "oracle",
-    "hiroute"
+    "hiroute",
+    "oracle"
   ],
   "seeds": [
     1,
     2,
-    3,
-    4,
-    5
-  ],
-  "budgets": [
-    8,
-    16,
-    32,
-    64
+    3
   ],
   "metrics": [
     "success_at_1",
-    "manifest_hit_at_5",
-    "ndcg_at_5",
-    "num_remote_probes",
-    "discovery_bytes",
     "latency_ms"
   ],
   "outputs": [
-    "results/aggregate/main_success_overhead.csv",
-    "results/figures/fig_main_success_overhead.pdf"
+    "results/aggregate/robustness_summary.csv",
+    "results/figures/fig_robustness.pdf"
   ],
   "promotion_rule": {
-    "min_runs_per_scheme": 5,
+    "min_runs_per_scheme": 3,
     "max_missing_logs": 0,
     "require_clean_git": true
   },
@@ -45,11 +32,10 @@
     "hierarchy": "configs/hierarchy/hiroute_hkm_v1.yaml",
     "topology": "configs/topologies/rocketfuel_3967_exodus.yaml",
     "baselines": {
-      "exact": "configs/baselines/exact.yaml",
       "flood": "configs/baselines/flood.yaml",
       "flat_iroute": "configs/baselines/flat_iroute.yaml",
-      "oracle": "configs/baselines/oracle.yaml",
-      "hiroute": "configs/baselines/hiroute.yaml"
+      "hiroute": "configs/baselines/hiroute.yaml",
+      "oracle": "configs/baselines/oracle.yaml"
     }
   },
   "inputs": {
