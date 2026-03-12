@@ -7,3 +7,7 @@
 - Migrated the existing IoTJ draft to `paper/main.tex`.
 - Bound `fig_main_success_overhead` to `exp_main_v1` promoted runs and aggregate CSVs.
 - Locked the first scoped claim to object-level success versus discovery overhead instead of broad latency claims.
+- Added formal Figure 4-10 aggregate and PDF output paths to the workflow.
+- Bound Figure 5, 6, 7, 8, 9, and 10 note files and claim stubs to explicit aggregate CSVs.
+- Replaced the paper placeholders for Figure 4-10 with `\includegraphics` bindings to `results/figures/*.pdf`.
+- Kept Figure 8 and Figure 9 in placeholder-PDF mode until official scaling and robustness runs are promoted.

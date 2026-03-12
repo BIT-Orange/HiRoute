@@ -55,6 +55,14 @@ def _save(fig: plt.Figure, filename: str) -> None:
     plt.close(fig)
 
 
+def _placeholder(filename: str, title: str, message: str) -> None:
+    fig, ax = plt.subplots(figsize=(6.6, 4.0))
+    ax.axis("off")
+    ax.text(0.5, 0.68, title, ha="center", va="center", fontsize=14, weight="bold")
+    ax.text(0.5, 0.42, message, ha="center", va="center", fontsize=10)
+    _save(fig, filename)
+
+
 def _scheme_color(scheme: str) -> str:
     return COLORS.get(scheme, "#6d6d6d")
 
@@ -62,6 +70,7 @@ def _scheme_color(scheme: str) -> str:
 def plot_main_success() -> None:
     frame = _read_csv(repo_root() / "results" / "aggregate" / "main_success_overhead.csv")
     if frame.empty:
+        _placeholder("fig_main_success_overhead.pdf", "Figure 4", "Awaiting aggregate data")
         return
 
     fig, ax = plt.subplots(figsize=(6.4, 4.2))
@@ -84,6 +93,7 @@ def plot_main_success() -> None:
 def plot_failure_breakdown() -> None:
     frame = _read_csv(repo_root() / "results" / "aggregate" / "failure_breakdown.csv")
     if frame.empty:
+        _placeholder("fig_failure_breakdown.pdf", "Figure 5", "Awaiting aggregate data")
         return
 
     pivot = frame.pivot(index="scheme", columns="failure_type", values="rate").fillna(0.0)
@@ -109,6 +119,7 @@ def plot_failure_breakdown() -> None:
 def plot_candidate_shrinkage() -> None:
     frame = _read_csv(repo_root() / "results" / "aggregate" / "candidate_shrinkage.csv")
     if frame.empty:
+        _placeholder("fig_candidate_shrinkage.pdf", "Figure 6", "Awaiting aggregate data")
         return
 
     frame = frame.sort_values("mean_candidate_shrinkage_ratio")
@@ -127,6 +138,7 @@ def plot_candidate_shrinkage() -> None:
 def plot_deadlines() -> None:
     frame = _read_csv(repo_root() / "results" / "aggregate" / "deadline_summary.csv")
     if frame.empty:
+        _placeholder("fig_deadline_summary.pdf", "Figure 7", "Awaiting aggregate data")
         return
 
     fig, ax = plt.subplots(figsize=(6.8, 4.0))
@@ -150,6 +162,7 @@ def plot_deadlines() -> None:
 def plot_state_scaling() -> None:
     frame = _read_csv(repo_root() / "results" / "aggregate" / "state_scaling_summary.csv")
     if frame.empty:
+        _placeholder("fig_state_scaling.pdf", "Figure 8", "Awaiting scaling runs")
         return
 
     fig, ax = plt.subplots(figsize=(6.8, 4.2))
@@ -175,6 +188,7 @@ def plot_state_scaling() -> None:
 def plot_robustness() -> None:
     frame = _read_csv(repo_root() / "results" / "aggregate" / "robustness_summary.csv")
     if frame.empty:
+        _placeholder("fig_robustness.pdf", "Figure 9", "Awaiting staleness and failure runs")
         return
 
     frame["scenario_label"] = frame.apply(
@@ -201,6 +215,7 @@ def plot_robustness() -> None:
 def plot_ablation() -> None:
     frame = _read_csv(repo_root() / "results" / "aggregate" / "ablation_summary.csv")
     if frame.empty:
+        _placeholder("fig_ablation.pdf", "Figure 10", "Awaiting ablation aggregate")
         return
 
     fig, ax1 = plt.subplots(figsize=(7.0, 4.2))

@@ -286,8 +286,12 @@ The evaluation is organized around the dimensions that determine whether semanti
 
 The first experiment should compare ServiceSuccess@1 against discovery overhead while increasing naming heterogeneity or semantic ambiguity. The central question is whether hierarchical constraint-guided resolution closes more of the gap to the centralized oracle than the flat semantic baseline does, without incurring flooding-like overhead.
 
-\figplaceholder{Primary result comparing end-to-end service success and discovery overhead.}{5.0cm}{\textit{Insert main result figure here.}\\[0.6em]
-Recommended visual elements: success on the vertical axis and normalized discovery overhead on the horizontal axis, with one curve or one point set per method.}{fig:main}
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.95\linewidth]{../results/figures/fig_main_success_overhead.pdf}
+\caption{Primary result comparing end-to-end service success and discovery overhead.}
+\label{fig:main}
+\end{figure}
 
 The expected interpretation is not simply that one method is better than another. A strong result should show where the gain comes from. If \sysname{} lies close to the flat semantic router in overhead but clearly above it in ServiceSuccess@1, the paper can argue that the improvement is due to better object-level resolution rather than to indiscriminate probing. If it lies close to flooding in success but far below flooding in overhead, the paper can argue that hierarchical refinement is an effective substitute for broad search.
 
@@ -295,35 +299,64 @@ The expected interpretation is not simply that one method is better than another
 
 A semantic routing paper becomes much stronger when it shows where errors arise. The second experiment should decompose failures into predicate miss, wrong-domain resolution, wrong-object resolution inside a relevant domain, and fetch-stage timeout or loss. This decomposition is particularly important because it exposes the difference between a domain-level semantic hint and an object-level answer.
 
-\figplaceholder{Failure decomposition for \sysname{} and the most relevant baselines.}{5.0cm}{\textit{Insert failure-decomposition figure here.}\\[0.6em]
-Recommended visual elements: stacked bars or a waterfall chart separating predicate miss, wrong-domain miss, wrong-object miss, and fetch failure.}{fig:waterfall}
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.95\linewidth]{../results/figures/fig_failure_breakdown.pdf}
+\caption{Failure decomposition for \sysname{} and the most relevant baselines.}
+\label{fig:waterfall}
+\end{figure}
 
 A convincing result in this experiment would show that the principal reduction comes from the wrong-object category, because that is the specific failure mode that manifest-based local resolution is intended to address.
 
+\subsection{Candidate Shrinkage Through Hierarchical Filtering}
+
+The third experiment should report how aggressively the search frontier contracts after predicate screening and hierarchical refinement. This figure complements the failure decomposition because it explains why \sysname{} can reduce wasted discovery effort before the final object fetch takes place.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.95\linewidth]{../results/figures/fig_candidate_shrinkage.pdf}
+\caption{Candidate shrinkage under hierarchical filtering and refinement.}
+\label{fig:shrinkage}
+\end{figure}
+
+The most useful interpretation is whether the hierarchy reduces the effective search set before the system starts issuing remote probes. If the shrinkage ratio remains substantially lower for \sysname{} than for flat semantic discovery, then the paper can argue that the exported hierarchy is doing real work rather than acting as a cosmetic index structure.
+
 \subsection{Deadline-Sensitive Latency}
 
-Average latency is often too blunt for IoT applications. The third experiment should therefore report deadline satisfaction under several thresholds together with completion-time distributions for successful requests. This experiment should use the same workload as the first experiment so that latency is interpreted together with service success.
+Average latency is often too blunt for IoT applications. The fourth experiment should therefore report deadline satisfaction under several thresholds together with completion-time distributions for successful requests. This experiment should use the same workload as the first experiment so that latency is interpreted together with service success.
 
-\figplaceholder{Deadline-sensitive latency evaluation.}{5.0cm}{\textit{Insert latency figure here.}\\[0.6em]
-Recommended visual elements: deadline satisfaction curves and, if space permits, a complementary completion-time CDF for successful requests.}{fig:latency}
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.95\linewidth]{../results/figures/fig_deadline_summary.pdf}
+\caption{Deadline-sensitive latency evaluation.}
+\label{fig:latency}
+\end{figure}
 
 The important point here is to separate speed from usefulness. A method that returns a fast but irrelevant answer should not be credited as superior. That is why deadline satisfaction should be computed with respect to satisfactory retrieval rather than mere first-byte arrival.
 
 \subsection{Routing-State Scaling}
 
-The fourth experiment should validate the control-plane argument of the paper. One panel should vary the number of objects per domain under a fixed export budget. A second panel should vary the number of domains. The metric should be exported summary count or bytes, optionally paired with summary refresh traffic.
+The fifth experiment should validate the control-plane argument of the paper. One panel should vary the number of objects per domain under a fixed export budget. A second panel should vary the number of domains. The metric should be exported summary count or bytes, optionally paired with summary refresh traffic.
 
-\figplaceholder{Routing-state scaling of \sysname{} under increasing object count and domain count.}{5.0cm}{\textit{Insert state-scaling figure here.}\\[0.6em]
-Recommended visual elements: one panel for objects per domain and one panel for domain count, with explicit export-budget annotations.}{fig:state}
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.95\linewidth]{../results/figures/fig_state_scaling.pdf}
+\caption{Routing-state scaling of \sysname{} under increasing object count and domain count.}
+\label{fig:state}
+\end{figure}
 
 A useful result will show near-insensitivity to object growth under a fixed budget and approximately linear growth with the number of domains. That observation would confirm the architectural claim that exported state tracks the budgeted summary surface, not the full object population.
 
 \subsection{Robustness Under Stale Summaries and Failures}
 
-The fifth experiment should study two kinds of disruption. The first disruption is physical, such as a link failure or temporary controller unreachability. The second is semantic, meaning that a summary has become stale because the local object distribution changed but the export has not yet been refreshed. Both types of disruption matter in semantic NDN-IoT, and they stress different parts of the design.
+The sixth experiment should study two kinds of disruption. The first disruption is physical, such as a link failure or temporary controller unreachability. The second is semantic, meaning that a summary has become stale because the local object distribution changed but the export has not yet been refreshed. Both types of disruption matter in semantic NDN-IoT, and they stress different parts of the design.
 
-\figplaceholder{Robustness of \sysname{} under stale summaries, link failures, and domain failures.}{5.0cm}{\textit{Insert robustness figure here.}\\[0.6em]
-Recommended visual elements: aligned subfigures or grouped plots showing service success and completion time before, during, and after each event.}{fig:robust}
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.95\linewidth]{../results/figures/fig_robustness.pdf}
+\caption{Robustness of \sysname{} under stale summaries, link failures, and domain failures.}
+\label{fig:robust}
+\end{figure}
 
 This experiment should reveal whether cell-level reliability and the negative cache help the system avoid repeated poor choices after a failure or semantic drift event. A paper on semantic name resolution becomes materially stronger if it treats stale summaries as a first-class failure mode rather than focusing only on physical failures.
 
@@ -331,8 +364,12 @@ This experiment should reveal whether cell-level reliability and the negative ca
 
 The final experiment should isolate the contribution of query decomposition, hierarchy, and reliability-aware fallback. A practical ablation set contains a predicate-only version, a flat semantic-only version, a predicate plus flat semantic version, and the full \sysname{} design.
 
-\figplaceholder{Ablation of the principal components of \sysname{}.}{4.8cm}{\textit{Insert ablation figure here.}\\[0.6em]
-Recommended visual elements: grouped bars for ServiceSuccess@1, discovery overhead, and deadline satisfaction.}{fig:ablation}
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.95\linewidth]{../results/figures/fig_ablation.pdf}
+\caption{Ablation of the principal components of \sysname{}.}
+\label{fig:ablation}
+\end{figure}
 
 This ablation is essential because it prevents the paper from being read as a loose collection of heuristics. If the ablation shows that predicate filtering reduces wasted probes, flat semantics raises recall, and the full hierarchical design improves object-level success without excessive overhead, then the paper will have a much cleaner causal story.
 
