@@ -1,0 +1,89 @@
+# macOS and editor metadata
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Python caches and virtualenvs
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# LaTeX auxiliary files
+*.pdf
+*.aux
+*.bbl
+*.bcf
+*.blg
+*.fdb_latexmk
+*.fls
+*.lof
+*.log
+*.lot
+*.nav
+*.out
+*.run.xml
+*.snm
+*.synctex.gz
+*.toc
+
+# Top-level build and scratch outputs
+tmp/
+dist/
+
+# ns-3 and vendored dependency build artifacts
+/ns-3/.lock-waf_*
+/ns-3/.waf*
+/ns-3/build/
+/ns-3/__pycache__/
+/ns-3/**/*.o
+/ns-3/**/*.os
+/ns-3/**/*.so
+/ns-3/**/*.dylib
+/ns-3/**/*.pyc
+/pybindgen/build/
+/pybindgen/dist/
+/pybindgen/__pycache__/
+/pybindgen/**/*.pyc
+
+# Generated datasets and large intermediate artifacts
+/data/raw/**
+/data/interim/**
+/data/processed/**
+!/data/raw/.gitkeep
+!/data/interim/.gitkeep
+!/data/processed/.gitkeep
+!/data/registry/
+!/data/registry/*.csv
+
+# Run artifacts stay outside version control; registries are tracked
+/runs/pending/**
+/runs/completed/**
+/runs/archived/**
+!/runs/pending/.gitkeep
+!/runs/completed/.gitkeep
+!/runs/archived/.gitkeep
+!/runs/registry/
+!/runs/registry/*.csv
+
+# Aggregates and tables are tracked; ad-hoc exports are not
+/results/figures/*.png
+/results/figures/*.jpg
+/results/figures/*.jpeg
+/results/figures/*.svg
+/results/figures/*_draft.*
+/results/figures/*_tmp.*
+/results/aggregate/*.tmp
+/results/tables/*.tmp
+!/results/aggregate/
+!/results/aggregate/*.csv
+!/results/tables/
+!/results/tables/*.csv
+!/results/figures/
+!/results/figures/*.pdf
