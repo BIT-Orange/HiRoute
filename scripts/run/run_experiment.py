@@ -155,6 +155,7 @@ def _copy_snapshots(experiment: dict[str, Any], scheme: str, config_snapshot_dir
         "baseline_config": experiment["configs"]["baselines"][scheme],
         "hierarchy_config": experiment["configs"]["hierarchy"],
         "dataset_config": experiment["configs"]["dataset"],
+        "topology_config": experiment["configs"]["topology"],
     }
     for _, source in config_map.items():
         source_path = _resolve(str(source))
@@ -395,9 +396,242 @@ def _generate_mock_outputs(
     write_csv(run_dir / "failure_event_log.csv", FAILURE_EVENT_FIELDS, failure_rows)
 
 
+def _parse_controller_domain(controller_prefix: str) -> str:
+    parts = [part for part in controller_prefix.split("/") if part]
+    return parts[1] if len(parts) >= 2 else ""
+
+
+def _copy_raw_if_needed(path: Path) -> Path:
+    raw_path = path.with_suffix(path.suffix + ".raw")
+    if not raw_path.exists():
+        shutil.copy2(path, raw_path)
+    return raw_path
+
+
+def _normalize_ndnsim_query_log(
+    run_dir: Path,
+    experiment: dict[str, Any],
+    scheme: str,
+    seed: int,
+) -> None:
+    query_log_path = run_dir / "query_log.csv"
+    if not query_log_path.exists():
+        return
+
+    rows = read_csv(query_log_path)
+    if not rows:
+        write_csv(query_log_path, QUERY_LOG_FIELDS, [])
+        return
+    if "manifest_hit_at_5" in rows[0]:
+        return
+
+    _copy_raw_if_needed(query_log_path)
+    object_by_id = {
+        row["object_id"]: row
+        for row in read_csv(_resolve(experiment["inputs"]["objects_csv"]))
+    }
+    normalized = []
+    for row in rows:
+        object_id = row.get("fetched_object_id", "")
+        object_row = object_by_id.get(object_id, {})
+        latency_ms = float(row.get("latency_ms") or 0.0)
+        start_time_ms = float(row.get("start_time_ms") or 0.0)
+        discovery_bytes = float(row.get("discovery_bytes") or 0.0)
+        normalized.append(
+            {
+                "query_id": row["query_id"],
+                "scheme": scheme,
+                "seed": seed,
+                "topology_id": experiment["topology_id"],
+                "dataset_id": experiment["dataset_id"],
+                "start_time_ms": start_time_ms,
+                "end_time_ms": round(start_time_ms + latency_ms, 3),
+                "latency_ms": latency_ms,
+                "success_at_1": int(row.get("success_at_1", 0)),
+                "manifest_hit_at_3": int(row.get("manifest_hit_at_r", 0)),
+                "manifest_hit_at_5": int(row.get("manifest_hit_at_r", 0)),
+                "ndcg_at_5": float(row.get("ndcg_at_r") or 0.0),
+                "final_object_id": object_id,
+                "final_domain_id": object_row.get("domain_id", ""),
+                "final_cell_id": object_row.get("zone_id", ""),
+                "num_remote_probes": int(row.get("remote_probes") or 0),
+                "discovery_tx_bytes": int(discovery_bytes),
+                "discovery_rx_bytes": 0,
+                "fetch_tx_bytes": 0,
+                "fetch_rx_bytes": int(object_row.get("payload_size_bytes") or 0),
+                "failure_type": "success"
+                if str(row.get("success_at_1", "0")) == "1"
+                else row.get("failure_type", "unknown"),
+            }
+        )
+    write_csv(query_log_path, QUERY_LOG_FIELDS, normalized)
+
+
+def _normalize_ndnsim_probe_log(run_dir: Path, scheme: str, seed: int) -> None:
+    probe_log_path = run_dir / "probe_log.csv"
+    if not probe_log_path.exists():
+        return
+
+    rows = read_csv(probe_log_path)
+    if not rows:
+        write_csv(probe_log_path, PROBE_LOG_FIELDS, [])
+        return
+    if "target_domain_id" in rows[0]:
+        return
+
+    _copy_raw_if_needed(probe_log_path)
+    normalized = []
+    for row in rows:
+        normalized.append(
+            {
+                "query_id": row["query_id"],
+                "scheme": scheme,
+                "seed": seed,
+                "probe_index": row.get("probe_index", "0"),
+                "target_domain_id": _parse_controller_domain(row.get("controller_prefix", "")),
+                "target_cell_id": row.get("cell_id", ""),
+                "probe_latency_ms": 0,
+                "accepted": 1 if str(row.get("reply_entries", "0")) != "0" else 0,
+            }
+        )
+    write_csv(probe_log_path, PROBE_LOG_FIELDS, normalized)
+
+
+def _normalize_ndnsim_search_trace(run_dir: Path, scheme: str) -> None:
+    search_trace_path = run_dir / "search_trace.csv"
+    if not search_trace_path.exists():
+        return
+
+    rows = read_csv(search_trace_path)
+    if not rows:
+        write_csv(search_trace_path, SEARCH_TRACE_FIELDS, [])
+        return
+    if "stage" in rows[0]:
+        return
+
+    _copy_raw_if_needed(search_trace_path)
+    normalized = []
+    for row in rows:
+        rank = int(row.get("rank") or 0)
+        normalized.append(
+            {
+                "query_id": row["query_id"],
+                "scheme": scheme,
+                "stage": f"candidate_rank_{rank}",
+                "candidate_count": rank + 1,
+                "selected_count": 1,
+                "frontier_size": 1,
+                "timestamp_ms": rank,
+            }
+        )
+    write_csv(search_trace_path, SEARCH_TRACE_FIELDS, normalized)
+
+
+def _normalize_ndnsim_outputs(
+    experiment: dict[str, Any],
+    scheme: str,
+    seed: int,
+    run_dir: Path,
+) -> None:
+    _normalize_ndnsim_query_log(run_dir, experiment, scheme, seed)
+    _normalize_ndnsim_probe_log(run_dir, scheme, seed)
+    _normalize_ndnsim_search_trace(run_dir, scheme)
+
+
+def _prepare_runtime_query_csv(experiment: dict[str, Any], run_dir: Path) -> Path:
+    query_csv_path = _resolve(experiment["inputs"]["queries_csv"])
+    topology_mapping_path = _resolve(experiment["inputs"]["topology_mapping_csv"])
+    query_rows = read_csv(query_csv_path)
+    topology_rows = read_csv(topology_mapping_path)
+    ingress_nodes = [row["node_id"] for row in topology_rows if row["role"] == "ingress"]
+    if not query_rows or not ingress_nodes:
+        return query_csv_path
+
+    query_ingress_nodes = {row["ingress_node_id"] for row in query_rows}
+    if query_ingress_nodes.issubset(set(ingress_nodes)):
+        return query_csv_path
+
+    remapped_rows = []
+    for index, row in enumerate(query_rows):
+        remapped = dict(row)
+        remapped["ingress_node_id"] = ingress_nodes[index % len(ingress_nodes)]
+        remapped_rows.append(remapped)
+
+    runtime_query_csv = run_dir / "queries_runtime.csv"
+    write_csv(runtime_query_csv, list(query_rows[0].keys()), remapped_rows)
+    experiment["_runtime_query_csv"] = str(runtime_query_csv.relative_to(repo_root()))
+    return runtime_query_csv
+
+
 def _run_external(command: list[str], cwd: Path) -> tuple[int, str, str]:
     result = subprocess.run(command, cwd=cwd, check=False, capture_output=True, text=True)
     return result.returncode, result.stdout, result.stderr
+
+
+def _scenario_binary_path(ns3_root: Path, scenario: str) -> Path | None:
+    examples_dir = ns3_root / "build" / "src" / "ndnSIM" / "examples"
+    matches = sorted(examples_dir.glob(f"ns3.*-{scenario}-debug"))
+    return matches[0] if matches else None
+
+
+def _ndnsim_command(
+    experiment: dict[str, Any],
+    scheme: str,
+    run_dir: Path,
+    binary: Path,
+) -> tuple[Path, list[str]]:
+    runner = experiment.get("runner", {})
+    ns3_root = _resolve(runner.get("ns3_root", "ns-3"))
+    topology_config = load_json_yaml(_resolve(experiment["configs"]["topology"]))
+    params = runner.get("params", {})
+
+    runtime_query_csv = _prepare_runtime_query_csv(experiment, run_dir)
+    command = [
+        str(binary),
+        f"--topology={_resolve(topology_config['annotated_topology_path'])}",
+        f"--topologyMapping={_resolve(experiment['inputs']['topology_mapping_csv'])}",
+        f"--objectsCsv={_resolve(experiment['inputs']['objects_csv'])}",
+        f"--queryCsv={runtime_query_csv}",
+        f"--queryEmbeddingIndexCsv={_resolve(experiment['inputs']['query_embedding_index_csv'])}",
+        f"--qrelsObjectCsv={_resolve(experiment['inputs']['qrels_object_csv'])}",
+        f"--summaryCsv={_resolve(experiment['inputs']['hslsa_csv'])}",
+        f"--controllerLocalIndexCsv={_resolve(experiment['inputs']['controller_local_index_csv'])}",
+        f"--runDir={run_dir}",
+        f"--topologyId={experiment['topology_id']}",
+        f"--scheme={scheme}",
+    ]
+    for flag in [
+        "stopSeconds",
+        "failureTime",
+        "recoveryTime",
+        "staleDropProbability",
+        "manifestSize",
+        "probeBudget",
+        "queryLimitPerIngress",
+    ]:
+        if flag in params:
+            command.append(f"--{flag}={params[flag]}")
+    return ns3_root, command
+
+
+def _run_ndnsim(
+    experiment: dict[str, Any],
+    scheme: str,
+    run_dir: Path,
+) -> tuple[int, str, str]:
+    runner = experiment.get("runner", {})
+    ns3_root = _resolve(runner.get("ns3_root", "ns-3"))
+    binary = _scenario_binary_path(ns3_root, experiment["scenario"])
+    build_always = bool(runner.get("build_before_run", False))
+    if build_always or binary is None or not binary.exists():
+        build_code, build_stdout, build_stderr = _run_external(["./waf", "build"], ns3_root)
+        if build_code != 0:
+            return build_code, build_stdout, build_stderr
+        binary = _scenario_binary_path(ns3_root, experiment["scenario"])
+        if binary is None or not binary.exists():
+            return 1, build_stdout, build_stderr + "\nmissing ndnSIM scenario binary after build"
+    _, command = _ndnsim_command(experiment, scheme, run_dir, binary)
+    return _run_external(command, ns3_root)
 
 
 def parse_args() -> argparse.Namespace:
@@ -407,16 +641,32 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--seed", required=True, type=int)
     parser.add_argument("--mode", choices=["dry", "official"], default="official")
     parser.add_argument("--timestamp")
+    parser.add_argument("--topology-id")
+    parser.add_argument("--variant")
     return parser.parse_args()
 
 
 def main() -> int:
     args = parse_args()
     experiment_path = args.experiment if args.experiment.is_absolute() else repo_root() / args.experiment
-    experiment, errors = validate_context(experiment_path, args.scheme, args.seed, args.mode)
+    experiment, errors = validate_context(
+        experiment_path,
+        args.scheme,
+        args.seed,
+        args.mode,
+        args.topology_id,
+        args.variant,
+    )
     experiment["_experiment_path"] = str(experiment_path)
 
-    run_id = make_run_id(experiment, args.scheme, args.seed, args.timestamp)
+    run_id = make_run_id(
+        experiment,
+        args.scheme,
+        args.seed,
+        args.timestamp,
+        experiment["topology_id"],
+        experiment.get("_runner_variant"),
+    )
     run_root = repo_root() / "runs" / ("pending" if args.mode == "dry" else "completed")
     run_dir = run_root / run_id
     git_commit = git_head()
@@ -465,6 +715,18 @@ def main() -> int:
     if runner.get("type", "mock") == "mock":
         dataset_context = _load_dataset_context(experiment)
         _generate_mock_outputs(experiment, args.scheme, args.seed, run_dir, dataset_context)
+    elif runner.get("type") == "ndnsim":
+        exit_code, stdout_text, stderr_text = _run_ndnsim(experiment, args.scheme, run_dir)
+        status = "completed" if exit_code == 0 else "failed"
+        if status == "completed":
+            try:
+                _normalize_ndnsim_outputs(experiment, args.scheme, args.seed, run_dir)
+            except Exception as exc:  # pragma: no cover - surfaced in run stderr/manifest
+                status = "failed"
+                exit_code = 1
+                stderr_text = (stderr_text + "\n" if stderr_text else "") + (
+                    f"normalize_ndnsim_outputs failed: {exc}"
+                )
     else:
         command = runner.get("command", [])
         working_dir = _resolve(runner.get("cwd", "."))
@@ -494,6 +756,7 @@ def main() -> int:
             "baseline_config": experiment["configs"]["baselines"][args.scheme],
             "hierarchy_config": experiment["configs"]["hierarchy"],
             "dataset_config": experiment["configs"]["dataset"],
+            "topology_config": experiment["configs"]["topology"],
         },
         "inputs": experiment["inputs"],
         "outputs": {
@@ -509,6 +772,10 @@ def main() -> int:
         "end_time": isoformat_z(end_time),
         "duration_sec": duration_sec,
     }
+    if experiment.get("_runtime_query_csv"):
+        manifest["inputs"]["queries_csv_runtime"] = experiment["_runtime_query_csv"]
+    if experiment.get("_runner_variant"):
+        manifest["scenario_variant"] = experiment["_runner_variant"]
     dump_json_yaml(run_dir / "manifest.yaml", manifest)
 
     if status == "completed" and args.mode == "official":

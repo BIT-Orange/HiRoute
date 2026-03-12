@@ -13,17 +13,25 @@ if str(ROOT) not in sys.path:
 from tools.workflow_support import load_json_yaml, sanitize_token, utc_timestamp
 
 
-def make_run_id(experiment: dict, scheme: str, seed: int, timestamp: str | None = None) -> str:
+def make_run_id(
+    experiment: dict,
+    scheme: str,
+    seed: int,
+    timestamp: str | None = None,
+    topology_id: str | None = None,
+    variant: str | None = None,
+) -> str:
     timestamp = timestamp or utc_timestamp()
-    return "__".join(
-        [
-            sanitize_token(experiment["experiment_id"]),
-            sanitize_token(scheme),
-            sanitize_token(experiment["dataset_id"]),
-            f"seed{seed}",
-            timestamp,
-        ]
-    )
+    parts = [
+        sanitize_token(experiment["experiment_id"]),
+        sanitize_token(scheme),
+        sanitize_token(experiment["dataset_id"]),
+        sanitize_token(topology_id or experiment["topology_id"]),
+    ]
+    if variant:
+        parts.append(sanitize_token(variant))
+    parts.extend([f"seed{seed}", timestamp])
+    return "__".join(parts)
 
 
 def parse_args() -> argparse.Namespace:
@@ -32,13 +40,24 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--scheme", required=True)
     parser.add_argument("--seed", required=True, type=int)
     parser.add_argument("--timestamp")
+    parser.add_argument("--topology-id")
+    parser.add_argument("--variant")
     return parser.parse_args()
 
 
 def main() -> int:
     args = parse_args()
     experiment = load_json_yaml(args.experiment)
-    print(make_run_id(experiment, args.scheme, args.seed, args.timestamp))
+    print(
+        make_run_id(
+            experiment,
+            args.scheme,
+            args.seed,
+            args.timestamp,
+            args.topology_id,
+            args.variant,
+        )
+    )
     return 0
 
 

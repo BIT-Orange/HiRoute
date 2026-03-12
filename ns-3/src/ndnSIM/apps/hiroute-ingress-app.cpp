@@ -29,6 +29,33 @@ fileNeedsHeader(const std::string& path)
   return !input.good() || input.peek() == std::ifstream::traits_type::eof();
 }
 
+std::string
+escapeCsv(std::string value)
+{
+  bool needsQuotes = false;
+  for (char ch : value) {
+    if (ch == ',' || ch == '"' || ch == '\n' || ch == '\r') {
+      needsQuotes = true;
+      break;
+    }
+  }
+  if (!needsQuotes) {
+    return value;
+  }
+
+  std::string escaped;
+  escaped.reserve(value.size() + 4);
+  escaped.push_back('"');
+  for (char ch : value) {
+    if (ch == '"') {
+      escaped.push_back('"');
+    }
+    escaped.push_back(ch);
+  }
+  escaped.push_back('"');
+  return escaped;
+}
+
 } // namespace
 
 TypeId
@@ -517,7 +544,7 @@ HiRouteIngressApp::appendRow(std::ofstream& stream, const std::vector<std::strin
     if (index != 0) {
       stream << ',';
     }
-    stream << values[index];
+    stream << escapeCsv(values[index]);
   }
   stream << '\n';
   stream.flush();

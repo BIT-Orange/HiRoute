@@ -2,7 +2,7 @@
   "experiment_id": "exp_main_v1",
   "dataset_id": "smartcity_v1",
   "topology_id": "rf_3967_exodus",
-  "scenario": "mock-hiroute-main",
+  "scenario": "hiroute-main",
   "schemes": [
     "exact",
     "flood",
@@ -55,12 +55,21 @@
   "inputs": {
     "objects_csv": "data/processed/ndnsim/objects_master.csv",
     "queries_csv": "data/processed/ndnsim/queries_master.csv",
+    "query_embedding_index_csv": "data/processed/ndnsim/query_embedding_index.csv",
     "qrels_object_csv": "data/processed/eval/qrels_object.csv",
     "qrels_domain_csv": "data/processed/eval/qrels_domain.csv",
     "hslsa_csv": "data/processed/ndnsim/hslsa_export.csv",
+    "controller_local_index_csv": "data/processed/ndnsim/controller_local_index.csv",
     "topology_mapping_csv": "data/processed/ndnsim/topology_mapping_rf_3967_exodus.csv"
   },
   "runner": {
-    "type": "mock"
+    "type": "ndnsim",
+    "ns3_root": "ns-3",
+    "params": {
+      "stopSeconds": 16,
+      "manifestSize": 5,
+      "probeBudget": 5,
+      "queryLimitPerIngress": 0
+    }
   }
 }

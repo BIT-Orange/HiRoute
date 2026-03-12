@@ -5,6 +5,8 @@ SCHEME ?= hiroute
 SEED ?= 1
 MODE ?= official
 TOPOLOGY ?= configs/topologies/rocketfuel_3967_exodus.yaml
+TOPOLOGY_ID ?=
+VARIANT ?=
 
 .PHONY: venv download-smartdatamodels extract-sdm-subjects build-service-ontology embed-texts download-rocketfuel convert-topologies topology-map dataset validate-dataset run aggregate promote figures paper-check
 
@@ -43,7 +45,7 @@ validate-dataset:
 	$(PYTHON) scripts/build_dataset/validate_dataset.py --topology-config $(TOPOLOGY)
 
 run:
-	$(PYTHON) scripts/run/run_experiment.py --experiment $(EXP) --scheme $(SCHEME) --seed $(SEED) --mode $(MODE)
+	$(PYTHON) scripts/run/run_experiment.py --experiment $(EXP) --scheme $(SCHEME) --seed $(SEED) --mode $(MODE) $(if $(TOPOLOGY_ID),--topology-id $(TOPOLOGY_ID),) $(if $(VARIANT),--variant $(VARIANT),)
 
 aggregate:
 	$(PYTHON) scripts/eval/aggregate_experiment.py --experiment $(EXP)
