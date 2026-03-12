@@ -1,32 +1,37 @@
-"""Aggregate query metrics for a HiRoute experiment."""
+"""Dispatch experiment-specific aggregate builders for Figure 4-10."""
 
 from __future__ import annotations
 
 import argparse
-from collections import defaultdict
 from pathlib import Path
-from statistics import fmean
+import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from tools.workflow_support import load_json_yaml, read_csv, repo_root, write_csv
+from tools.workflow_support import load_json_yaml, repo_root
 
 
-OUTPUT_FIELDS = [
-    "experiment_id",
-    "scheme",
-    "run_count",
-    "mean_success_at_1",
-    "mean_manifest_hit_at_5",
-    "mean_ndcg_at_5",
-    "mean_num_remote_probes",
-    "mean_discovery_bytes",
-    "mean_latency_ms",
-    "source_run_ids",
-]
+SCRIPT_MAP = {
+    "exp_main_v1": [
+        "scripts/eval/aggregate_query_metrics.py",
+        "scripts/eval/build_failure_breakdown.py",
+        "scripts/eval/build_candidate_shrinkage.py",
+        "scripts/eval/build_deadline_summary.py",
+        "scripts/eval/build_ablation_summary.py",
+    ],
+    "exp_scaling_v1": [
+        "scripts/eval/build_state_scaling_summary.py",
+    ],
+    "exp_staleness_v1": [
+        "scripts/eval/build_robustness_summary.py",
+    ],
+    "exp_failures_v1": [
+        "scripts/eval/build_robustness_summary.py",
+    ],
+}
 
 
 def parse_args() -> argparse.Namespace:
@@ -36,69 +41,25 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def _read_registry(experiment_id: str, source: str) -> list[dict[str, str]]:
-    filename = "promoted_runs.csv" if source == "promoted" else "runs.csv"
-    path = repo_root() / "runs" / "registry" / filename
-    return [row for row in read_csv(path) if row["experiment_id"] == experiment_id]
-
-
-def _run_dir_map(experiment_id: str) -> dict[str, str]:
-    path = repo_root() / "runs" / "registry" / "runs.csv"
-    return {
-        row["run_id"]: row["run_dir"]
-        for row in read_csv(path)
-        if row["experiment_id"] == experiment_id
-    }
-
-
 def main() -> int:
     args = parse_args()
-    experiment = load_json_yaml(ROOT / args.experiment)
-    run_rows = _read_registry(experiment["experiment_id"], args.registry_source)
-    if not run_rows:
-        print("ERROR: no registry rows available for aggregation")
-        return 1
+    experiment_path = args.experiment if args.experiment.is_absolute() else repo_root() / args.experiment
+    experiment = load_json_yaml(experiment_path)
+    scripts = SCRIPT_MAP.get(experiment["experiment_id"], ["scripts/eval/aggregate_query_metrics.py"])
 
-    grouped_logs: dict[str, list[dict[str, str]]] = defaultdict(list)
-    grouped_run_ids: dict[str, list[str]] = defaultdict(list)
-    run_dir_map = _run_dir_map(experiment["experiment_id"])
-    for row in run_rows:
-        run_dir = row.get("run_dir") or run_dir_map.get(row["run_id"])
-        if not run_dir:
-            print(f"ERROR: missing run_dir for {row['run_id']}")
-            return 1
-        query_log_path = repo_root() / run_dir / "query_log.csv"
-        logs = read_csv(query_log_path)
-        grouped_logs[row["scheme"]].extend(logs)
-        grouped_run_ids[row["scheme"]].append(row["run_id"])
-
-    output_rows = []
-    for scheme in experiment["schemes"]:
-        logs = grouped_logs.get(scheme, [])
-        if not logs:
-            continue
-        output_rows.append(
-            {
-                "experiment_id": experiment["experiment_id"],
-                "scheme": scheme,
-                "run_count": len(grouped_run_ids[scheme]),
-                "mean_success_at_1": round(fmean(float(row["success_at_1"]) for row in logs), 6),
-                "mean_manifest_hit_at_5": round(fmean(float(row["manifest_hit_at_5"]) for row in logs), 6),
-                "mean_ndcg_at_5": round(fmean(float(row["ndcg_at_5"]) for row in logs), 6),
-                "mean_num_remote_probes": round(fmean(float(row["num_remote_probes"]) for row in logs), 6),
-                "mean_discovery_bytes": round(
-                    fmean(float(row["discovery_tx_bytes"]) + float(row["discovery_rx_bytes"]) for row in logs), 6
-                ),
-                "mean_latency_ms": round(fmean(float(row["latency_ms"]) for row in logs), 6),
-                "source_run_ids": "|".join(sorted(grouped_run_ids[scheme])),
-            }
+    for script in scripts:
+        result = subprocess.run(
+            [sys.executable, str(repo_root() / script), "--experiment", str(experiment_path), "--registry-source", args.registry_source],
+            cwd=repo_root(),
+            check=False,
+            capture_output=True,
+            text=True,
         )
-
-    aggregate_path = repo_root() / "results" / "aggregate" / "main_success_overhead.csv"
-    table_path = repo_root() / "results" / "tables" / "main_success_overhead_table.csv"
-    write_csv(aggregate_path, OUTPUT_FIELDS, output_rows)
-    write_csv(table_path, OUTPUT_FIELDS, output_rows)
-    print(str(aggregate_path.relative_to(repo_root())))
+        if result.returncode != 0:
+            sys.stderr.write(result.stderr or result.stdout)
+            return result.returncode
+        if result.stdout:
+            sys.stdout.write(result.stdout)
     return 0
 
 

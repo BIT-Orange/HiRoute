@@ -55,7 +55,12 @@ def main() -> int:
     if len(dataset_ids) != 1:
         print("ERROR: promoted runs mix dataset versions")
         return 1
-    if len(topology_ids) != 1:
+    expected_topologies = set(experiment.get("comparison_topologies", []))
+    if expected_topologies:
+        if not expected_topologies.issubset(topology_ids):
+            print("ERROR: promoted runs do not cover every comparison topology")
+            return 1
+    elif len(topology_ids) != 1:
         print("ERROR: promoted runs mix topology versions")
         return 1
 

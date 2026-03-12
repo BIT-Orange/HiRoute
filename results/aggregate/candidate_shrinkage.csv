@@ -1,0 +1,6 @@
+experiment_id,scheme,topology_id,mean_candidate_shrinkage_ratio,median_candidate_shrinkage_ratio,mean_remote_probes,mean_manifest_hit_at_r
+exp_main_v1,exact,as3967_medium,0.0,0.0,0.805,0.585
+exp_main_v1,flood,as3967_medium,0.0,0.0,5.6075,0.9125
+exp_main_v1,flat_iroute,as3967_medium,0.0,0.0,4.275,0.8375
+exp_main_v1,oracle,as3967_medium,0.0,0.0,1.445,0.98
+exp_main_v1,hiroute,as3967_medium,0.0,0.0,2.8925,0.955

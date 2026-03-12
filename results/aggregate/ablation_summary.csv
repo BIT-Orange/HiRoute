@@ -1,0 +1,6 @@
+experiment_id,scheme,topology_id,mean_success_at_1,mean_latency_ms,mean_discovery_bytes,mean_manifest_hit_at_5
+exp_main_v1,exact,as3967_medium,0.3375,50.368825,215.705,0.585
+exp_main_v1,flood,as3967_medium,0.6225,126.68863,1815.03,0.9125
+exp_main_v1,flat_iroute,as3967_medium,0.4975,113.897495,1288.5075,0.8375
+exp_main_v1,oracle,as3967_medium,0.7925,73.020992,507.665,0.98
+exp_main_v1,hiroute,as3967_medium,0.705,90.48271,851.24,0.955
