@@ -20,7 +20,6 @@ SCRIPT_MAP = {
         "scripts/eval/build_failure_breakdown.py",
         "scripts/eval/build_candidate_shrinkage.py",
         "scripts/eval/build_deadline_summary.py",
-        "scripts/eval/build_ablation_summary.py",
     ],
     "exp_scaling_v1": [
         "scripts/eval/build_state_scaling_summary.py",

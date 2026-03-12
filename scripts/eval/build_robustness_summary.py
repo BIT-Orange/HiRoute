@@ -16,6 +16,7 @@ from tools.workflow_support import repo_root, write_csv
 
 OUTPUT_FIELDS = [
     "experiment_id",
+    "source_experiment_id",
     "scenario",
     "scenario_variant",
     "scheme",
@@ -25,6 +26,11 @@ OUTPUT_FIELDS = [
     "mean_discovery_bytes",
     "event_count",
 ]
+
+ROBUSTNESS_EXPERIMENTS = {
+    "exp_staleness_v1": ["exp_staleness_v1", "exp_failures_v1"],
+    "exp_failures_v1": ["exp_staleness_v1", "exp_failures_v1"],
+}
 
 
 def parse_args() -> argparse.Namespace:
@@ -37,7 +43,12 @@ def parse_args() -> argparse.Namespace:
 def main() -> int:
     args = parse_args()
     experiment = load_experiment(args.experiment)
-    rows = require_rows(experiment, args.registry_source)
+    experiment_ids = ROBUSTNESS_EXPERIMENTS.get(experiment["experiment_id"], [experiment["experiment_id"]])
+    rows = []
+    for experiment_id in experiment_ids:
+        companion_path = repo_root() / "configs" / "experiments" / f"{experiment_id}.yaml"
+        companion = load_experiment(companion_path)
+        rows.extend(require_rows(companion, args.registry_source))
     query_frame = log_frame(rows, "query_log.csv")
     failure_frame = log_frame(rows, "failure_event_log.csv")
     if query_frame.empty:
@@ -56,9 +67,11 @@ def main() -> int:
     ):
         scenario, scenario_variant, scheme, topology_id = keys
         event_count = sum(failure_counts.get(run_id, 0) for run_id in group["run_id"].unique())
+        source_experiment_ids = sorted(group["experiment_id"].unique().tolist())
         output_rows.append(
             {
-                "experiment_id": experiment["experiment_id"],
+                "experiment_id": "exp_robustness_v1",
+                "source_experiment_id": "|".join(source_experiment_ids),
                 "scenario": scenario,
                 "scenario_variant": scenario_variant,
                 "scheme": scheme,
