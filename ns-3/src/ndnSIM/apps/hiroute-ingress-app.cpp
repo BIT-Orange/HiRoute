@@ -409,8 +409,15 @@ HiRouteIngressApp::buildProbePlan(const HiRouteQueryRecord& query)
       if (candidate.summary == nullptr) {
         continue;
       }
+      std::string frontierCellId = candidate.summary->cellId;
+      if ((m_strategyMode == "hiroute" || m_strategyMode == "full_hiroute") &&
+          candidate.summary->level > 1 && !candidate.summary->parentId.empty()) {
+        // Probe the level-1 parent cell so the controller can search the target neighborhood
+        // instead of only a single microcluster.
+        frontierCellId = candidate.summary->parentId;
+      }
       plan.probes.push_back(
-        {candidate.summary->controllerPrefix, candidate.summary->cellId, candidate.totalScore});
+        {candidate.summary->controllerPrefix, frontierCellId, candidate.totalScore});
     }
   }
 

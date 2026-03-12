@@ -92,10 +92,26 @@ def main() -> int:
             manifest = load_json_yaml(manifest_path)
             if manifest.get("scenario", "") not in allowed_scenarios:
                 continue
+            row = dict(row)
+            row["_scenario"] = manifest.get("scenario", "")
+        elif manifest_path.exists():
+            row = dict(row)
+            row["_scenario"] = load_json_yaml(manifest_path).get("scenario", "")
+        else:
+            row = dict(row)
+            row["_scenario"] = ""
         run_rows.append(row)
     if not run_rows:
         print("ERROR: no completed runs found for experiment")
         return 1
+
+    latest_by_key: dict[tuple[str, str, str, str], dict[str, str]] = {}
+    for row in run_rows:
+        key = (row["scheme"], row["seed"], row["topology_id"], row.get("_scenario", ""))
+        existing = latest_by_key.get(key)
+        if existing is None or row["start_time"] > existing["start_time"]:
+            latest_by_key[key] = row
+    run_rows = list(latest_by_key.values())
 
     min_runs = int(experiment["promotion_rule"]["min_runs_per_scheme"])
     if experiment.get("comparison_topologies"):
