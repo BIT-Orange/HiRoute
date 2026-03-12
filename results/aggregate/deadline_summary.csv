@@ -7,10 +7,10 @@ exp_main_v1,oracle,rf_3967_exodus,50,0.0,81.691667
 exp_main_v1,oracle,rf_3967_exodus,100,0.408333,81.691667
 exp_main_v1,oracle,rf_3967_exodus,200,0.575,81.691667
 exp_main_v1,oracle,rf_3967_exodus,500,0.575,81.691667
-exp_main_v1,hiroute,rf_3967_exodus,50,0.0,152.616667
-exp_main_v1,hiroute,rf_3967_exodus,100,0.325,152.616667
-exp_main_v1,hiroute,rf_3967_exodus,200,0.541667,152.616667
-exp_main_v1,hiroute,rf_3967_exodus,500,0.65,152.616667
+exp_main_v1,hiroute,rf_3967_exodus,50,0.0,152.625
+exp_main_v1,hiroute,rf_3967_exodus,100,0.325,152.625
+exp_main_v1,hiroute,rf_3967_exodus,200,0.541667,152.625
+exp_main_v1,hiroute,rf_3967_exodus,500,0.658333,152.625
 exp_main_v1,flood,rf_3967_exodus,50,0.0,141.208333
 exp_main_v1,flood,rf_3967_exodus,100,0.408333,141.208333
 exp_main_v1,flood,rf_3967_exodus,200,0.591667,141.208333

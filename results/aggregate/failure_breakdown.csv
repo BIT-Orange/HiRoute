@@ -3,8 +3,8 @@ exp_main_v1,exact,rf_3967_exodus,success,600,1.0
 exp_main_v1,oracle,rf_3967_exodus,success,345,0.575
 exp_main_v1,oracle,rf_3967_exodus,wrong_domain,135,0.225
 exp_main_v1,oracle,rf_3967_exodus,wrong_object,120,0.2
-exp_main_v1,hiroute,rf_3967_exodus,success,390,0.65
-exp_main_v1,hiroute,rf_3967_exodus,wrong_object,210,0.35
+exp_main_v1,hiroute,rf_3967_exodus,success,395,0.658333
+exp_main_v1,hiroute,rf_3967_exodus,wrong_object,205,0.341667
 exp_main_v1,flood,rf_3967_exodus,success,480,0.8
 exp_main_v1,flood,rf_3967_exodus,wrong_object,120,0.2
 exp_main_v1,flat_iroute,rf_3967_exodus,success,480,0.8
