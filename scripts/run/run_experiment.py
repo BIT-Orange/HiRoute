@@ -423,21 +423,22 @@ def main() -> int:
     timestamp = isoformat_z()
 
     if errors:
-        append_csv(
-            repo_root() / "runs" / "registry" / "failed_runs.csv",
-            FAILED_FIELDS,
-            {
-                "run_id": run_id,
-                "experiment_id": experiment.get("experiment_id", "unknown"),
-                "scheme": args.scheme,
-                "seed": args.seed,
-                "git_commit": git_commit,
-                "error_stage": "pre_run_validation",
-                "error_message": " | ".join(errors),
-                "run_dir": str(run_dir.relative_to(repo_root())),
-                "timestamp": timestamp,
-            },
-        )
+        if args.mode == "official":
+            append_csv(
+                repo_root() / "runs" / "registry" / "failed_runs.csv",
+                FAILED_FIELDS,
+                {
+                    "run_id": run_id,
+                    "experiment_id": experiment.get("experiment_id", "unknown"),
+                    "scheme": args.scheme,
+                    "seed": args.seed,
+                    "git_commit": git_commit,
+                    "error_stage": "pre_run_validation",
+                    "error_message": " | ".join(errors),
+                    "run_dir": str(run_dir.relative_to(repo_root())),
+                    "timestamp": timestamp,
+                },
+            )
         for error in errors:
             print(f"ERROR: {error}")
         return 1
@@ -510,7 +511,7 @@ def main() -> int:
     }
     dump_json_yaml(run_dir / "manifest.yaml", manifest)
 
-    if status == "completed":
+    if status == "completed" and args.mode == "official":
         append_csv(
             repo_root() / "runs" / "registry" / "runs.csv",
             RUNS_FIELDS,
@@ -531,22 +532,26 @@ def main() -> int:
         )
         print(run_id)
         return 0
+    if status == "completed":
+        print(run_id)
+        return 0
 
-    append_csv(
-        repo_root() / "runs" / "registry" / "failed_runs.csv",
-        FAILED_FIELDS,
-        {
-            "run_id": run_id,
-            "experiment_id": experiment["experiment_id"],
-            "scheme": args.scheme,
-            "seed": args.seed,
-            "git_commit": git_commit,
-            "error_stage": "runner",
-            "error_message": stderr_text.strip() or "external command failed",
-            "run_dir": str(run_dir.relative_to(repo_root())),
-            "timestamp": isoformat_z(end_time),
-        },
-    )
+    if args.mode == "official":
+        append_csv(
+            repo_root() / "runs" / "registry" / "failed_runs.csv",
+            FAILED_FIELDS,
+            {
+                "run_id": run_id,
+                "experiment_id": experiment["experiment_id"],
+                "scheme": args.scheme,
+                "seed": args.seed,
+                "git_commit": git_commit,
+                "error_stage": "runner",
+                "error_message": stderr_text.strip() or "external command failed",
+                "run_dir": str(run_dir.relative_to(repo_root())),
+                "timestamp": isoformat_z(end_time),
+            },
+        )
     print(run_id)
     return 1
 
