@@ -493,6 +493,12 @@ HiRouteIngressApp::onPhaseTimeout()
     return;
   }
 
+  if (usesAdaptiveReliability() && m_activeQuery.manifestFetchIndex + 1 < m_activeQuery.manifest.size()) {
+    ++m_activeQuery.manifestFetchIndex;
+    sendFetchInterest(m_activeQuery.manifest[m_activeQuery.manifestFetchIndex]);
+    return;
+  }
+
   m_activeQuery.failureType = "fetch_timeout";
   finishActiveQuery(false, "");
 }
@@ -506,6 +512,7 @@ HiRouteIngressApp::handleDiscoveryReply(shared_ptr<const Data> data)
 
   const auto reply = HiRouteTlv::DecodeDiscoveryReply(data->getContent().blockFromValue());
   m_activeQuery.manifest = reply.manifest;
+  m_activeQuery.manifestFetchIndex = 0;
   m_activeQuery.manifestHit = false;
   for (const auto& entry : reply.manifest) {
     if (isRelevantObject(m_activeQuery.query.queryId, entry.objectId)) {
@@ -546,6 +553,13 @@ HiRouteIngressApp::handleFetchReply(shared_ptr<const Data> data)
   if (usesAdaptiveReliability() && m_activeQuery.probeIndex < m_activeQuery.plan.probes.size()) {
     const auto& probe = m_activeQuery.plan.probes[m_activeQuery.probeIndex];
     m_reliabilityCache.ObserveResult(probe.controllerPrefix, probe.cellId, isRelevantObject(m_activeQuery.query.queryId, objectId));
+  }
+  if (!isRelevantObject(m_activeQuery.query.queryId, objectId) &&
+      usesAdaptiveReliability() &&
+      m_activeQuery.manifestFetchIndex + 1 < m_activeQuery.manifest.size()) {
+    ++m_activeQuery.manifestFetchIndex;
+    sendFetchInterest(m_activeQuery.manifest[m_activeQuery.manifestFetchIndex]);
+    return;
   }
   finishActiveQuery(isRelevantObject(m_activeQuery.query.queryId, objectId), objectId);
 }

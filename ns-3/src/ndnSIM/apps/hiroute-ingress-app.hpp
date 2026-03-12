@@ -72,6 +72,7 @@ private:
     Time startedAt = Seconds(0);
     Phase phase = Phase::Idle;
     std::vector<HiRouteManifestEntry> manifest;
+    size_t manifestFetchIndex = 0;
     uint32_t remoteProbes = 0;
     uint64_t discoveryBytes = 0;
     bool manifestHit = false;
