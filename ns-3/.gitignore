@@ -88,9 +88,14 @@ src/ndnSIM/*
 !src/ndnSIM/examples/
 src/ndnSIM/examples/*
 !src/ndnSIM/examples/hiroute-*.cpp
+!src/ndnSIM/examples/hiroute-*.hpp
 !src/ndnSIM/apps/
 src/ndnSIM/apps/*
 !src/ndnSIM/apps/hiroute-*
+!src/ndnSIM/apps/exact-name-ingress-app.*
+!src/ndnSIM/apps/flood-discovery-app.*
+!src/ndnSIM/apps/flat-semantic-ingress-app.*
+!src/ndnSIM/apps/oracle-controller-app.*
 !src/ndnSIM/model/
 src/ndnSIM/model/*
 !src/ndnSIM/model/hiroute-*
