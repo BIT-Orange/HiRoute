@@ -1,0 +1,50 @@
+{
+  "dataset_id": "smartcity_v1",
+  "version": "2026-03-12",
+  "seed": 42,
+  "domains_total": 4,
+  "zones_per_domain": 3,
+  "objects_per_service_per_zone": 3,
+  "service_classes": [
+    "temperature",
+    "humidity",
+    "rainfall",
+    "air_quality_pm25",
+    "air_quality_co2",
+    "traffic_speed",
+    "parking_availability",
+    "bus_arrival",
+    "street_light_state",
+    "noise_level"
+  ],
+  "zone_types": [
+    "school_area",
+    "residential",
+    "downtown",
+    "industrial",
+    "transport_hub",
+    "stadium_area"
+  ],
+  "freshness_classes": {
+    "realtime": 5000,
+    "recent": 60000,
+    "archival": 600000
+  },
+  "naming_templates_per_domain": 4,
+  "query_generation": {
+    "seed": 43,
+    "queries_total": 80,
+    "template_ratio": 0.4,
+    "paraphrase_ratio": 0.4,
+    "ambiguous_ratio": 0.2,
+    "splits": {
+      "dev": 0.2,
+      "test": 0.8
+    }
+  },
+  "topology": {
+    "topology_id": "as3967_medium",
+    "ingress_nodes": 4,
+    "relays_per_domain": 1
+  }
+}

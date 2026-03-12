@@ -1,0 +1,13 @@
+{
+  "scheme_id": "flat_iroute",
+  "description": "Flat semantic routing without hierarchical refinement.",
+  "mock_profile": {
+    "success_bias": 0.63,
+    "manifest_bias": 0.7,
+    "ndcg_bias": 0.61,
+    "probe_bias": 3.8,
+    "discovery_byte_bias": 520.0,
+    "fetch_byte_bias": 145.0,
+    "latency_bias": 82.0
+  }
+}

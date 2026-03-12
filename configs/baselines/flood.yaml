@@ -1,0 +1,13 @@
+{
+  "scheme_id": "flood",
+  "description": "High-recall flooding-style semantic discovery.",
+  "mock_profile": {
+    "success_bias": 0.71,
+    "manifest_bias": 0.76,
+    "ndcg_bias": 0.67,
+    "probe_bias": 5.2,
+    "discovery_byte_bias": 780.0,
+    "fetch_byte_bias": 160.0,
+    "latency_bias": 95.0
+  }
+}

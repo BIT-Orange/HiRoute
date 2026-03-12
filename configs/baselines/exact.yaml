@@ -1,0 +1,13 @@
+{
+  "scheme_id": "exact",
+  "description": "Exact canonical-name fetch without semantic discovery.",
+  "mock_profile": {
+    "success_bias": 0.42,
+    "manifest_bias": 0.42,
+    "ndcg_bias": 0.38,
+    "probe_bias": 0.2,
+    "discovery_byte_bias": 32.0,
+    "fetch_byte_bias": 180.0,
+    "latency_bias": 18.0
+  }
+}

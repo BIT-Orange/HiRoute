@@ -6,6 +6,11 @@ import argparse
 import csv
 from collections import Counter
 from pathlib import Path
+import sys
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 from tools.workflow_support import load_json_yaml, repo_root
 

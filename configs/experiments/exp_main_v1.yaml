@@ -1,0 +1,65 @@
+{
+  "experiment_id": "exp_main_v1",
+  "dataset_id": "smartcity_v1",
+  "topology_id": "as3967_medium",
+  "scenario": "mock-hiroute-main",
+  "schemes": [
+    "exact",
+    "flood",
+    "flat_iroute",
+    "oracle",
+    "hiroute"
+  ],
+  "seeds": [
+    1,
+    2,
+    3,
+    4,
+    5
+  ],
+  "budgets": [
+    8,
+    16,
+    32,
+    64
+  ],
+  "metrics": [
+    "success_at_1",
+    "manifest_hit_at_5",
+    "ndcg_at_5",
+    "num_remote_probes",
+    "discovery_bytes",
+    "latency_ms"
+  ],
+  "outputs": [
+    "results/aggregate/main_success_overhead.csv",
+    "results/figures/fig_main_success_overhead.pdf"
+  ],
+  "promotion_rule": {
+    "min_runs_per_scheme": 5,
+    "max_missing_logs": 0,
+    "require_clean_git": true
+  },
+  "configs": {
+    "dataset": "configs/datasets/smartcity_v1.yaml",
+    "hierarchy": "configs/hierarchy/hiroute_hkm_v1.yaml",
+    "baselines": {
+      "exact": "configs/baselines/exact.yaml",
+      "flood": "configs/baselines/flood.yaml",
+      "flat_iroute": "configs/baselines/flat_iroute.yaml",
+      "oracle": "configs/baselines/oracle.yaml",
+      "hiroute": "configs/baselines/hiroute.yaml"
+    }
+  },
+  "inputs": {
+    "objects_csv": "data/processed/ndnsim/objects_master.csv",
+    "queries_csv": "data/processed/ndnsim/queries_master.csv",
+    "qrels_object_csv": "data/processed/eval/qrels_object.csv",
+    "qrels_domain_csv": "data/processed/eval/qrels_domain.csv",
+    "hslsa_csv": "data/processed/ndnsim/hslsa_export.csv",
+    "topology_mapping_csv": "data/processed/ndnsim/topology_mapping.csv"
+  },
+  "runner": {
+    "type": "mock"
+  }
+}

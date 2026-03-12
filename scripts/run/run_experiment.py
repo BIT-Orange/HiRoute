@@ -8,10 +8,14 @@ import json
 import random
 import shutil
 import subprocess
+import sys
 from collections import Counter
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+
+ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 from tools.make_run_id import make_run_id
 from tools.validate_run import validate_context
