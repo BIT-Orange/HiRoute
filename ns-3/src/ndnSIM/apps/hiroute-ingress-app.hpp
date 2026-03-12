@@ -125,6 +125,9 @@ private:
   double
   computeNdcgAtR(const std::string& queryId, const std::vector<HiRouteManifestEntry>& manifest) const;
 
+  bool
+  usesAdaptiveReliability() const;
+
 private:
   std::string m_queryCsvPath;
   std::string m_queryEmbeddingIndexCsvPath;

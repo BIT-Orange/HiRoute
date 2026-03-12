@@ -1,0 +1,13 @@
+{
+  "scheme_id": "flat_semantic_only",
+  "description": "Ablation using flat semantic ranking without predicate constraints.",
+  "mock_profile": {
+    "success_bias": 0.52,
+    "manifest_bias": 0.57,
+    "ndcg_bias": 0.5,
+    "probe_bias": 2.8,
+    "discovery_byte_bias": 300.0,
+    "fetch_byte_bias": 145.0,
+    "latency_bias": 80.0
+  }
+}

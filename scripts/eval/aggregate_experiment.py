@@ -31,6 +31,9 @@ SCRIPT_MAP = {
     "exp_failures_v1": [
         "scripts/eval/build_robustness_summary.py",
     ],
+    "exp_ablation_v1": [
+        "scripts/eval/build_ablation_summary.py",
+    ],
 }
 
 

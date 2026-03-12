@@ -308,7 +308,9 @@ RunHiRouteScenario(int argc, char* argv[], HiRouteScenarioMode mode)
       ingressType = "ns3::ndn::FlatSemanticIngressApp";
       strategyMode = "flat";
     }
-    else if (config.scheme == "hiroute" || config.scheme == "oracle") {
+    else if (config.scheme == "predicates_only" || config.scheme == "flat_semantic_only" ||
+             config.scheme == "predicates_plus_flat" || config.scheme == "full_hiroute" ||
+             config.scheme == "hiroute" || config.scheme == "oracle") {
       strategyMode = config.scheme;
     }
 

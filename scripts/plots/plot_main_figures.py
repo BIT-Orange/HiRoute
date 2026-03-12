@@ -32,6 +32,10 @@ COLORS = {
     "flat_iroute": "#e4a52b",
     "oracle": "#2f7d57",
     "hiroute": "#2451a4",
+    "predicates_only": "#b85c38",
+    "flat_semantic_only": "#8c6a16",
+    "predicates_plus_flat": "#4f7f2b",
+    "full_hiroute": "#2451a4",
 }
 
 
@@ -220,11 +224,31 @@ def plot_ablation() -> None:
 
     fig, ax1 = plt.subplots(figsize=(7.0, 4.2))
     schemes = frame["scheme"].tolist()
-    ax1.bar(schemes, frame["mean_success_at_1"], color=[_scheme_color(s) for s in schemes], alpha=0.8)
-    ax1.set_ylabel("ServiceSuccess@1")
+    x_positions = list(range(len(schemes)))
+    width = 0.35
+    ax1.bar(
+        [position - width / 2 for position in x_positions],
+        frame["mean_success_at_1"],
+        width=width,
+        color=[_scheme_color(s) for s in schemes],
+        alpha=0.85,
+        label="ServiceSuccess@1",
+    )
+    ax1.bar(
+        [position + width / 2 for position in x_positions],
+        frame["success_before_200ms_rate"],
+        width=width,
+        color="#d8d8d8",
+        alpha=0.95,
+        label="Success<=200ms",
+    )
+    ax1.set_ylabel("Rate")
     ax1.set_ylim(0, 1.0)
     ax1.set_title("Figure 10: Ablation Summary")
     ax1.grid(axis="y", alpha=0.25)
+    ax1.set_xticks(x_positions)
+    ax1.set_xticklabels(schemes, rotation=15, ha="right")
+    ax1.legend(fontsize=8, loc="upper left")
 
     ax2 = ax1.twinx()
     ax2.plot(schemes, frame["mean_discovery_bytes"], color="#111111", marker="o", linewidth=2)

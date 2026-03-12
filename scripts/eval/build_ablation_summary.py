@@ -19,6 +19,7 @@ OUTPUT_FIELDS = [
     "scheme",
     "topology_id",
     "mean_success_at_1",
+    "success_before_200ms_rate",
     "mean_latency_ms",
     "mean_discovery_bytes",
     "mean_manifest_hit_at_5",
@@ -44,12 +45,14 @@ def main() -> int:
     frame["discovery_bytes_total"] = frame["discovery_tx_bytes"] + frame["discovery_rx_bytes"]
     output_rows = []
     for (scheme, topology_id), group in frame.groupby(["registry_scheme", "registry_topology_id"], sort=False):
+        deadline_hits = ((group["success_at_1"] == 1) & (group["latency_ms"] <= 200)).mean()
         output_rows.append(
             {
                 "experiment_id": experiment["experiment_id"],
                 "scheme": scheme,
                 "topology_id": topology_id,
                 "mean_success_at_1": round(group["success_at_1"].mean(), 6),
+                "success_before_200ms_rate": round(float(deadline_hits), 6),
                 "mean_latency_ms": round(group["latency_ms"].mean(), 6),
                 "mean_discovery_bytes": round(group["discovery_bytes_total"].mean(), 6),
                 "mean_manifest_hit_at_5": round(group["manifest_hit_at_5"].mean(), 6),

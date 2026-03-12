@@ -1,0 +1,13 @@
+{
+  "scheme_id": "predicates_plus_flat",
+  "description": "Ablation using predicate decomposition plus flat semantic ranking.",
+  "mock_profile": {
+    "success_bias": 0.6,
+    "manifest_bias": 0.66,
+    "ndcg_bias": 0.59,
+    "probe_bias": 2.0,
+    "discovery_byte_bias": 260.0,
+    "fetch_byte_bias": 138.0,
+    "latency_bias": 70.0
+  }
+}

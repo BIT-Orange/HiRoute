@@ -1,0 +1,64 @@
+{
+  "experiment_id": "exp_ablation_v1",
+  "dataset_id": "smartcity_v1",
+  "topology_id": "rf_3967_exodus",
+  "scenario": "hiroute-main",
+  "schemes": [
+    "predicates_only",
+    "flat_semantic_only",
+    "predicates_plus_flat",
+    "full_hiroute"
+  ],
+  "seeds": [
+    1,
+    2,
+    3
+  ],
+  "metrics": [
+    "success_at_1",
+    "deadline_success_rate",
+    "num_remote_probes",
+    "discovery_bytes",
+    "latency_ms"
+  ],
+  "outputs": [
+    "results/aggregate/ablation_summary.csv",
+    "results/figures/fig_ablation.pdf"
+  ],
+  "promotion_rule": {
+    "min_runs_per_scheme": 3,
+    "max_missing_logs": 0,
+    "require_clean_git": true
+  },
+  "configs": {
+    "dataset": "configs/datasets/smartcity_v1.yaml",
+    "hierarchy": "configs/hierarchy/hiroute_hkm_v1.yaml",
+    "topology": "configs/topologies/rocketfuel_3967_exodus.yaml",
+    "baselines": {
+      "predicates_only": "configs/baselines/predicates_only.yaml",
+      "flat_semantic_only": "configs/baselines/flat_semantic_only.yaml",
+      "predicates_plus_flat": "configs/baselines/predicates_plus_flat.yaml",
+      "full_hiroute": "configs/baselines/full_hiroute.yaml"
+    }
+  },
+  "inputs": {
+    "objects_csv": "data/processed/ndnsim/objects_master.csv",
+    "queries_csv": "data/processed/ndnsim/queries_master.csv",
+    "query_embedding_index_csv": "data/processed/ndnsim/query_embedding_index.csv",
+    "qrels_object_csv": "data/processed/eval/qrels_object.csv",
+    "qrels_domain_csv": "data/processed/eval/qrels_domain.csv",
+    "hslsa_csv": "data/processed/ndnsim/hslsa_export.csv",
+    "controller_local_index_csv": "data/processed/ndnsim/controller_local_index.csv",
+    "topology_mapping_csv": "data/processed/ndnsim/topology_mapping_rf_3967_exodus.csv"
+  },
+  "runner": {
+    "type": "ndnsim",
+    "ns3_root": "ns-3",
+    "params": {
+      "stopSeconds": 16,
+      "manifestSize": 5,
+      "probeBudget": 5,
+      "queryLimitPerIngress": 0
+    }
+  }
+}

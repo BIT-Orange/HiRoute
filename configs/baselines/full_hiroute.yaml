@@ -1,0 +1,13 @@
+{
+  "scheme_id": "full_hiroute",
+  "description": "Full HiRoute design with predicate decomposition, hierarchy, and reliability-aware fallback.",
+  "mock_profile": {
+    "success_bias": 0.79,
+    "manifest_bias": 0.86,
+    "ndcg_bias": 0.78,
+    "probe_bias": 2.4,
+    "discovery_byte_bias": 320.0,
+    "fetch_byte_bias": 132.0,
+    "latency_bias": 58.0
+  }
+}

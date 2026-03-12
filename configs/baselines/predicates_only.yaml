@@ -1,0 +1,13 @@
+{
+  "scheme_id": "predicates_only",
+  "description": "Ablation using only predicate-based filtering over flat controller summaries.",
+  "mock_profile": {
+    "success_bias": 0.46,
+    "manifest_bias": 0.5,
+    "ndcg_bias": 0.42,
+    "probe_bias": 2.2,
+    "discovery_byte_bias": 240.0,
+    "fetch_byte_bias": 140.0,
+    "latency_bias": 74.0
+  }
+}

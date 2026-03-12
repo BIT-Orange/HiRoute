@@ -90,7 +90,8 @@ HiRouteIngressApp::GetTypeId()
                     StringValue(""),
                     MakeStringAccessor(&HiRouteIngressApp::m_ingressNodeFilter),
                     MakeStringChecker())
-      .AddAttribute("StrategyMode", "exact, flood, flat, hiroute, or oracle",
+      .AddAttribute("StrategyMode",
+                    "exact, flood, flat, hiroute, oracle, predicates_only, flat_semantic_only, predicates_plus_flat, or full_hiroute",
                     StringValue("hiroute"),
                     MakeStringAccessor(&HiRouteIngressApp::m_strategyMode), MakeStringChecker())
       .AddAttribute("OraclePrefix", "Discovery prefix used by the oracle baseline",
@@ -328,6 +329,37 @@ HiRouteIngressApp::buildProbePlan(const HiRouteQueryRecord& query)
                                      query.serviceConstraint, query.freshnessConstraint);
   plan.predicateCandidateCount = predicateMatches.size();
 
+  auto flatTargets = [&] (const std::vector<const HiRouteSummaryEntry*>& entries, bool scoreSemantics) {
+    std::map<std::string, ProbeTarget> bestByController;
+    for (const auto* entry : entries) {
+      if (entry == nullptr || entry->level != 0) {
+        continue;
+      }
+      const double semanticScore = entry->radius <= 0.0 ? 1.0 : 1.0 / (1.0 + entry->radius);
+      ProbeTarget target{entry->controllerPrefix, entry->cellId, scoreSemantics ? semanticScore : 1.0};
+      auto existing = bestByController.find(entry->controllerPrefix);
+      if (existing == bestByController.end() || target.score > existing->second.score) {
+        bestByController[entry->controllerPrefix] = target;
+      }
+    }
+
+    std::vector<ProbeTarget> targets;
+    targets.reserve(bestByController.size());
+    for (const auto& item : bestByController) {
+      targets.push_back(item.second);
+    }
+    std::sort(targets.begin(), targets.end(), [] (const ProbeTarget& left, const ProbeTarget& right) {
+      if (left.score == right.score) {
+        return left.controllerPrefix < right.controllerPrefix;
+      }
+      return left.score > right.score;
+    });
+    if (targets.size() > m_maxProbeBudget) {
+      targets.resize(m_maxProbeBudget);
+    }
+    return targets;
+  };
+
   if (m_strategyMode == "oracle") {
     plan.probes.push_back({m_oraclePrefix, "", 1.0});
   }
@@ -345,6 +377,21 @@ HiRouteIngressApp::buildProbePlan(const HiRouteQueryRecord& query)
       seen.insert(entry->controllerPrefix);
       plan.probes.push_back({entry->controllerPrefix, entry->cellId, 1.0});
     }
+  }
+  else if (m_strategyMode == "predicates_only") {
+    plan.probes = flatTargets(predicateMatches, false);
+  }
+  else if (m_strategyMode == "flat_semantic_only") {
+    std::vector<const HiRouteSummaryEntry*> allEntries;
+    allEntries.reserve(m_summaryStore.GetEntries().size());
+    for (const auto& entry : m_summaryStore.GetEntries()) {
+      allEntries.push_back(&entry);
+    }
+    plan.predicateCandidateCount = allEntries.size();
+    plan.probes = flatTargets(allEntries, true);
+  }
+  else if (m_strategyMode == "predicates_plus_flat") {
+    plan.probes = flatTargets(predicateMatches, true);
   }
   else {
     HiRouteDiscoveryRequest request;
@@ -489,7 +536,7 @@ HiRouteIngressApp::handleFetchReply(shared_ptr<const Data> data)
   const auto name = data->getName().toUri();
   auto objectIt = m_objectIdByCanonicalName.find(name);
   const auto objectId = objectIt == m_objectIdByCanonicalName.end() ? std::string() : objectIt->second;
-  if (m_strategyMode != "exact" && m_activeQuery.probeIndex < m_activeQuery.plan.probes.size()) {
+  if (usesAdaptiveReliability() && m_activeQuery.probeIndex < m_activeQuery.plan.probes.size()) {
     const auto& probe = m_activeQuery.plan.probes[m_activeQuery.probeIndex];
     m_reliabilityCache.ObserveResult(probe.controllerPrefix, probe.cellId, isRelevantObject(m_activeQuery.query.queryId, objectId));
   }
@@ -508,7 +555,7 @@ HiRouteIngressApp::finishActiveQuery(bool success, const std::string& fetchedObj
   if (m_activeQuery.failureType.empty()) {
     m_activeQuery.failureType = success ? "none" : "wrong_object";
   }
-  if (!success && !m_activeQuery.plan.probes.empty() && m_strategyMode != "exact") {
+  if (!success && !m_activeQuery.plan.probes.empty() && usesAdaptiveReliability()) {
     const auto& probe = m_activeQuery.plan.probes[m_activeQuery.probeIndex];
     m_reliabilityCache.MarkNegative(probe.controllerPrefix, probe.cellId,
                                     HiRoutePredicateHeader{m_activeQuery.query.zoneConstraint,
@@ -601,6 +648,12 @@ HiRouteIngressApp::computeNdcgAtR(const std::string& queryId,
             std::log2(static_cast<double>(index) + 2.0);
   }
   return idcg == 0.0 ? 0.0 : dcg / idcg;
+}
+
+bool
+HiRouteIngressApp::usesAdaptiveReliability() const
+{
+  return m_strategyMode == "hiroute" || m_strategyMode == "full_hiroute";
 }
 
 } // namespace hiroute
