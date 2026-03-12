@@ -1,0 +1,40 @@
+{
+  "run_id": "exp_main_v1__hiroute__smartcity_v1__seed1__20260312_221500",
+  "experiment_id": "exp_main_v1",
+  "scheme": "hiroute",
+  "dataset_id": "smartcity_v1",
+  "topology_id": "as3967_medium",
+  "scenario": "hiroute-main",
+  "seed": 1,
+  "code": {
+    "git_commit": "26a9e41",
+    "git_branch": "main",
+    "git_dirty": false
+  },
+  "configs": {
+    "experiment_config": "configs/experiments/exp_main_v1.yaml",
+    "baseline_config": "configs/baselines/hiroute.yaml",
+    "hierarchy_config": "configs/hierarchy/hiroute_hkm_v1.yaml",
+    "dataset_config": "configs/datasets/smartcity_v1.yaml"
+  },
+  "inputs": {
+    "objects_csv": "data/processed/ndnsim/objects_master.csv",
+    "queries_csv": "data/processed/ndnsim/queries_master.csv",
+    "qrels_object_csv": "data/processed/eval/qrels_object.csv",
+    "qrels_domain_csv": "data/processed/eval/qrels_domain.csv",
+    "hslsa_csv": "data/processed/ndnsim/hslsa_export.csv",
+    "topology_mapping_csv": "data/processed/ndnsim/topology_mapping.csv"
+  },
+  "outputs": {
+    "query_log": "query_log.csv",
+    "probe_log": "probe_log.csv",
+    "search_trace": "search_trace.csv",
+    "state_log": "state_log.csv",
+    "failure_event_log": "failure_event_log.csv"
+  },
+  "status": "completed",
+  "exit_code": 0,
+  "start_time": "2026-03-12T22:15:00Z",
+  "end_time": "2026-03-12T22:37:18Z",
+  "duration_sec": 1338
+}
