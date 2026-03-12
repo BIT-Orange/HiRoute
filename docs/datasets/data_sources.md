@@ -5,6 +5,20 @@
 - Smart Data Models domain repositories and shared schema definitions.
 - Rocketfuel IMW2002 `weights.intra` and `latencies.intra` files for ISP-style backbone topologies.
 
+## Smart Data Models source policy
+
+- `scripts/download/download_smartdatamodels.sh` clones:
+  - `smart-data-models/SmartCities`
+  - `smart-data-models/SmartEnvironment`
+  - `smart-data-models/data-models`
+  - `smart-data-models/dataModel.Environment`
+- The download step also initializes the official `SmartCities` and `SmartEnvironment` submodules so
+  that domain repositories such as Weather, Transportation, Parking, Streetlighting, and
+  Environment are available locally.
+- The tracked provenance artifact is `data/raw/smartdatamodels/raw_manifest.json`.
+- `scripts/preprocess/extract_sdm_subjects.py` builds the subject catalog.
+- `scripts/preprocess/build_service_ontology.py` maps the catalog into HiRoute service classes.
+
 ## Rocketfuel source policy
 
 - Primary source: `https://research.cs.washington.edu/networking/rocketfuel/maps/weights-dist.tar.gz`

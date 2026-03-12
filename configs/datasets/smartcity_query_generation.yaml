@@ -1,0 +1,64 @@
+seed: 43
+queries_total: 120
+families:
+  precise_template: 0.35
+  paraphrase: 0.4
+  ambiguous: 0.25
+splits:
+  dev: 0.2
+  test: 0.8
+max_domain_targets:
+  precise_template: 1
+  paraphrase: 4
+  ambiguous: 6
+max_object_targets:
+  precise_template: 3
+  paraphrase: 6
+  ambiguous: 8
+freshness_drop_probability:
+  paraphrase: 0.35
+  ambiguous: 0.8
+zone_drop_probability:
+  paraphrase: 0.2
+  ambiguous: 0.75
+service_synonyms:
+  temperature:
+    - temperature
+    - thermal reading
+    - ambient heat
+  humidity:
+    - humidity
+    - moisture level
+    - ambient humidity
+  rainfall:
+    - rainfall
+    - rain intensity
+    - precipitation level
+  air_quality_pm25:
+    - pm25
+    - particulate pollution
+    - fine dust level
+  air_quality_co2:
+    - co2
+    - carbon dioxide
+    - carbon level
+  traffic_speed:
+    - traffic speed
+    - vehicle flow speed
+    - road speed
+  parking_availability:
+    - parking availability
+    - open parking spots
+    - vacant parking
+  bus_arrival:
+    - bus arrival
+    - next bus
+    - bus waiting time
+  street_light_state:
+    - street light state
+    - lamp status
+    - lighting state
+  noise_level:
+    - noise level
+    - sound level
+    - ambient noise

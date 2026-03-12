@@ -1,0 +1,25 @@
+{
+  "downloaded_at": "2026-03-12T15:33:17Z",
+  "repositories": {
+    "SmartCities": {
+      "url": "https://github.com/smart-data-models/SmartCities.git",
+      "path": "data/raw/smartdatamodels/SmartCities",
+      "commit": "faad5af89abe86525e546e5900550763b7f61dc5"
+    },
+    "SmartEnvironment": {
+      "url": "https://github.com/smart-data-models/SmartEnvironment.git",
+      "path": "data/raw/smartdatamodels/SmartEnvironment",
+      "commit": "78aed051f4b77b61ed707c1e6a125084cc53374b"
+    },
+    "data-models": {
+      "url": "https://github.com/smart-data-models/data-models.git",
+      "path": "data/raw/smartdatamodels/data-models",
+      "commit": "e5a5d829924b829624c35a78c672311ba1d081b5"
+    },
+    "dataModel.Environment": {
+      "url": "https://github.com/smart-data-models/dataModel.Environment.git",
+      "path": "data/raw/smartdatamodels/dataModel.Environment",
+      "commit": "a363c2bccf5ea3118fb82526372573021ebe1256"
+    }
+  }
+}

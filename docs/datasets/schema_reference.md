@@ -35,6 +35,25 @@
 - `intended_domain_count`
 - `query_text_id`
 
+## `data/processed/ndnsim/object_embedding_index.csv`
+
+- `object_id`
+- `object_text_id`
+- `embedding_row`
+
+## `data/processed/ndnsim/query_embedding_index.csv`
+
+- `query_id`
+- `query_text_id`
+- `embedding_row`
+
+## `data/processed/ndnsim/summary_embedding_index.csv`
+
+- `centroid_row`
+- `domain_id`
+- `level`
+- `cell_id`
+
 ## `data/processed/eval/qrels_object.csv`
 
 - `query_id`
@@ -73,3 +92,18 @@
 - `zone_id`
 - `controller_prefix`
 - `producer_count`
+
+## `data/processed/ndnsim/controller_local_index.csv`
+
+- `domain_id`
+- `cell_id`
+- `object_id`
+- `local_rank_hint`
+
+## `data/processed/ndnsim/cell_membership.csv`
+
+- `object_id`
+- `domain_id`
+- `level0_cell`
+- `level1_cell`
+- `level2_cell`

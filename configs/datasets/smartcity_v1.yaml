@@ -1,50 +1,31 @@
-{
-  "dataset_id": "smartcity_v1",
-  "version": "2026-03-12",
-  "seed": 42,
-  "domains_total": 8,
-  "zones_per_domain": 4,
-  "objects_per_service_per_zone": 3,
-  "service_classes": [
-    "temperature",
-    "humidity",
-    "rainfall",
-    "air_quality_pm25",
-    "air_quality_co2",
-    "traffic_speed",
-    "parking_availability",
-    "bus_arrival",
-    "street_light_state",
-    "noise_level"
-  ],
-  "zone_types": [
-    "school_area",
-    "residential",
-    "downtown",
-    "industrial",
-    "transport_hub",
-    "stadium_area"
-  ],
-  "freshness_classes": {
-    "realtime": 5000,
-    "recent": 60000,
-    "archival": 600000
-  },
-  "naming_templates_per_domain": 4,
-  "query_generation": {
-    "seed": 43,
-    "queries_total": 80,
-    "template_ratio": 0.4,
-    "paraphrase_ratio": 0.4,
-    "ambiguous_ratio": 0.2,
-    "splits": {
-      "dev": 0.2,
-      "test": 0.8
-    }
-  },
-  "topology": {
-    "topology_id": "rf_3967_exodus",
-    "ingress_nodes": 8,
-    "relays_per_domain": 1
-  }
-}
+dataset_id: smartcity_v1
+version: "2026-03-12"
+seed: 42
+sources:
+  smartdatamodels_manifest: data/raw/smartdatamodels/raw_manifest.json
+rules:
+  service_ontology: configs/datasets/service_ontology_rules.yaml
+  object_generation: configs/datasets/smartcity_object_generation.yaml
+  query_generation: configs/datasets/smartcity_query_generation.yaml
+  hierarchy: configs/hierarchy/hiroute_hkm_v1.yaml
+topology:
+  topology_id: rf_3967_exodus
+  default_config: configs/topologies/rocketfuel_3967_exodus.yaml
+outputs:
+  subject_catalog_csv: data/interim/objects/sdm_subject_catalog.csv
+  service_ontology_csv: data/interim/objects/service_ontology.csv
+  objects_csv: data/processed/ndnsim/objects_master.csv
+  object_texts_jsonl: data/processed/ndnsim/object_texts.jsonl
+  queries_csv: data/processed/ndnsim/queries_master.csv
+  qrels_object_csv: data/processed/eval/qrels_object.csv
+  qrels_domain_csv: data/processed/eval/qrels_domain.csv
+  object_embeddings_npy: data/processed/ndnsim/object_embeddings.npy
+  query_embeddings_npy: data/processed/ndnsim/query_embeddings.npy
+  object_embedding_index_csv: data/processed/ndnsim/object_embedding_index.csv
+  query_embedding_index_csv: data/processed/ndnsim/query_embedding_index.csv
+  summary_embeddings_npy: data/processed/ndnsim/summary_embeddings.npy
+  summary_embedding_index_csv: data/processed/ndnsim/summary_embedding_index.csv
+  hslsa_csv: data/processed/ndnsim/hslsa_export.csv
+  controller_local_index_csv: data/processed/ndnsim/controller_local_index.csv
+  cell_membership_csv: data/processed/ndnsim/cell_membership.csv
+  topology_mapping_csv: data/processed/ndnsim/topology_mapping_rf_3967_exodus.csv

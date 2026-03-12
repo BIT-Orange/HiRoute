@@ -11,6 +11,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
+try:
+    import yaml
+except ImportError:  # pragma: no cover - available in the project venv
+    yaml = None
+
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 GENERATED_TRACKED_PREFIXES = (
@@ -52,12 +57,18 @@ def sanitize_token(value: str) -> str:
 
 
 def load_json_yaml(path: Path) -> Any:
-    return json.loads(path.read_text(encoding="utf-8"))
+    text = path.read_text(encoding="utf-8")
+    if yaml is not None:
+        return yaml.safe_load(text)
+    return json.loads(text)
 
 
 def dump_json_yaml(path: Path, payload: Any) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload, indent=2, sort_keys=False) + "\n", encoding="utf-8")
+    if yaml is not None:
+        path.write_text(yaml.safe_dump(payload, sort_keys=False), encoding="utf-8")
+    else:
+        path.write_text(json.dumps(payload, indent=2, sort_keys=False) + "\n", encoding="utf-8")
 
 
 def ensure_csv(path: Path, fieldnames: list[str]) -> None:

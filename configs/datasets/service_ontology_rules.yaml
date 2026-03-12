@@ -1,0 +1,93 @@
+service_classes:
+  temperature:
+    match_any:
+      - weatherobserved
+      - temperature
+    primary_property: temperature
+    unit: celsius
+    value_type: float
+    template_group: environment
+  humidity:
+    match_any:
+      - weatherobserved
+      - humidity
+    primary_property: relativeHumidity
+    unit: percent
+    value_type: float
+    template_group: environment
+  rainfall:
+    match_any:
+      - weatherobserved
+      - rainfall
+      - precipitation
+    primary_property: precipitation
+    unit: mm
+    value_type: float
+    template_group: environment
+  air_quality_pm25:
+    match_any:
+      - airquality
+      - pm25
+      - particulate
+    primary_property: pm2_5
+    unit: ugm3
+    value_type: float
+    template_group: environment
+  air_quality_co2:
+    match_any:
+      - airquality
+      - co2
+      - carbon
+    primary_property: co2
+    unit: ppm
+    value_type: float
+    template_group: environment
+  traffic_speed:
+    match_any:
+      - trafficflow
+      - traffic
+      - speed
+      - roadsegment
+    primary_property: averageVehicleSpeed
+    unit: kmh
+    value_type: float
+    template_group: mobility
+  parking_availability:
+    match_any:
+      - parking
+      - parkingspot
+      - parkinggroup
+      - parkingaccess
+    primary_property: availableSpotNumber
+    unit: spots
+    value_type: integer
+    template_group: mobility
+  bus_arrival:
+    match_any:
+      - bus
+      - arrival
+      - stop
+      - transit
+      - gtfs
+    primary_property: arrivalTime
+    unit: minutes
+    value_type: integer
+    template_group: mobility
+  street_light_state:
+    match_any:
+      - streetlight
+      - lighting
+      - lamp
+    primary_property: status
+    unit: state
+    value_type: enum
+    template_group: public_space
+  noise_level:
+    match_any:
+      - noise
+      - sound
+      - acoustic
+    primary_property: noiseLevel
+    unit: db
+    value_type: float
+    template_group: public_space
