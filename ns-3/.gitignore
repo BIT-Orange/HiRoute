@@ -88,6 +88,12 @@ src/ndnSIM/*
 !src/ndnSIM/examples/
 src/ndnSIM/examples/*
 !src/ndnSIM/examples/hiroute-*.cpp
+!src/ndnSIM/apps/
+src/ndnSIM/apps/*
+!src/ndnSIM/apps/hiroute-*
+!src/ndnSIM/model/
+src/ndnSIM/model/*
+!src/ndnSIM/model/hiroute-*
 configure
 toggle
 
