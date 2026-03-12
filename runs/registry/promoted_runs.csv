@@ -1,1 +1,26 @@
 run_id,experiment_id,scheme,dataset_id,topology_id,seed,git_commit,promotion_reason,promoted_at
+exp_main_v1__exact__smartcity_v1__seed1__20260312_122120,exp_main_v1,exact,smartcity_v1,as3967_medium,1,ef80809,meets min run count and artifact completeness,2026-03-12T12:22:19Z
+exp_main_v1__exact__smartcity_v1__seed2__20260312_122120,exp_main_v1,exact,smartcity_v1,as3967_medium,2,ef80809,meets min run count and artifact completeness,2026-03-12T12:22:19Z
+exp_main_v1__exact__smartcity_v1__seed3__20260312_122121,exp_main_v1,exact,smartcity_v1,as3967_medium,3,ef80809,meets min run count and artifact completeness,2026-03-12T12:22:19Z
+exp_main_v1__exact__smartcity_v1__seed4__20260312_122121,exp_main_v1,exact,smartcity_v1,as3967_medium,4,ef80809,meets min run count and artifact completeness,2026-03-12T12:22:19Z
+exp_main_v1__exact__smartcity_v1__seed5__20260312_122121,exp_main_v1,exact,smartcity_v1,as3967_medium,5,ef80809,meets min run count and artifact completeness,2026-03-12T12:22:19Z
+exp_main_v1__flood__smartcity_v1__seed1__20260312_122121,exp_main_v1,flood,smartcity_v1,as3967_medium,1,ef80809,meets min run count and artifact completeness,2026-03-12T12:22:19Z
+exp_main_v1__flood__smartcity_v1__seed2__20260312_122121,exp_main_v1,flood,smartcity_v1,as3967_medium,2,ef80809,meets min run count and artifact completeness,2026-03-12T12:22:19Z
+exp_main_v1__flood__smartcity_v1__seed3__20260312_122122,exp_main_v1,flood,smartcity_v1,as3967_medium,3,ef80809,meets min run count and artifact completeness,2026-03-12T12:22:19Z
+exp_main_v1__flood__smartcity_v1__seed4__20260312_122122,exp_main_v1,flood,smartcity_v1,as3967_medium,4,ef80809,meets min run count and artifact completeness,2026-03-12T12:22:19Z
+exp_main_v1__flood__smartcity_v1__seed5__20260312_122122,exp_main_v1,flood,smartcity_v1,as3967_medium,5,ef80809,meets min run count and artifact completeness,2026-03-12T12:22:19Z
+exp_main_v1__flat_iroute__smartcity_v1__seed1__20260312_122122,exp_main_v1,flat_iroute,smartcity_v1,as3967_medium,1,ef80809,meets min run count and artifact completeness,2026-03-12T12:22:19Z
+exp_main_v1__flat_iroute__smartcity_v1__seed2__20260312_122122,exp_main_v1,flat_iroute,smartcity_v1,as3967_medium,2,ef80809,meets min run count and artifact completeness,2026-03-12T12:22:19Z
+exp_main_v1__flat_iroute__smartcity_v1__seed3__20260312_122123,exp_main_v1,flat_iroute,smartcity_v1,as3967_medium,3,ef80809,meets min run count and artifact completeness,2026-03-12T12:22:19Z
+exp_main_v1__flat_iroute__smartcity_v1__seed4__20260312_122123,exp_main_v1,flat_iroute,smartcity_v1,as3967_medium,4,ef80809,meets min run count and artifact completeness,2026-03-12T12:22:19Z
+exp_main_v1__flat_iroute__smartcity_v1__seed5__20260312_122123,exp_main_v1,flat_iroute,smartcity_v1,as3967_medium,5,ef80809,meets min run count and artifact completeness,2026-03-12T12:22:19Z
+exp_main_v1__oracle__smartcity_v1__seed1__20260312_122123,exp_main_v1,oracle,smartcity_v1,as3967_medium,1,ef80809,meets min run count and artifact completeness,2026-03-12T12:22:19Z
+exp_main_v1__oracle__smartcity_v1__seed2__20260312_122123,exp_main_v1,oracle,smartcity_v1,as3967_medium,2,ef80809,meets min run count and artifact completeness,2026-03-12T12:22:19Z
+exp_main_v1__oracle__smartcity_v1__seed3__20260312_122124,exp_main_v1,oracle,smartcity_v1,as3967_medium,3,ef80809,meets min run count and artifact completeness,2026-03-12T12:22:19Z
+exp_main_v1__oracle__smartcity_v1__seed4__20260312_122124,exp_main_v1,oracle,smartcity_v1,as3967_medium,4,ef80809,meets min run count and artifact completeness,2026-03-12T12:22:19Z
+exp_main_v1__oracle__smartcity_v1__seed5__20260312_122124,exp_main_v1,oracle,smartcity_v1,as3967_medium,5,ef80809,meets min run count and artifact completeness,2026-03-12T12:22:19Z
+exp_main_v1__hiroute__smartcity_v1__seed1__20260312_122124,exp_main_v1,hiroute,smartcity_v1,as3967_medium,1,ef80809,meets min run count and artifact completeness,2026-03-12T12:22:19Z
+exp_main_v1__hiroute__smartcity_v1__seed2__20260312_122124,exp_main_v1,hiroute,smartcity_v1,as3967_medium,2,ef80809,meets min run count and artifact completeness,2026-03-12T12:22:19Z
+exp_main_v1__hiroute__smartcity_v1__seed3__20260312_122124,exp_main_v1,hiroute,smartcity_v1,as3967_medium,3,ef80809,meets min run count and artifact completeness,2026-03-12T12:22:19Z
+exp_main_v1__hiroute__smartcity_v1__seed4__20260312_122125,exp_main_v1,hiroute,smartcity_v1,as3967_medium,4,ef80809,meets min run count and artifact completeness,2026-03-12T12:22:19Z
+exp_main_v1__hiroute__smartcity_v1__seed5__20260312_122125,exp_main_v1,hiroute,smartcity_v1,as3967_medium,5,ef80809,meets min run count and artifact completeness,2026-03-12T12:22:19Z
