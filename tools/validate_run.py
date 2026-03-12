@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from tools.workflow_support import git_dirty, load_json_yaml, repo_root
+from tools.workflow_support import GENERATED_TRACKED_PREFIXES, git_dirty, load_json_yaml, repo_root
 
 
 def _resolve(path_str: str) -> Path:
@@ -63,7 +63,7 @@ def validate_context(experiment_path: Path, scheme: str, seed: int, mode: str) -
         if not _resolve(input_path).exists():
             errors.append(f"missing input file: {input_path}")
 
-    if mode == "official" and git_dirty():
+    if mode == "official" and git_dirty(GENERATED_TRACKED_PREFIXES):
         errors.append("official runs require a clean git worktree")
 
     return experiment, errors

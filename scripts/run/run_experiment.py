@@ -20,6 +20,7 @@ if str(ROOT) not in sys.path:
 from tools.make_run_id import make_run_id
 from tools.validate_run import validate_context
 from tools.workflow_support import (
+    GENERATED_TRACKED_PREFIXES,
     append_csv,
     dump_json_yaml,
     env_snapshot_text,
@@ -485,7 +486,7 @@ def main() -> int:
         "code": {
             "git_commit": git_commit,
             "git_branch": git_branch(),
-            "git_dirty": git_dirty(),
+            "git_dirty": git_dirty(GENERATED_TRACKED_PREFIXES),
         },
         "configs": {
             "experiment_config": str(Path(experiment["_experiment_path"]).relative_to(repo_root())),

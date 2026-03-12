@@ -13,6 +13,12 @@ from typing import Any, Iterable
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+GENERATED_TRACKED_PREFIXES = (
+    "runs/registry/",
+    "results/aggregate/",
+    "results/tables/",
+    "results/figures/",
+)
 
 
 def repo_root() -> Path:
@@ -107,11 +113,18 @@ def git_branch() -> str:
     return result.stdout.strip()
 
 
-def git_dirty() -> bool:
+def git_dirty(ignored_prefixes: tuple[str, ...] = ()) -> bool:
     result = git(["status", "--porcelain"])
     if result.returncode != 0:
         return True
-    return bool(result.stdout.strip())
+    for line in result.stdout.splitlines():
+        path = line[3:]
+        if " -> " in path:
+            path = path.split(" -> ", 1)[1]
+        if any(path.startswith(prefix) for prefix in ignored_prefixes):
+            continue
+        return True
+    return False
 
 
 def git_snapshot_text() -> str:
