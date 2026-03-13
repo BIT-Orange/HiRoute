@@ -486,18 +486,27 @@ RunHiRouteScenario(int argc, char* argv[], HiRouteScenarioMode mode)
   std::map<std::string, uint32_t> summariesByDomain;
   std::map<std::string, uint32_t> summaryBytesByDomain;
   std::set<std::string> domainIds;
-  for (const auto& row : topologyRows) {
-    if (!GetFieldOrEmpty(row, "domain_id").empty()) {
-      domainIds.insert(GetFieldOrEmpty(row, "domain_id"));
-    }
-  }
   for (const auto& row : objectRows) {
-    ++objectsByDomain[GetFieldOrEmpty(row, "domain_id")];
+    const auto domainId = GetFieldOrEmpty(row, "domain_id");
+    ++objectsByDomain[domainId];
+    if (!domainId.empty()) {
+      domainIds.insert(domainId);
+    }
   }
   for (const auto& row : summaryRows) {
     const auto domainId = GetFieldOrEmpty(row, "domain_id");
     ++summariesByDomain[domainId];
     summaryBytesByDomain[domainId] += estimateSummaryBytes(row);
+    if (!domainId.empty()) {
+      domainIds.insert(domainId);
+    }
+  }
+  if (domainIds.empty()) {
+    for (const auto& row : topologyRows) {
+      if (!GetFieldOrEmpty(row, "domain_id").empty()) {
+        domainIds.insert(GetFieldOrEmpty(row, "domain_id"));
+      }
+    }
   }
 
   const std::vector<std::string> orderedDomains(domainIds.begin(), domainIds.end());
@@ -529,6 +538,8 @@ RunHiRouteScenario(int argc, char* argv[], HiRouteScenarioMode mode)
     }
 
     for (double scale : objectScales) {
+      const auto scaledMeanObjects = orderedDomains.empty() ? 0u : static_cast<uint32_t>(std::llround(
+        (static_cast<double>(objectRows.size()) / orderedDomains.size()) * scale));
       for (const auto& domainId : orderedDomains) {
         const auto availableSummaries = summariesByDomain[domainId];
         const auto availableBytes = summaryBytesByDomain[domainId];
@@ -540,7 +551,7 @@ RunHiRouteScenario(int argc, char* argv[], HiRouteScenarioMode mode)
           std::llround(objectsByDomain[domainId] * scale)));
         appendStateRow(domainId, exportedSummaries, exportedBytes, exportedSummaries,
                        scaledObjects, static_cast<uint32_t>(orderedDomains.size()),
-                       "objects_per_domain", scaledObjects);
+                       "objects_per_domain", std::max(1u, scaledMeanObjects));
       }
     }
 
