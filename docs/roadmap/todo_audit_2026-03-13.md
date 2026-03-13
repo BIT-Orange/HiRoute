@@ -7,6 +7,7 @@ This audit cross-checks `Todo.md` and `paper/main.tex` against the current HiRou
 - Robustness injection now targets the dominant query domain instead of the first controller or the first topology link.
 - Link-failure mode now disables controller-adjacent links for the selected target domain, which is materially closer to the paper's intended physical-failure stress.
 - Staleness mode now records and targets the same dominant domain so Figure 9 reflects a deliberate semantic-drift stress point.
+- The robustness experiments now produce non-trivial degradation curves, which means Figure 9 is testing a real failure path instead of a nearly no-op scenario.
 
 ## Still Misaligned With `paper/main.tex`
 
@@ -33,6 +34,11 @@ This audit cross-checks `Todo.md` and `paper/main.tex` against the current HiRou
 - Current Figure 6 mostly reflects predicate-screening shrinkage.
 - The paper's intended interpretation also needs frontier contraction after hierarchical refinement.
 - Impact: the figure does not yet fully separate "predicate elimination" from "semantic refinement" benefits.
+
+### 5. Robustness is now informative, but not yet good
+
+- After the stronger injections, `hiroute` no longer dominates Figure 9.
+- Impact: this is no longer a measurement bug; it is an implementation weakness that now deserves protocol-level work rather than scenario-level fixes.
 
 ## Next Implementation Priority
 
