@@ -1,5 +1,5 @@
 seed: 42
-domains_total: 8
+domains_total: 16
 zones_per_domain: 4
 base_objects_per_service_per_zone: 2
 max_objects_per_service_per_zone: 5

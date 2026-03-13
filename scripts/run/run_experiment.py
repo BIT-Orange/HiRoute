@@ -9,7 +9,7 @@ import random
 import shutil
 import subprocess
 import sys
-from collections import Counter
+from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Any
 
@@ -544,29 +544,109 @@ def _normalize_ndnsim_outputs(
     _normalize_ndnsim_search_trace(run_dir, scheme)
 
 
-def _prepare_runtime_query_csv(experiment: dict[str, Any], run_dir: Path) -> Path:
-    query_csv_path = _resolve(experiment["inputs"]["queries_csv"])
-    topology_mapping_path = _resolve(experiment["inputs"]["topology_mapping_csv"])
-    query_rows = read_csv(query_csv_path)
-    topology_rows = read_csv(topology_mapping_path)
-    ingress_nodes = [row["node_id"] for row in topology_rows if row["role"] == "ingress"]
-    if not query_rows or not ingress_nodes:
-        return query_csv_path
+def _stable_query_slot(query_id: str, modulo: int) -> int:
+    if modulo <= 0:
+        return 0
+    digits = "".join(ch for ch in query_id if ch.isdigit())
+    if digits:
+        return (int(digits) - 1) % modulo
+    return sum(ord(ch) for ch in query_id) % modulo
 
-    query_ingress_nodes = {row["ingress_node_id"] for row in query_rows}
-    if query_ingress_nodes.issubset(set(ingress_nodes)):
-        return query_csv_path
 
-    remapped_rows = []
-    for index, row in enumerate(query_rows):
-        remapped = dict(row)
-        remapped["ingress_node_id"] = ingress_nodes[index % len(ingress_nodes)]
-        remapped_rows.append(remapped)
+def _prepare_runtime_inputs(experiment: dict[str, Any], run_dir: Path) -> dict[str, Path]:
+    inputs = experiment["inputs"]
+    topology_rows = read_csv(_resolve(inputs["topology_mapping_csv"]))
+    active_domains = sorted({row["domain_id"] for row in topology_rows if row["domain_id"]})
+    active_domain_set = set(active_domains)
+    ingress_nodes = sorted(row["node_id"] for row in topology_rows if row["role"] == "ingress")
 
-    runtime_query_csv = run_dir / "queries_runtime.csv"
-    write_csv(runtime_query_csv, list(query_rows[0].keys()), remapped_rows)
-    experiment["_runtime_query_csv"] = str(runtime_query_csv.relative_to(repo_root()))
-    return runtime_query_csv
+    runtime_paths: dict[str, Path] = {}
+
+    def _write_runtime_copy(input_key: str, rows: list[dict[str, Any]], fieldnames: list[str] | None = None) -> Path:
+        source_path = _resolve(inputs[input_key])
+        runtime_path = run_dir / f"{source_path.stem}_runtime{source_path.suffix}"
+        actual_fieldnames = fieldnames or (list(rows[0].keys()) if rows else [])
+        write_csv(runtime_path, actual_fieldnames, rows)
+        runtime_paths[input_key] = runtime_path
+        experiment[f"_runtime_{input_key}"] = str(runtime_path.relative_to(repo_root()))
+        return runtime_path
+
+    object_rows = read_csv(_resolve(inputs["objects_csv"]))
+    object_rows = [row for row in object_rows if row["domain_id"] in active_domain_set]
+    active_object_ids = {row["object_id"] for row in object_rows}
+    if object_rows:
+        _write_runtime_copy("objects_csv", object_rows)
+
+    summary_rows = read_csv(_resolve(inputs["hslsa_csv"]))
+    summary_rows = [row for row in summary_rows if row["domain_id"] in active_domain_set]
+    if summary_rows:
+        _write_runtime_copy("hslsa_csv", summary_rows)
+
+    controller_rows = read_csv(_resolve(inputs["controller_local_index_csv"]))
+    controller_rows = [
+        row
+        for row in controller_rows
+        if row["domain_id"] in active_domain_set and row["object_id"] in active_object_ids
+    ]
+    if controller_rows:
+        _write_runtime_copy("controller_local_index_csv", controller_rows)
+
+    qrels_domain_rows = read_csv(_resolve(inputs["qrels_domain_csv"]))
+    relevant_domains_by_query: dict[str, set[str]] = defaultdict(set)
+    for row in qrels_domain_rows:
+        if row["is_relevant_domain"] == "1":
+            relevant_domains_by_query[row["query_id"]].add(row["domain_id"])
+
+    eligible_queries = {
+        query_id
+        for query_id, relevant_domains in relevant_domains_by_query.items()
+        if relevant_domains and relevant_domains.issubset(active_domain_set)
+    }
+    filtered_qrels_domain = [
+        row
+        for row in qrels_domain_rows
+        if row["query_id"] in eligible_queries and row["domain_id"] in active_domain_set
+    ]
+    if filtered_qrels_domain:
+        _write_runtime_copy("qrels_domain_csv", filtered_qrels_domain)
+
+    qrels_object_rows = read_csv(_resolve(inputs["qrels_object_csv"]))
+    filtered_qrels_object = [
+        row
+        for row in qrels_object_rows
+        if row["query_id"] in eligible_queries and row["object_id"] in active_object_ids
+    ]
+    if filtered_qrels_object:
+        _write_runtime_copy("qrels_object_csv", filtered_qrels_object)
+
+    surviving_queries = {row["query_id"] for row in filtered_qrels_object}
+    query_rows = read_csv(_resolve(inputs["queries_csv"]))
+    filtered_queries = [row for row in query_rows if row["query_id"] in surviving_queries]
+    if query_rows and not filtered_queries:
+        raise RuntimeError(
+            f"no eligible queries remain after slicing {experiment['experiment_id']} "
+            f"to active domains {','.join(active_domains)}"
+        )
+    if filtered_queries and ingress_nodes:
+        remapped_queries = []
+        ingress_set = set(ingress_nodes)
+        for row in filtered_queries:
+            remapped = dict(row)
+            if remapped["ingress_node_id"] not in ingress_set:
+                remapped["ingress_node_id"] = ingress_nodes[_stable_query_slot(remapped["query_id"], len(ingress_nodes))]
+            remapped_queries.append(remapped)
+        filtered_queries = remapped_queries
+    if filtered_queries:
+        _write_runtime_copy("queries_csv", filtered_queries)
+
+    query_embedding_rows = read_csv(_resolve(inputs["query_embedding_index_csv"]))
+    filtered_query_embeddings = [
+        row for row in query_embedding_rows if row["query_id"] in {row["query_id"] for row in filtered_queries}
+    ]
+    if filtered_query_embeddings:
+        _write_runtime_copy("query_embedding_index_csv", filtered_query_embeddings)
+
+    return runtime_paths
 
 
 def _run_external(command: list[str], cwd: Path) -> tuple[int, str, str]:
@@ -591,17 +671,17 @@ def _ndnsim_command(
     topology_config = load_json_yaml(_resolve(experiment["configs"]["topology"]))
     params = runner.get("params", {})
 
-    runtime_query_csv = _prepare_runtime_query_csv(experiment, run_dir)
+    runtime_paths = _prepare_runtime_inputs(experiment, run_dir)
     command = [
         str(binary),
         f"--topology={_resolve(topology_config['annotated_topology_path'])}",
         f"--topologyMapping={_resolve(experiment['inputs']['topology_mapping_csv'])}",
-        f"--objectsCsv={_resolve(experiment['inputs']['objects_csv'])}",
-        f"--queryCsv={runtime_query_csv}",
-        f"--queryEmbeddingIndexCsv={_resolve(experiment['inputs']['query_embedding_index_csv'])}",
-        f"--qrelsObjectCsv={_resolve(experiment['inputs']['qrels_object_csv'])}",
-        f"--summaryCsv={_resolve(experiment['inputs']['hslsa_csv'])}",
-        f"--controllerLocalIndexCsv={_resolve(experiment['inputs']['controller_local_index_csv'])}",
+        f"--objectsCsv={runtime_paths.get('objects_csv', _resolve(experiment['inputs']['objects_csv']))}",
+        f"--queryCsv={runtime_paths.get('queries_csv', _resolve(experiment['inputs']['queries_csv']))}",
+        f"--queryEmbeddingIndexCsv={runtime_paths.get('query_embedding_index_csv', _resolve(experiment['inputs']['query_embedding_index_csv']))}",
+        f"--qrelsObjectCsv={runtime_paths.get('qrels_object_csv', _resolve(experiment['inputs']['qrels_object_csv']))}",
+        f"--summaryCsv={runtime_paths.get('hslsa_csv', _resolve(experiment['inputs']['hslsa_csv']))}",
+        f"--controllerLocalIndexCsv={runtime_paths.get('controller_local_index_csv', _resolve(experiment['inputs']['controller_local_index_csv']))}",
         f"--runDir={run_dir}",
         f"--topologyId={experiment['topology_id']}",
         f"--scheme={scheme}",
@@ -781,8 +861,18 @@ def main() -> int:
         "end_time": isoformat_z(end_time),
         "duration_sec": duration_sec,
     }
-    if experiment.get("_runtime_query_csv"):
-        manifest["inputs"]["queries_csv_runtime"] = experiment["_runtime_query_csv"]
+    for input_key in [
+        "objects_csv",
+        "queries_csv",
+        "query_embedding_index_csv",
+        "qrels_object_csv",
+        "qrels_domain_csv",
+        "hslsa_csv",
+        "controller_local_index_csv",
+    ]:
+        runtime_key = f"_runtime_{input_key}"
+        if experiment.get(runtime_key):
+            manifest["inputs"][f"{input_key}_runtime"] = experiment[runtime_key]
     if experiment.get("_runner_variant"):
         manifest["scenario_variant"] = experiment["_runner_variant"]
     dump_json_yaml(run_dir / "manifest.yaml", manifest)

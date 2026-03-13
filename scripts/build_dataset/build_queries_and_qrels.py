@@ -94,6 +94,8 @@ def main() -> int:
     by_service: dict[str, list[dict[str, str]]] = defaultdict(list)
     for obj in objects:
         by_service[obj["service_class"]].append(obj)
+    anchor_pool = list(objects)
+    rng.shuffle(anchor_pool)
 
     families = _family_counts(int(rules["queries_total"]), rules["families"])
     rng.shuffle(families)
@@ -103,7 +105,7 @@ def main() -> int:
     qrels_domain = []
 
     for index, family in enumerate(families):
-        anchor = objects[index % len(objects)]
+        anchor = anchor_pool[index % len(anchor_pool)]
         service_phrase = rng.choice(service_synonyms[anchor["service_class"]])
         drop_zone = rng.random() < float(rules["zone_drop_probability"].get(family, 0.0))
         drop_freshness = rng.random() < float(rules["freshness_drop_probability"].get(family, 0.0))
