@@ -2,7 +2,8 @@
 
 ## Text
 
-HiRoute improves object-level service success over `flat_iroute` and `flood` on `rf_3967_exodus`,
+HiRoute improves object-level service success over the decentralized semantic baselines
+`flat_iroute` and `flood` on `rf_3967_exodus`, while remaining below the centralized oracle and
 trading higher discovery overhead for fewer wrong-object failures.
 
 ## Supported by

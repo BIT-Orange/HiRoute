@@ -2,7 +2,9 @@
 
 ## Text
 
-HiRoute's primary gain comes from cutting wrong-object failures, while deadline-sensitive usefulness depends on how much latency budget the application allows.
+HiRoute's primary gain comes from cutting wrong-object failures relative to the decentralized
+baselines, while the centralized oracle remains the deadline-sensitive upper reference and
+deadline-sensitive usefulness still depends on how much latency budget the application allows.
 
 ## Supported by
 

@@ -14,9 +14,11 @@
 
 ## Observations
 
-- `hiroute` reduces `wrong_object` failures to `0.008333`, compared with `0.2` for both `flood` and `flat_iroute`.
-- `oracle` splits its misses between `wrong_domain` (`0.225`) and `wrong_object` (`0.2`), while `hiroute`, `flood`, and `flat_iroute` only expose `wrong_object` in the promoted main experiment.
+- `oracle` now has the expected all-success profile, which confirms that the centralized upper reference is aligned with `qrels_object.csv`.
+- `hiroute` reduces `wrong_object` failures to `0.04918`, compared with `0.393443` for both `flood` and `flat_iroute`.
+- The current main workload also surfaces a smaller `predicate_miss` slice (`0.04918`) for `hiroute`, `flood`, and `flat_iroute`, which is useful because it separates predicate-stage misses from object-resolution mistakes.
 
 ## Caveats
 
+- `exact` is intentionally omitted from the plotted semantic-discovery comparison even though the aggregate retains it for reference bookkeeping.
 - This figure is sourced from the current promoted ndnSIM main-experiment runs only.

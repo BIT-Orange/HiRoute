@@ -26,3 +26,8 @@
 - Tightened Figure 8 to a state-only scenario and reran its official inputs so the large Rocketfuel topology now reaches `16` active domains and `256` exported summaries under the fixed budget.
 - Repaired the HiRoute reliability path by fixing the domain-id/cache mismatch, adding domain-aware negative suppression, and replanning after failed probes.
 - Reran the official Figure 9 inputs after the fallback repair; `hiroute` now recovers to `0.868852` under staleness, `0.803279` under link failure, and `0.688525` under domain failure.
+- Corrected the `oracle` baseline from a mislabeled domain-local controller into a true centralized semantic directory keyed by `qrels_object.csv`.
+- Removed `exact` from the plotted semantic-discovery comparisons for Figure 4, Figure 5, and Figure 7, keeping it only as a syntactic reference outside the main comparison set.
+- Reran all `exp_main_v1` schemes on commit `922a148`, which equalized the current promoted main-experiment inputs at `305` queries and restored the expected ordering `oracle > hiroute > flood/flat_iroute`.
+- Reworked Figure 6 into a two-panel mechanism figure: HiRoute-only staged contraction on the left, cross-method probes/query on the right.
+- Reworked Figure 7 into a two-panel deadline figure: success within deadline on the left, median successful latency on the right.

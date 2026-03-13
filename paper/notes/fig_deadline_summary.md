@@ -14,9 +14,11 @@
 
 ## Observations
 
-- At `200 ms`, `flat_iroute` still remains slightly ahead on deadline satisfaction (`0.683333`) while `hiroute` reaches `0.675`.
-- At `500 ms`, `hiroute` clearly overtakes the semantic baselines at `0.891667`, compared with `0.8` for `flat_iroute` and `0.75` for `flood`.
+- `oracle` now dominates the comparable methods on deadline-sensitive usefulness, reaching `0.95082` success within `200 ms` and `1.0` within `500 ms`.
+- `hiroute` still improves eventual useful retrieval over the decentralized baselines, reaching `0.754098` success within `500 ms` versus `0.557377` for both `flat_iroute` and `flood`.
+- The right-hand latency panel now reports median latency among successful queries instead of mixing incomparable curves and the exact-name reference in one panel.
 
 ## Caveats
 
+- `exact` is intentionally left out of the plotted semantic-discovery comparison and should only be referenced as a syntactic lower-bound appendix point.
 - The deadline story is deadline-dependent: `hiroute` wins on eventual object resolution, but not on the tightest latency thresholds.

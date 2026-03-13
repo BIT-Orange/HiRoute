@@ -11,16 +11,15 @@ Compare end-to-end service success against discovery overhead on `rf_3967_exodus
 ## Promoted runs
 
 - Current promoted rows are the latest `exp_main_v1` entries in `runs/registry/promoted_runs.csv`.
-- Latest `hiroute` runs: `exp_main_v1__hiroute__smartcity_v1__rf_3967_exodus__seed1__20260313_062613`, `exp_main_v1__hiroute__smartcity_v1__rf_3967_exodus__seed2__20260313_062657`, `exp_main_v1__hiroute__smartcity_v1__rf_3967_exodus__seed3__20260313_062741`, `exp_main_v1__hiroute__smartcity_v1__rf_3967_exodus__seed4__20260313_062825`, `exp_main_v1__hiroute__smartcity_v1__rf_3967_exodus__seed5__20260313_062910`
-- Full per-scheme run lists are captured in the `source_run_ids` column of `results/aggregate/main_success_overhead.csv`.
+- The current `source_run_ids` in `results/aggregate/main_success_overhead.csv` point to the `20260313_111001` to `20260313_113901` reruns on commit `922a148`.
 
 ## Observations
 
-- `hiroute` now reaches `0.991667` object-level success on `rf_3967_exodus`, substantially above `0.8` for both `flood` and `flat_iroute`.
-- The gain still comes with higher discovery cost: `1.475` remote probes/query and `183.275` discovery bytes/query for `hiroute`, compared with `1.225` / `106.841667` for `flood` and `1.008333` / `104.725` for `flat_iroute`.
-- `exact` remains the name-known lower bound at `1.0` success and zero discovery bytes; `oracle` remains below `hiroute` at `0.575` success because it skips hierarchical constraint-guided refinement.
+- `oracle` now behaves as the intended centralized semantic directory upper reference: `1.0` `ServiceSuccess@1` with `81.47541` discovery bytes/query.
+- Among comparable distributed discovery schemes, `hiroute` reaches `0.901639` `ServiceSuccess@1`, substantially above `0.557377` for both `flood` and `flat_iroute`.
+- The gain comes with higher discovery cost: `1.770492` remote probes/query and `211.442623` discovery bytes/query for `hiroute`, compared with `0.967213` / `78.163934` for `flood` and `0.967213` / `95.57377` for `flat_iroute`.
 
 ## Caveats
 
+- `exact` is intentionally excluded from the main semantic-discovery plot; it remains a syntactic known-name reference rather than a comparable semantic baseline.
 - These values come from promoted ndnSIM runs on `rf_3967_exodus`, not the earlier mock pipeline.
-- The main tradeoff is success vs discovery overhead, not lower latency than all baselines.
