@@ -62,7 +62,7 @@
       "stopSeconds": 16,
       "manifestSize": 5,
       "probeBudget": 5,
-      "queryLimitPerIngress": 4,
+      "queryLimitPerIngress": 1,
       "exportBudget": 16,
       "objectScales": "0.25,0.5,0.75,1.0"
     }
