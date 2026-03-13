@@ -57,12 +57,14 @@ def registry_rows(experiment: dict[str, Any] | str, source: str = "promoted") ->
         expected_dataset_id = str(experiment.get("dataset_id", ""))
         expected_topologies = expected_topology_ids(experiment)
         expected_seeds = {str(seed) for seed in experiment.get("seeds", [])}
+        expected_schemes = {str(scheme) for scheme in experiment.get("schemes", [])}
         allowed_scenarios = expected_scenarios(experiment)
     else:
         experiment_id = experiment
         expected_dataset_id = ""
         expected_topologies = set()
         expected_seeds = set()
+        expected_schemes = set()
         allowed_scenarios = set()
 
     run_index = _runs_index()
@@ -75,6 +77,8 @@ def registry_rows(experiment: dict[str, Any] | str, source: str = "promoted") ->
         if expected_topologies and row["topology_id"] not in expected_topologies:
             continue
         if expected_seeds and row["seed"] not in expected_seeds:
+            continue
+        if expected_schemes and row["scheme"] not in expected_schemes:
             continue
         enriched = dict(row)
         if "run_dir" not in enriched or not enriched["run_dir"]:

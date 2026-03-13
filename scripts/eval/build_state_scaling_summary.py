@@ -100,9 +100,9 @@ def main() -> int:
     if per_run_query is not None:
         per_run_state = per_run_state.merge(per_run_query, on="run_id", how="left")
     else:
-        per_run_state["mean_success_at_1"] = 0.0
-        per_run_state["mean_latency_ms"] = 0.0
-        per_run_state["mean_discovery_bytes"] = 0.0
+        per_run_state["mean_success_at_1"] = float("nan")
+        per_run_state["mean_latency_ms"] = float("nan")
+        per_run_state["mean_discovery_bytes"] = float("nan")
 
     output_rows = []
     for (scheme, topology_id, scaling_axis), group in per_run_state.groupby(

@@ -75,6 +75,7 @@ def main() -> int:
     expected_dataset_id = str(experiment.get("dataset_id", ""))
     expected_topologies = expected_topology_ids(experiment)
     expected_seeds = {str(seed) for seed in experiment.get("seeds", [])}
+    expected_schemes = {str(scheme) for scheme in experiment.get("schemes", [])}
     allowed_scenarios = expected_scenarios(experiment)
 
     run_rows = []
@@ -86,6 +87,8 @@ def main() -> int:
         if expected_topologies and row["topology_id"] not in expected_topologies:
             continue
         if expected_seeds and row["seed"] not in expected_seeds:
+            continue
+        if expected_schemes and row["scheme"] not in expected_schemes:
             continue
         manifest_path = repo_root() / row["run_dir"] / "manifest.yaml"
         if allowed_scenarios and manifest_path.exists():
