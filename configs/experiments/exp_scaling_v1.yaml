@@ -8,9 +8,7 @@
   ],
   "scenario": "hiroute-state-scaling",
   "schemes": [
-    "flat_iroute",
-    "hiroute",
-    "oracle"
+    "hiroute"
   ],
   "seeds": [
     1,
@@ -40,9 +38,7 @@
       "rf_1239_sprint": "configs/topologies/rocketfuel_1239_sprint.yaml"
     },
     "baselines": {
-      "flat_iroute": "configs/baselines/flat_iroute.yaml",
-      "hiroute": "configs/baselines/hiroute.yaml",
-      "oracle": "configs/baselines/oracle.yaml"
+      "hiroute": "configs/baselines/hiroute.yaml"
     }
   },
   "inputs": {

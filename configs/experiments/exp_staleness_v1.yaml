@@ -4,9 +4,7 @@
   "topology_id": "rf_3967_exodus",
   "scenario": "hiroute-staleness",
   "schemes": [
-    "flat_iroute",
-    "hiroute",
-    "oracle"
+    "hiroute"
   ],
   "seeds": [
     1,
@@ -31,9 +29,7 @@
     "hierarchy": "configs/hierarchy/hiroute_hkm_v1.yaml",
     "topology": "configs/topologies/rocketfuel_3967_exodus.yaml",
     "baselines": {
-      "flat_iroute": "configs/baselines/flat_iroute.yaml",
-      "hiroute": "configs/baselines/hiroute.yaml",
-      "oracle": "configs/baselines/oracle.yaml"
+      "hiroute": "configs/baselines/hiroute.yaml"
     }
   },
   "inputs": {
