@@ -58,8 +58,8 @@
     },
     "params": {
       "stopSeconds": 16,
-      "failureTime": 6,
-      "recoveryTime": 10,
+      "failureTime": 1,
+      "recoveryTime": 15,
       "manifestSize": 5,
       "probeBudget": 5,
       "queryLimitPerIngress": 0
