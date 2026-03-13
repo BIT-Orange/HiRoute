@@ -15,17 +15,18 @@ HiRouteReliabilityCache::SetAlpha(double alpha)
 }
 
 double
-HiRouteReliabilityCache::GetReliability(const std::string& domainId, const std::string& cellId) const
+HiRouteReliabilityCache::getStateScore(const std::map<std::string, ReliabilityState>& table,
+                                       const std::string& key) const
 {
-  auto it = m_reliability.find(makeCellKey(domainId, cellId));
-  return it == m_reliability.end() ? 0.5 : it->second.score;
+  auto it = table.find(key);
+  return it == table.end() ? 0.5 : it->second.score;
 }
 
 void
-HiRouteReliabilityCache::ObserveResult(const std::string& domainId, const std::string& cellId,
-                                       bool success)
+HiRouteReliabilityCache::observeState(std::map<std::string, ReliabilityState>& table,
+                                      const std::string& key, bool success)
 {
-  auto& state = m_reliability[makeCellKey(domainId, cellId)];
+  auto& state = table[key];
   if (!state.initialized) {
     state.score = success ? 1.0 : 0.0;
     state.initialized = true;
@@ -36,25 +37,52 @@ HiRouteReliabilityCache::ObserveResult(const std::string& domainId, const std::s
   state.score = (1.0 - m_alpha) * state.score + m_alpha * target;
 }
 
+double
+HiRouteReliabilityCache::GetReliability(const std::string& domainId, const std::string& cellId) const
+{
+  const auto cellScore = getStateScore(m_cellReliability, makeCellKey(domainId, cellId));
+  const auto domainScore = getStateScore(m_domainReliability, makeDomainKey(domainId));
+  return 0.7 * cellScore + 0.3 * domainScore;
+}
+
+void
+HiRouteReliabilityCache::ObserveResult(const std::string& domainId, const std::string& cellId,
+                                       bool success)
+{
+  observeState(m_cellReliability, makeCellKey(domainId, cellId), success);
+  observeState(m_domainReliability, makeDomainKey(domainId), success);
+}
+
 void
 HiRouteReliabilityCache::MarkNegative(const std::string& domainId, const std::string& cellId,
                                       const HiRoutePredicateHeader& predicate, Time ttl)
 {
-  m_negativeExpiry[makeNegativeKey(domainId, cellId, predicate)] = Simulator::Now() + ttl;
+  const auto expiry = Simulator::Now() + ttl;
+  m_cellNegativeExpiry[makeNegativeKey(domainId, cellId, predicate)] = expiry;
+  m_domainNegativeExpiry[makeDomainNegativeKey(domainId, predicate)] = expiry;
 }
 
 bool
 HiRouteReliabilityCache::IsSuppressed(const std::string& domainId, const std::string& cellId,
                                       const HiRoutePredicateHeader& predicate) const
 {
-  const auto key = makeNegativeKey(domainId, cellId, predicate);
-  auto it = m_negativeExpiry.find(key);
-  if (it == m_negativeExpiry.end()) {
-    return false;
+  const auto now = Simulator::Now();
+  const auto cellKey = makeNegativeKey(domainId, cellId, predicate);
+  auto cellIt = m_cellNegativeExpiry.find(cellKey);
+  if (cellIt != m_cellNegativeExpiry.end()) {
+    if (cellIt->second > now) {
+      return true;
+    }
+    m_cellNegativeExpiry.erase(cellIt);
   }
 
-  if (it->second <= Simulator::Now()) {
-    m_negativeExpiry.erase(it);
+  const auto domainKey = makeDomainNegativeKey(domainId, predicate);
+  auto domainIt = m_domainNegativeExpiry.find(domainKey);
+  if (domainIt == m_domainNegativeExpiry.end()) {
+    return false;
+  }
+  if (domainIt->second <= now) {
+    m_domainNegativeExpiry.erase(domainIt);
     return false;
   }
   return true;
@@ -78,10 +106,23 @@ HiRouteReliabilityCache::makeCellKey(const std::string& domainId, const std::str
 }
 
 std::string
+HiRouteReliabilityCache::makeDomainKey(const std::string& domainId) const
+{
+  return domainId;
+}
+
+std::string
 HiRouteReliabilityCache::makeNegativeKey(const std::string& domainId, const std::string& cellId,
                                          const HiRoutePredicateHeader& predicate) const
 {
   return makeCellKey(domainId, cellId) + "::" + MakePredicateKey(predicate);
+}
+
+std::string
+HiRouteReliabilityCache::makeDomainNegativeKey(const std::string& domainId,
+                                               const HiRoutePredicateHeader& predicate) const
+{
+  return makeDomainKey(domainId) + "::" + MakePredicateKey(predicate);
 }
 
 } // namespace hiroute

@@ -40,17 +40,31 @@ private:
     bool initialized = false;
   };
 
+  double
+  getStateScore(const std::map<std::string, ReliabilityState>& table, const std::string& key) const;
+
+  void
+  observeState(std::map<std::string, ReliabilityState>& table, const std::string& key, bool success);
+
   std::string
   makeCellKey(const std::string& domainId, const std::string& cellId) const;
+
+  std::string
+  makeDomainKey(const std::string& domainId) const;
 
   std::string
   makeNegativeKey(const std::string& domainId, const std::string& cellId,
                   const HiRoutePredicateHeader& predicate) const;
 
+  std::string
+  makeDomainNegativeKey(const std::string& domainId, const HiRoutePredicateHeader& predicate) const;
+
 private:
   double m_alpha = 0.2;
-  std::map<std::string, ReliabilityState> m_reliability;
-  mutable std::map<std::string, Time> m_negativeExpiry;
+  std::map<std::string, ReliabilityState> m_cellReliability;
+  std::map<std::string, ReliabilityState> m_domainReliability;
+  mutable std::map<std::string, Time> m_cellNegativeExpiry;
+  mutable std::map<std::string, Time> m_domainNegativeExpiry;
 };
 
 } // namespace hiroute

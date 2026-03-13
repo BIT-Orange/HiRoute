@@ -52,6 +52,7 @@ protected:
 
 private:
   struct ProbeTarget {
+    std::string domainId;
     std::string controllerPrefix;
     std::string cellId;
     double score = 0.0;
@@ -82,8 +83,10 @@ private:
     uint32_t remoteProbes = 0;
     uint64_t discoveryBytes = 0;
     bool manifestHit = false;
+    uint32_t replanCount = 0;
     std::string failureType;
     std::string fetchedObjectId;
+    std::set<std::string> attemptedProbeKeys;
     EventId timeoutEvent;
   };
 
@@ -100,7 +103,8 @@ private:
   dispatchNextQuery();
 
   ProbePlan
-  buildProbePlan(const HiRouteQueryRecord& query);
+  buildProbePlan(const HiRouteQueryRecord& query,
+                 const std::set<std::string>& excludedProbeKeys = {});
 
   void
   sendDiscoveryProbe();
@@ -113,6 +117,9 @@ private:
 
   bool
   advanceToNextProbe(const std::string& terminalFailureType);
+
+  std::string
+  makeProbeKey(const ProbeTarget& target) const;
 
   void
   handleDiscoveryReply(shared_ptr<const Data> data);
@@ -167,7 +174,6 @@ private:
   std::map<std::string, std::vector<std::pair<std::string, uint32_t>>> m_rankedQrels;
   std::map<std::string, std::string> m_canonicalByObjectId;
   std::map<std::string, std::string> m_objectIdByCanonicalName;
-  std::set<std::string> m_allControllerPrefixes;
   ActiveQueryState m_activeQuery;
 
   std::ofstream m_queryLog;

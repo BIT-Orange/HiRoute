@@ -184,12 +184,6 @@ void
 HiRouteIngressApp::loadInputs()
 {
   m_summaryStore.LoadFromCsv(m_summaryCsvPath);
-  m_allControllerPrefixes.clear();
-  for (const auto& entry : m_summaryStore.GetEntries()) {
-    if (entry.level == 0) {
-      m_allControllerPrefixes.insert(entry.controllerPrefix);
-    }
-  }
 
   std::map<std::string, uint32_t> queryEmbeddingRows;
   for (const auto& row : HiRouteDatasetReader::ReadCsvRows(m_queryEmbeddingIndexCsvPath)) {
@@ -322,7 +316,8 @@ HiRouteIngressApp::dispatchNextQuery()
 }
 
 HiRouteIngressApp::ProbePlan
-HiRouteIngressApp::buildProbePlan(const HiRouteQueryRecord& query)
+HiRouteIngressApp::buildProbePlan(const HiRouteQueryRecord& query,
+                                  const std::set<std::string>& excludedProbeKeys)
 {
   ProbePlan plan;
   HiRouteDiscoveryRequest request;
@@ -364,6 +359,22 @@ HiRouteIngressApp::buildProbePlan(const HiRouteQueryRecord& query)
     return deduped;
   };
 
+  auto maybeAppendProbe = [&] (std::vector<ProbeTarget>& probes, const ProbeTarget& target) {
+    if (target.domainId.empty()) {
+      return;
+    }
+    if (excludedProbeKeys.count(makeProbeKey(target)) != 0) {
+      return;
+    }
+    auto duplicate = std::find_if(probes.begin(), probes.end(), [&] (const ProbeTarget& existing) {
+      return makeProbeKey(existing) == makeProbeKey(target);
+    });
+    if (duplicate != probes.end()) {
+      return;
+    }
+    probes.push_back(target);
+  };
+
   const auto allLevel0Entries = m_summaryStore.GetEntriesAtLevel(0);
   const auto predicateMatches = filterMatches(allLevel0Entries);
   plan.allDomainCount = allLevel0Entries.size();
@@ -378,7 +389,8 @@ HiRouteIngressApp::buildProbePlan(const HiRouteQueryRecord& query)
         continue;
       }
       const double semanticScore = entry->radius <= 0.0 ? 1.0 : 1.0 / (1.0 + entry->radius);
-      ProbeTarget target{entry->controllerPrefix, entry->cellId, scoreSemantics ? semanticScore : 1.0};
+      ProbeTarget target{entry->domainId, entry->controllerPrefix, entry->cellId,
+                         scoreSemantics ? semanticScore : 1.0};
       auto existing = bestByController.find(entry->controllerPrefix);
       if (existing == bestByController.end() || target.score > existing->second.score) {
         bestByController[entry->controllerPrefix] = target;
@@ -403,13 +415,16 @@ HiRouteIngressApp::buildProbePlan(const HiRouteQueryRecord& query)
   };
 
   if (m_strategyMode == "oracle") {
-    plan.probes.push_back({m_oraclePrefix, "", 1.0});
+    maybeAppendProbe(plan.probes, {"oracle", m_oraclePrefix, "", 1.0});
     plan.level1CellCount = plan.level0CellCount;
     plan.refinedCellCount = 1;
   }
   else if (m_strategyMode == "flood") {
-    for (const auto& prefix : m_allControllerPrefixes) {
-      plan.probes.push_back({prefix, "", 0.0});
+    for (const auto* entry : predicateMatches) {
+      if (entry == nullptr || entry->level != 0) {
+        continue;
+      }
+      maybeAppendProbe(plan.probes, {entry->domainId, entry->controllerPrefix, "", 0.0});
     }
     plan.level1CellCount = plan.level0CellCount;
     plan.refinedCellCount = plan.probes.size();
@@ -421,7 +436,7 @@ HiRouteIngressApp::buildProbePlan(const HiRouteQueryRecord& query)
         continue;
       }
       seen.insert(entry->controllerPrefix);
-      plan.probes.push_back({entry->controllerPrefix, entry->cellId, 1.0});
+      maybeAppendProbe(plan.probes, {entry->domainId, entry->controllerPrefix, entry->cellId, 1.0});
     }
     plan.level1CellCount = plan.level0CellCount;
     plan.refinedCellCount = plan.probes.size();
@@ -503,8 +518,10 @@ HiRouteIngressApp::buildProbePlan(const HiRouteQueryRecord& query)
         // instead of only a single microcluster.
         frontierCellId = candidate.summary->parentId;
       }
-      plan.probes.push_back(
-        {candidate.summary->controllerPrefix, frontierCellId, candidate.totalScore});
+      maybeAppendProbe(
+        plan.probes,
+        {candidate.summary->domainId, candidate.summary->controllerPrefix,
+         frontierCellId, candidate.totalScore});
     }
   }
 
@@ -528,7 +545,8 @@ HiRouteIngressApp::buildProbePlan(const HiRouteQueryRecord& query)
 void
 HiRouteIngressApp::sendDiscoveryProbe()
 {
-  if (m_activeQuery.probeIndex >= m_activeQuery.plan.probes.size()) {
+  if (m_activeQuery.remoteProbes >= m_maxProbeBudget ||
+      m_activeQuery.probeIndex >= m_activeQuery.plan.probes.size()) {
     m_activeQuery.failureType = "wrong_domain";
     finishActiveQuery(false, "");
     return;
@@ -585,20 +603,26 @@ HiRouteIngressApp::advanceToNextProbe(const std::string& terminalFailureType)
 
   if (!m_activeQuery.plan.probes.empty() && m_activeQuery.probeIndex < m_activeQuery.plan.probes.size()) {
     const auto& probe = m_activeQuery.plan.probes[m_activeQuery.probeIndex];
+    m_activeQuery.attemptedProbeKeys.insert(makeProbeKey(probe));
+    m_reliabilityCache.ObserveResult(probe.domainId, probe.cellId, false);
     m_reliabilityCache.MarkNegative(
-      probe.controllerPrefix, probe.cellId,
+      probe.domainId, probe.cellId,
       HiRoutePredicateHeader{m_activeQuery.query.zoneConstraint,
                              m_activeQuery.query.zoneTypeConstraint,
                              m_activeQuery.query.serviceConstraint,
                              m_activeQuery.query.freshnessConstraint},
-      MilliSeconds(500));
+      MilliSeconds(900));
   }
 
-  ++m_activeQuery.probeIndex;
   m_activeQuery.manifest.clear();
   m_activeQuery.manifestFetchIndex = 0;
   m_activeQuery.manifestHit = false;
-  if (m_activeQuery.probeIndex < m_activeQuery.plan.probes.size()) {
+  ++m_activeQuery.replanCount;
+  if (m_activeQuery.remoteProbes < m_maxProbeBudget) {
+    m_activeQuery.plan = buildProbePlan(m_activeQuery.query, m_activeQuery.attemptedProbeKeys);
+    m_activeQuery.probeIndex = 0;
+  }
+  if (!m_activeQuery.plan.probes.empty() && m_activeQuery.remoteProbes < m_maxProbeBudget) {
     sendDiscoveryProbe();
     return true;
   }
@@ -615,6 +639,14 @@ HiRouteIngressApp::onPhaseTimeout()
   }
 
   if (m_activeQuery.phase == Phase::WaitingDiscovery) {
+    if (usesAdaptiveReliability()) {
+      if (advanceToNextProbe("no_reply")) {
+        return;
+      }
+      m_activeQuery.failureType = "no_reply";
+      finishActiveQuery(false, "");
+      return;
+    }
     ++m_activeQuery.probeIndex;
     sendDiscoveryProbe();
     return;
@@ -666,6 +698,14 @@ HiRouteIngressApp::handleDiscoveryReply(shared_ptr<const Data> data)
                  Simulator::Now().GetMilliSeconds());
 
   if (reply.manifest.empty()) {
+    if (usesAdaptiveReliability()) {
+      if (advanceToNextProbe("wrong_domain")) {
+        return;
+      }
+      m_activeQuery.failureType = "wrong_domain";
+      finishActiveQuery(false, "");
+      return;
+    }
     ++m_activeQuery.probeIndex;
     sendDiscoveryProbe();
     return;
@@ -686,7 +726,8 @@ HiRouteIngressApp::handleFetchReply(shared_ptr<const Data> data)
   const auto objectId = objectIt == m_objectIdByCanonicalName.end() ? std::string() : objectIt->second;
   if (usesAdaptiveReliability() && m_activeQuery.probeIndex < m_activeQuery.plan.probes.size()) {
     const auto& probe = m_activeQuery.plan.probes[m_activeQuery.probeIndex];
-    m_reliabilityCache.ObserveResult(probe.controllerPrefix, probe.cellId, isRelevantObject(m_activeQuery.query.queryId, objectId));
+    m_reliabilityCache.ObserveResult(probe.domainId, probe.cellId,
+                                     isRelevantObject(m_activeQuery.query.queryId, objectId));
   }
   if (!isRelevantObject(m_activeQuery.query.queryId, objectId) &&
       usesAdaptiveReliability() &&
@@ -718,12 +759,12 @@ HiRouteIngressApp::finishActiveQuery(bool success, const std::string& fetchedObj
   }
   if (!success && !m_activeQuery.plan.probes.empty() && usesAdaptiveReliability()) {
     const auto& probe = m_activeQuery.plan.probes[m_activeQuery.probeIndex];
-    m_reliabilityCache.MarkNegative(probe.controllerPrefix, probe.cellId,
+    m_reliabilityCache.MarkNegative(probe.domainId, probe.cellId,
                                     HiRoutePredicateHeader{m_activeQuery.query.zoneConstraint,
                                                            m_activeQuery.query.zoneTypeConstraint,
                                                            m_activeQuery.query.serviceConstraint,
                                                            m_activeQuery.query.freshnessConstraint},
-                                    MilliSeconds(500));
+                                    MilliSeconds(900));
   }
 
   appendRow(m_queryLog,
@@ -830,6 +871,12 @@ bool
 HiRouteIngressApp::usesAdaptiveReliability() const
 {
   return m_strategyMode == "hiroute" || m_strategyMode == "full_hiroute";
+}
+
+std::string
+HiRouteIngressApp::makeProbeKey(const ProbeTarget& target) const
+{
+  return target.domainId + "::" + target.cellId + "::" + target.controllerPrefix;
 }
 
 } // namespace hiroute
