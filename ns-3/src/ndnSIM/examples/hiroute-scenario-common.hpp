@@ -13,6 +13,7 @@
 #include <filesystem>
 #include <fstream>
 #include <map>
+#include <set>
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -168,6 +169,74 @@ firstLinkPair(const std::string& topologyPath)
   throw std::runtime_error("failed to find a link pair in topology file");
 }
 
+inline std::string
+dominantQueryDomain(const std::string& objectsCsv, const std::string& qrelsObjectCsv)
+{
+  std::map<std::string, std::string> objectDomain;
+  for (const auto& row : HiRouteDatasetReader::ReadCsvRows(objectsCsv)) {
+    objectDomain[GetFieldOrEmpty(row, "object_id")] = GetFieldOrEmpty(row, "domain_id");
+  }
+
+  std::map<std::string, uint32_t> demandByDomain;
+  for (const auto& row : HiRouteDatasetReader::ReadCsvRows(qrelsObjectCsv)) {
+    if (std::strtoul(GetFieldOrEmpty(row, "relevance").c_str(), nullptr, 10) == 0) {
+      continue;
+    }
+    auto objectIt = objectDomain.find(GetFieldOrEmpty(row, "object_id"));
+    if (objectIt == objectDomain.end()) {
+      continue;
+    }
+    ++demandByDomain[objectIt->second];
+  }
+
+  std::string bestDomain;
+  uint32_t bestDemand = 0;
+  for (const auto& item : demandByDomain) {
+    if (item.second > bestDemand || (item.second == bestDemand && item.first < bestDomain)) {
+      bestDomain = item.first;
+      bestDemand = item.second;
+    }
+  }
+  return bestDomain;
+}
+
+inline std::vector<std::string>
+adjacentNodes(const std::string& topologyPath, const std::string& nodeId)
+{
+  std::ifstream input(topologyPath.c_str());
+  if (!input.good()) {
+    throw std::runtime_error("failed to open topology file: " + topologyPath);
+  }
+
+  bool inLinkSection = false;
+  std::string line;
+  std::set<std::string> neighbors;
+  while (std::getline(input, line)) {
+    if (line.empty() || line[0] == '#') {
+      continue;
+    }
+    if (line == "link") {
+      inLinkSection = true;
+      continue;
+    }
+    if (!inLinkSection) {
+      continue;
+    }
+
+    std::stringstream parser(line);
+    std::string left;
+    std::string right;
+    parser >> left >> right;
+    if (left == nodeId && !right.empty()) {
+      neighbors.insert(right);
+    }
+    else if (right == nodeId && !left.empty()) {
+      neighbors.insert(left);
+    }
+  }
+  return {neighbors.begin(), neighbors.end()};
+}
+
 inline int
 RunHiRouteScenario(int argc, char* argv[], HiRouteScenarioMode mode)
 {
@@ -211,8 +280,10 @@ RunHiRouteScenario(int argc, char* argv[], HiRouteScenarioMode mode)
   const auto topologyRows = HiRouteDatasetReader::ReadCsvRows(config.topologyMappingCsv);
   const auto objectRows = HiRouteDatasetReader::ReadCsvRows(config.objectsCsv);
   const auto summaryRows = HiRouteDatasetReader::ReadCsvRows(config.summaryCsv);
+  const auto targetFailureDomain = dominantQueryDomain(config.objectsCsv, config.qrelsObjectCsv);
 
   std::map<std::string, Ptr<Node>> controllerByDomain;
+  std::map<std::string, std::string> controllerNodeIdByDomain;
   std::string firstControllerDomain;
   Ptr<Node> firstControllerNode;
 
@@ -227,6 +298,7 @@ RunHiRouteScenario(int argc, char* argv[], HiRouteScenarioMode mode)
     if (GetFieldOrEmpty(row, "role") == "controller") {
       auto node = Names::Find<Node>(GetFieldOrEmpty(row, "node_id"));
       controllerByDomain[GetFieldOrEmpty(row, "domain_id")] = node;
+      controllerNodeIdByDomain[GetFieldOrEmpty(row, "domain_id")] = GetFieldOrEmpty(row, "node_id");
       ++controllerCount;
       if (firstControllerNode == nullptr) {
         firstControllerNode = node;
@@ -240,7 +312,9 @@ RunHiRouteScenario(int argc, char* argv[], HiRouteScenarioMode mode)
       controllerHelper.SetAttribute("ControllerLocalIndexCsvPath",
                                     StringValue(config.controllerLocalIndexCsv));
       controllerHelper.SetAttribute("ManifestSize", UintegerValue(config.manifestSize));
-      if (mode == HiRouteScenarioMode::Staleness) {
+      if (mode == HiRouteScenarioMode::Staleness &&
+          GetFieldOrEmpty(row, "domain_id") ==
+            (targetFailureDomain.empty() ? firstControllerDomain : targetFailureDomain)) {
         controllerHelper.SetAttribute("StaleAfter",
                                       StringValue(std::to_string(config.failureTime) + "s"));
         controllerHelper.SetAttribute("StaleDropProbability",
@@ -249,7 +323,8 @@ RunHiRouteScenario(int argc, char* argv[], HiRouteScenarioMode mode)
       auto apps = controllerHelper.Install(node);
       apps.Start(Seconds(0.0));
       if (mode == HiRouteScenarioMode::DomainFailure &&
-          GetFieldOrEmpty(row, "domain_id") == firstControllerDomain) {
+          GetFieldOrEmpty(row, "domain_id") ==
+            (targetFailureDomain.empty() ? firstControllerDomain : targetFailureDomain)) {
         apps.Stop(Seconds(config.failureTime));
         appendCsvRow(failureLogPath,
                      {"timestamp_s", "event_type", "node_a", "node_b", "domain_id", "details"},
@@ -348,25 +423,55 @@ RunHiRouteScenario(int argc, char* argv[], HiRouteScenarioMode mode)
                 std::to_string(objectRows.size())});
 
   if (mode == HiRouteScenarioMode::LinkFailure) {
-    const auto link = firstLinkPair(config.topologyPath);
-    auto left = Names::Find<Node>(link.first);
-    auto right = Names::Find<Node>(link.second);
-    Simulator::Schedule(Seconds(config.failureTime), LinkControlHelper::FailLink, left, right);
-    Simulator::Schedule(Seconds(config.recoveryTime), LinkControlHelper::UpLink, left, right);
-    appendCsvRow(failureLogPath,
-                 {"timestamp_s", "event_type", "node_a", "node_b", "domain_id", "details"},
-                 {std::to_string(config.failureTime), "link_down", link.first, link.second, "",
-                  "inter-domain link disabled"});
-    appendCsvRow(failureLogPath,
-                 {"timestamp_s", "event_type", "node_a", "node_b", "domain_id", "details"},
-                 {std::to_string(config.recoveryTime), "link_up", link.first, link.second, "",
-                  "inter-domain link restored"});
+    const auto selectedDomain =
+      targetFailureDomain.empty() ? firstControllerDomain : targetFailureDomain;
+    const auto nodeIdIt = controllerNodeIdByDomain.find(selectedDomain);
+    std::vector<std::string> neighbors;
+    if (nodeIdIt != controllerNodeIdByDomain.end()) {
+      neighbors = adjacentNodes(config.topologyPath, nodeIdIt->second);
+    }
+
+    if (neighbors.empty()) {
+      const auto link = firstLinkPair(config.topologyPath);
+      auto left = Names::Find<Node>(link.first);
+      auto right = Names::Find<Node>(link.second);
+      Simulator::Schedule(Seconds(config.failureTime), LinkControlHelper::FailLink, left, right);
+      Simulator::Schedule(Seconds(config.recoveryTime), LinkControlHelper::UpLink, left, right);
+      appendCsvRow(failureLogPath,
+                   {"timestamp_s", "event_type", "node_a", "node_b", "domain_id", "details"},
+                   {std::to_string(config.failureTime), "link_down", link.first, link.second,
+                    selectedDomain, "fallback topology link disabled"});
+      appendCsvRow(failureLogPath,
+                   {"timestamp_s", "event_type", "node_a", "node_b", "domain_id", "details"},
+                   {std::to_string(config.recoveryTime), "link_up", link.first, link.second,
+                    selectedDomain, "fallback topology link restored"});
+    }
+    else {
+      const auto controllerNodeId = nodeIdIt->second;
+      auto controllerNode = Names::Find<Node>(controllerNodeId);
+      for (const auto& neighborId : neighbors) {
+        auto neighborNode = Names::Find<Node>(neighborId);
+        Simulator::Schedule(Seconds(config.failureTime), LinkControlHelper::FailLink,
+                            controllerNode, neighborNode);
+        Simulator::Schedule(Seconds(config.recoveryTime), LinkControlHelper::UpLink,
+                            controllerNode, neighborNode);
+        appendCsvRow(failureLogPath,
+                     {"timestamp_s", "event_type", "node_a", "node_b", "domain_id", "details"},
+                     {std::to_string(config.failureTime), "link_down", controllerNodeId, neighborId,
+                      selectedDomain, "target controller adjacency disabled"});
+        appendCsvRow(failureLogPath,
+                     {"timestamp_s", "event_type", "node_a", "node_b", "domain_id", "details"},
+                     {std::to_string(config.recoveryTime), "link_up", controllerNodeId, neighborId,
+                      selectedDomain, "target controller adjacency restored"});
+      }
+    }
   }
   else if (mode == HiRouteScenarioMode::Staleness) {
     appendCsvRow(failureLogPath,
                  {"timestamp_s", "event_type", "node_a", "node_b", "domain_id", "details"},
-                 {std::to_string(config.failureTime), "staleness_window", "", "", "",
-                  "controller manifests drop top entry probabilistically"});
+                 {std::to_string(config.failureTime), "staleness_window", "", "",
+                  targetFailureDomain.empty() ? firstControllerDomain : targetFailureDomain,
+                  "target domain controller manifests drop top entry probabilistically"});
   }
 
   GlobalRoutingHelper::CalculateRoutes();
