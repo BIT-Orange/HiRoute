@@ -480,6 +480,37 @@ HiRouteIngressApp::sendFetchInterest(const HiRouteManifestEntry& entry)
     Simulator::Schedule(m_replyTimeout, &HiRouteIngressApp::onPhaseTimeout, this);
 }
 
+bool
+HiRouteIngressApp::advanceToNextProbe(const std::string& terminalFailureType)
+{
+  if (!usesAdaptiveReliability()) {
+    return false;
+  }
+
+  if (!m_activeQuery.plan.probes.empty() && m_activeQuery.probeIndex < m_activeQuery.plan.probes.size()) {
+    const auto& probe = m_activeQuery.plan.probes[m_activeQuery.probeIndex];
+    m_reliabilityCache.MarkNegative(
+      probe.controllerPrefix, probe.cellId,
+      HiRoutePredicateHeader{m_activeQuery.query.zoneConstraint,
+                             m_activeQuery.query.zoneTypeConstraint,
+                             m_activeQuery.query.serviceConstraint,
+                             m_activeQuery.query.freshnessConstraint},
+      MilliSeconds(500));
+  }
+
+  ++m_activeQuery.probeIndex;
+  m_activeQuery.manifest.clear();
+  m_activeQuery.manifestFetchIndex = 0;
+  m_activeQuery.manifestHit = false;
+  if (m_activeQuery.probeIndex < m_activeQuery.plan.probes.size()) {
+    sendDiscoveryProbe();
+    return true;
+  }
+
+  m_activeQuery.failureType = terminalFailureType;
+  return false;
+}
+
 void
 HiRouteIngressApp::onPhaseTimeout()
 {
@@ -496,6 +527,10 @@ HiRouteIngressApp::onPhaseTimeout()
   if (usesAdaptiveReliability() && m_activeQuery.manifestFetchIndex + 1 < m_activeQuery.manifest.size()) {
     ++m_activeQuery.manifestFetchIndex;
     sendFetchInterest(m_activeQuery.manifest[m_activeQuery.manifestFetchIndex]);
+    return;
+  }
+
+  if (advanceToNextProbe("fetch_timeout")) {
     return;
   }
 
@@ -559,6 +594,10 @@ HiRouteIngressApp::handleFetchReply(shared_ptr<const Data> data)
       m_activeQuery.manifestFetchIndex + 1 < m_activeQuery.manifest.size()) {
     ++m_activeQuery.manifestFetchIndex;
     sendFetchInterest(m_activeQuery.manifest[m_activeQuery.manifestFetchIndex]);
+    return;
+  }
+
+  if (!isRelevantObject(m_activeQuery.query.queryId, objectId) && advanceToNextProbe("wrong_object")) {
     return;
   }
   finishActiveQuery(isRelevantObject(m_activeQuery.query.queryId, objectId), objectId);

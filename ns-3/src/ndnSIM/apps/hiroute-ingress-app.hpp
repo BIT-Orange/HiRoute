@@ -105,6 +105,9 @@ private:
   void
   onPhaseTimeout();
 
+  bool
+  advanceToNextProbe(const std::string& terminalFailureType);
+
   void
   handleDiscoveryReply(shared_ptr<const Data> data);
 
