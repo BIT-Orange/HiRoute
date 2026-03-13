@@ -45,6 +45,10 @@ HiRouteControllerApp::GetTypeId()
                     StringValue("../data/processed/ndnsim/controller_local_index.csv"),
                     MakeStringAccessor(&HiRouteControllerApp::m_controllerLocalIndexCsvPath),
                     MakeStringChecker())
+      .AddAttribute("QrelsObjectCsvPath", "Path to qrels_object.csv used by the centralized oracle",
+                    StringValue("../data/processed/eval/qrels_object.csv"),
+                    MakeStringAccessor(&HiRouteControllerApp::m_qrelsObjectCsvPath),
+                    MakeStringChecker())
       .AddAttribute("ManifestSize", "Maximum number of canonical names returned per discovery",
                     UintegerValue(4),
                     MakeUintegerAccessor(&HiRouteControllerApp::m_manifestSize),
@@ -125,14 +129,16 @@ HiRouteControllerApp::OnInterest(shared_ptr<const Interest> interest)
 void
 HiRouteControllerApp::loadInputs()
 {
+  const bool oracleController = m_oracleMode || m_prefix.find("/oracle/") != std::string::npos;
   m_objectsById.clear();
   m_objectsByName.clear();
   m_objectsByCell.clear();
+  m_oracleRankedQrels.clear();
   m_rankByCellObject.clear();
 
   for (const auto& row : HiRouteDatasetReader::ReadCsvRows(m_objectsCsvPath)) {
     const auto object = HiRouteObjectRecord::FromCsvRow(row);
-    if (!m_oracleMode && object.domainId != m_domainId) {
+    if (!oracleController && object.domainId != m_domainId) {
       continue;
     }
     m_objectsById[object.objectId] = object;
@@ -140,7 +146,7 @@ HiRouteControllerApp::loadInputs()
   }
 
   for (const auto& row : HiRouteDatasetReader::ReadCsvRows(m_controllerLocalIndexCsvPath)) {
-    if (!m_oracleMode && GetFieldOrEmpty(row, "domain_id") != m_domainId) {
+    if (!oracleController && GetFieldOrEmpty(row, "domain_id") != m_domainId) {
       continue;
     }
     const auto objectId = GetFieldOrEmpty(row, "object_id");
@@ -152,6 +158,28 @@ HiRouteControllerApp::loadInputs()
     const auto key = cellId + "::" + objectId;
     m_rankByCellObject[key] =
       static_cast<uint32_t>(std::strtoul(GetFieldOrEmpty(row, "local_rank_hint").c_str(), nullptr, 10));
+  }
+
+  if (!oracleController) {
+    return;
+  }
+
+  for (const auto& row : HiRouteDatasetReader::ReadCsvRows(m_qrelsObjectCsvPath)) {
+    const auto objectId = GetFieldOrEmpty(row, "object_id");
+    if (m_objectsById.count(objectId) == 0) {
+      continue;
+    }
+    const auto relevance =
+      static_cast<uint32_t>(std::strtoul(GetFieldOrEmpty(row, "relevance").c_str(), nullptr, 10));
+    m_oracleRankedQrels[GetFieldOrEmpty(row, "query_id")].push_back({objectId, relevance});
+  }
+  for (auto& item : m_oracleRankedQrels) {
+    std::sort(item.second.begin(), item.second.end(), [] (const auto& left, const auto& right) {
+      if (left.second != right.second) {
+        return left.second > right.second;
+      }
+      return left.first < right.first;
+    });
   }
 }
 
@@ -169,6 +197,10 @@ HiRouteControllerApp::matchesPredicate(const HiRouteObjectRecord& object,
 std::vector<HiRouteManifestEntry>
 HiRouteControllerApp::buildManifest(const HiRouteDiscoveryRequest& request) const
 {
+  if (m_oracleMode || m_prefix.find("/oracle/") != std::string::npos) {
+    return buildOracleManifest(request);
+  }
+
   std::vector<RankedObject> ranked;
   std::vector<std::string> objectIds;
   std::map<std::string, uint32_t> bestRankByObjectId;
@@ -275,6 +307,41 @@ HiRouteControllerApp::buildManifest(const HiRouteDiscoveryRequest& request) cons
       m_rand->GetValue(0.0, 1.0) < m_staleDropProbability) {
     manifest.erase(manifest.begin());
   }
+  return manifest;
+}
+
+std::vector<HiRouteManifestEntry>
+HiRouteControllerApp::buildOracleManifest(const HiRouteDiscoveryRequest& request) const
+{
+  std::vector<HiRouteManifestEntry> manifest;
+  auto rankedIt = m_oracleRankedQrels.find(request.queryId);
+  if (rankedIt == m_oracleRankedQrels.end()) {
+    return manifest;
+  }
+
+  const auto resultLimit = request.requestedManifestSize == 0 ?
+    m_manifestSize :
+    std::min<uint32_t>(m_manifestSize, request.requestedManifestSize);
+  manifest.reserve(std::min<size_t>(rankedIt->second.size(), resultLimit));
+
+  for (const auto& item : rankedIt->second) {
+    auto objectIt = m_objectsById.find(item.first);
+    if (objectIt == m_objectsById.end()) {
+      continue;
+    }
+
+    HiRouteManifestEntry entry;
+    entry.canonicalName = objectIt->second.canonicalName;
+    entry.confidenceScore = static_cast<double>(item.second);
+    entry.domainId = objectIt->second.domainId;
+    entry.cellId = "global-oracle";
+    entry.objectId = objectIt->second.objectId;
+    manifest.push_back(entry);
+    if (manifest.size() >= resultLimit) {
+      break;
+    }
+  }
+
   return manifest;
 }
 

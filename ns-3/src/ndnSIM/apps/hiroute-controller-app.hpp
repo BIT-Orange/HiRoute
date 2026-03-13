@@ -15,6 +15,7 @@
 
 #include <map>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace ns3 {
@@ -60,6 +61,9 @@ private:
   std::vector<HiRouteManifestEntry>
   buildManifest(const HiRouteDiscoveryRequest& request) const;
 
+  std::vector<HiRouteManifestEntry>
+  buildOracleManifest(const HiRouteDiscoveryRequest& request) const;
+
   void
   sendDiscoveryReply(shared_ptr<const Interest> interest, const HiRouteDiscoveryReply& reply);
 
@@ -71,6 +75,7 @@ private:
   std::string m_domainId;
   std::string m_objectsCsvPath;
   std::string m_controllerLocalIndexCsvPath;
+  std::string m_qrelsObjectCsvPath;
   uint32_t m_manifestSize = 4;
   bool m_oracleMode = false;
   Time m_staleAfter = Seconds(0);
@@ -80,6 +85,7 @@ private:
   std::map<std::string, HiRouteObjectRecord> m_objectsById;
   std::map<std::string, HiRouteObjectRecord> m_objectsByName;
   std::map<std::string, std::vector<std::string>> m_objectsByCell;
+  std::map<std::string, std::vector<std::pair<std::string, uint32_t>>> m_oracleRankedQrels;
   std::map<std::string, uint32_t> m_rankByCellObject;
 };
 

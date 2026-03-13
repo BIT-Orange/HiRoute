@@ -421,8 +421,10 @@ RunHiRouteScenario(int argc, char* argv[], HiRouteScenarioMode mode)
 
   AppHelper oracleHelper("ns3::ndn::OracleControllerApp");
   oracleHelper.SetAttribute("Prefix", StringValue(config.oraclePrefix));
+  oracleHelper.SetAttribute("OracleMode", BooleanValue(true));
   oracleHelper.SetAttribute("ObjectsCsvPath", StringValue(config.objectsCsv));
   oracleHelper.SetAttribute("ControllerLocalIndexCsvPath", StringValue(config.controllerLocalIndexCsv));
+  oracleHelper.SetAttribute("QrelsObjectCsvPath", StringValue(config.qrelsObjectCsv));
   oracleHelper.SetAttribute("ManifestSize", UintegerValue(config.manifestSize));
   auto oracleApps = oracleHelper.Install(firstControllerNode);
   oracleApps.Start(Seconds(0.0));
