@@ -62,6 +62,13 @@
     "controller_local_index_csv": "data/processed/ndnsim/controller_local_index.csv",
     "topology_mapping_csv": "data/processed/ndnsim/topology_mapping_rf_3967_exodus.csv"
   },
+  "query_filters": {
+    "ambiguity_levels": [
+      "medium",
+      "high"
+    ],
+    "min_intended_domain_count": 2
+  },
   "runner": {
     "type": "ndnsim",
     "ns3_root": "ns-3",

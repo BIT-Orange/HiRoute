@@ -555,6 +555,7 @@ def _stable_query_slot(query_id: str, modulo: int) -> int:
 
 def _prepare_runtime_inputs(experiment: dict[str, Any], run_dir: Path) -> dict[str, Path]:
     inputs = experiment["inputs"]
+    query_filters = experiment.get("query_filters", {}) or {}
     topology_rows = read_csv(_resolve(inputs["topology_mapping_csv"]))
     active_domains = sorted({row["domain_id"] for row in topology_rows if row["domain_id"]})
     active_domain_set = set(active_domains)
@@ -602,10 +603,30 @@ def _prepare_runtime_inputs(experiment: dict[str, Any], run_dir: Path) -> dict[s
         for query_id, relevant_domains in relevant_domains_by_query.items()
         if relevant_domains and relevant_domains.issubset(active_domain_set)
     }
+    query_rows = read_csv(_resolve(inputs["queries_csv"]))
+    filtered_queries = [row for row in query_rows if row["query_id"] in eligible_queries]
+    allowed_ambiguity_levels = {str(level) for level in query_filters.get("ambiguity_levels", [])}
+    if allowed_ambiguity_levels:
+        filtered_queries = [
+            row for row in filtered_queries if row.get("ambiguity_level", "") in allowed_ambiguity_levels
+        ]
+    min_intended_domain_count = int(query_filters.get("min_intended_domain_count", 0) or 0)
+    if min_intended_domain_count > 0:
+        filtered_queries = [
+            row
+            for row in filtered_queries
+            if int(row.get("intended_domain_count") or 0) >= min_intended_domain_count
+        ]
+    if query_rows and not filtered_queries:
+        raise RuntimeError(
+            f"no eligible queries remain after slicing {experiment['experiment_id']} "
+            f"to active domains {','.join(active_domains)}"
+        )
+    surviving_queries = {row["query_id"] for row in filtered_queries}
     filtered_qrels_domain = [
         row
         for row in qrels_domain_rows
-        if row["query_id"] in eligible_queries and row["domain_id"] in active_domain_set
+        if row["query_id"] in surviving_queries and row["domain_id"] in active_domain_set
     ]
     if filtered_qrels_domain:
         _write_runtime_copy("qrels_domain_csv", filtered_qrels_domain)
@@ -614,19 +635,11 @@ def _prepare_runtime_inputs(experiment: dict[str, Any], run_dir: Path) -> dict[s
     filtered_qrels_object = [
         row
         for row in qrels_object_rows
-        if row["query_id"] in eligible_queries and row["object_id"] in active_object_ids
+        if row["query_id"] in surviving_queries and row["object_id"] in active_object_ids
     ]
     if filtered_qrels_object:
         _write_runtime_copy("qrels_object_csv", filtered_qrels_object)
 
-    surviving_queries = {row["query_id"] for row in filtered_qrels_object}
-    query_rows = read_csv(_resolve(inputs["queries_csv"]))
-    filtered_queries = [row for row in query_rows if row["query_id"] in surviving_queries]
-    if query_rows and not filtered_queries:
-        raise RuntimeError(
-            f"no eligible queries remain after slicing {experiment['experiment_id']} "
-            f"to active domains {','.join(active_domains)}"
-        )
     if filtered_queries and ingress_nodes:
         remapped_queries = []
         ingress_set = set(ingress_nodes)
