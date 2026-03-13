@@ -3,7 +3,9 @@
 ## Exact-NDN
 
 Uses only exact prefix naming. No semantic discovery, no hierarchical summaries, and no manifest
-reply path. It is the strict lower bound for semantic resolution capability.
+reply path. It is a syntactic reference showing the lower bound when the canonical name is already
+known, and it should not be treated as a comparable semantic-discovery baseline in the main
+Pareto-style figures.
 
 ## Flood
 
@@ -17,8 +19,9 @@ as the primary non-hierarchical baseline.
 
 ## Oracle
 
-Uses idealized global knowledge to select the best destination directly. It is an upper-bound
-reference for success and overhead tradeoffs.
+Uses idealized global object knowledge to answer each query through a centralized semantic
+directory. It is an upper-bound reference for discovery quality, not a decentralized overhead
+comparison target.
 
 ## HiRoute
 

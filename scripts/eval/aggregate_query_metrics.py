@@ -6,6 +6,8 @@ import argparse
 from pathlib import Path
 import sys
 
+import pandas as pd
+
 ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
@@ -21,13 +23,23 @@ OUTPUT_FIELDS = [
     "run_count",
     "query_count",
     "mean_success_at_1",
+    "ci_success_at_1",
     "mean_manifest_hit_at_5",
     "mean_ndcg_at_5",
     "mean_num_remote_probes",
+    "ci_num_remote_probes",
     "mean_discovery_bytes",
+    "ci_discovery_bytes",
     "mean_latency_ms",
+    "ci_latency_ms",
     "source_run_ids",
 ]
+
+
+def _ci95(series: pd.Series) -> float:
+    if len(series) <= 1:
+        return 0.0
+    return float(1.96 * series.std(ddof=1) / (len(series) ** 0.5))
 
 
 def parse_args() -> argparse.Namespace:
@@ -50,6 +62,15 @@ def main() -> int:
     output_rows = []
     for (scheme, topology_id), group in frame.groupby(["registry_scheme", "registry_topology_id"], sort=False):
         run_ids = sorted(group["run_id"].unique().tolist())
+        per_run = (
+            group.groupby("run_id", as_index=False)
+            .agg(
+                success_at_1=("success_at_1", "mean"),
+                num_remote_probes=("num_remote_probes", "mean"),
+                discovery_bytes_total=("discovery_bytes_total", "mean"),
+                latency_ms=("latency_ms", "mean"),
+            )
+        )
         output_rows.append(
             {
                 "experiment_id": experiment["experiment_id"],
@@ -58,11 +79,15 @@ def main() -> int:
                 "run_count": len(run_ids),
                 "query_count": int(len(group)),
                 "mean_success_at_1": round(group["success_at_1"].mean(), 6),
+                "ci_success_at_1": round(_ci95(per_run["success_at_1"]), 6),
                 "mean_manifest_hit_at_5": round(group["manifest_hit_at_5"].mean(), 6),
                 "mean_ndcg_at_5": round(group["ndcg_at_5"].mean(), 6),
                 "mean_num_remote_probes": round(group["num_remote_probes"].mean(), 6),
+                "ci_num_remote_probes": round(_ci95(per_run["num_remote_probes"]), 6),
                 "mean_discovery_bytes": round(group["discovery_bytes_total"].mean(), 6),
+                "ci_discovery_bytes": round(_ci95(per_run["discovery_bytes_total"]), 6),
                 "mean_latency_ms": round(group["latency_ms"].mean(), 6),
+                "ci_latency_ms": round(_ci95(per_run["latency_ms"]), 6),
                 "source_run_ids": "|".join(run_ids),
             }
         )

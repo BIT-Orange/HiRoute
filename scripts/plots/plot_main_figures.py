@@ -38,6 +38,31 @@ COLORS = {
     "full_hiroute": "#2451a4",
 }
 
+FAILURE_COLORS = {
+    "predicate_miss": "#b7b7b7",
+    "wrong_domain": "#d97a3a",
+    "wrong_object": "#c94c3c",
+    "no_reply": "#7c5aa6",
+    "fetch_timeout": "#4f7fbe",
+    "success": "#2f7d57",
+}
+
+SCHEME_LABELS = {
+    "exact": "Exact name",
+    "flood": "Flood",
+    "flat": "Flat iRoute",
+    "flat_iroute": "Flat iRoute",
+    "oracle": "Central directory",
+    "hiroute": "HiRoute",
+    "predicates_only": "Predicates only",
+    "flat_semantic_only": "Flat semantic only",
+    "predicates_plus_flat": "Predicates + flat",
+    "full_hiroute": "Full HiRoute",
+}
+
+MAIN_SCHEME_ORDER = ["flat_iroute", "flood", "hiroute", "oracle"]
+FAILURE_ORDER = ["predicate_miss", "wrong_domain", "wrong_object", "no_reply", "fetch_timeout", "success"]
+
 SHRINKAGE_STAGE_ORDER = [
     "all_domains",
     "predicate_filtered_domains",
@@ -91,26 +116,46 @@ def _scheme_color(scheme: str) -> str:
     return COLORS.get(scheme, "#6d6d6d")
 
 
+def _scheme_label(scheme: str) -> str:
+    return SCHEME_LABELS.get(scheme, scheme.replace("_", " "))
+
+
 def plot_main_success() -> None:
     frame = _read_csv(repo_root() / "results" / "aggregate" / "main_success_overhead.csv")
     if frame.empty:
         _placeholder("fig_main_success_overhead.pdf", "Figure 4", "Awaiting aggregate data")
         return
 
-    fig, ax = plt.subplots(figsize=(6.4, 4.2))
-    for _, row in frame.iterrows():
-        ax.scatter(
+    frame = frame[frame["scheme"] != "exact"].copy()
+    if frame.empty:
+        _placeholder("fig_main_success_overhead.pdf", "Figure 4", "No comparable discovery baselines found")
+        return
+
+    fig, ax = plt.subplots(figsize=(6.4, 4.0))
+    for scheme in MAIN_SCHEME_ORDER:
+        group = frame[frame["scheme"] == scheme]
+        if group.empty:
+            continue
+        row = group.iloc[0]
+        marker = "*" if scheme == "oracle" else "o"
+        markersize = 14 if scheme == "oracle" else 8
+        ax.errorbar(
             row["mean_discovery_bytes"],
             row["mean_success_at_1"],
-            s=90,
-            color=_scheme_color(row["scheme"]),
-            label=row["scheme"],
+            xerr=row.get("ci_discovery_bytes", 0.0),
+            yerr=row.get("ci_success_at_1", 0.0),
+            fmt=marker,
+            markersize=markersize,
+            linewidth=1.8,
+            capsize=3,
+            color=_scheme_color(scheme),
+            label=_scheme_label(scheme),
         )
-        ax.text(row["mean_discovery_bytes"] + 3, row["mean_success_at_1"] + 0.005, row["scheme"], fontsize=9)
-    ax.set_xlabel("Mean Discovery Bytes")
+
+    ax.set_xlabel("Mean Discovery Bytes / Query")
     ax.set_ylabel("ServiceSuccess@1")
-    ax.set_title("Figure 4: Success vs Discovery Overhead")
     ax.grid(alpha=0.25)
+    ax.legend(fontsize=8, loc="lower right")
     _save(fig, "fig_main_success_overhead.pdf")
 
 
@@ -120,22 +165,30 @@ def plot_failure_breakdown() -> None:
         _placeholder("fig_failure_breakdown.pdf", "Figure 5", "Awaiting aggregate data")
         return
 
+    frame = frame[frame["scheme"] != "exact"].copy()
+    if frame.empty:
+        _placeholder("fig_failure_breakdown.pdf", "Figure 5", "No comparable discovery baselines found")
+        return
+
     pivot = frame.pivot(index="scheme", columns="failure_type", values="rate").fillna(0.0)
-    fig, ax = plt.subplots(figsize=(7.4, 4.6))
+    ordered_index = [scheme for scheme in MAIN_SCHEME_ORDER if scheme in pivot.index]
+    pivot = pivot.reindex(index=ordered_index, columns=FAILURE_ORDER, fill_value=0.0)
+
+    fig, ax = plt.subplots(figsize=(7.2, 4.1))
     bottom = pd.Series(0.0, index=pivot.index)
-    for failure_type in pivot.columns:
+    for failure_type in FAILURE_ORDER:
         ax.bar(
-            pivot.index,
+            [_scheme_label(scheme) for scheme in pivot.index],
             pivot[failure_type],
             bottom=bottom,
-            label=failure_type,
+            label=failure_type.replace("_", " "),
+            color=FAILURE_COLORS[failure_type],
             alpha=0.9,
         )
         bottom += pivot[failure_type]
     ax.set_ylim(0, 1.0)
-    ax.set_ylabel("Rate")
-    ax.set_title("Figure 5: Failure Breakdown")
-    ax.legend(fontsize=8)
+    ax.set_ylabel("Query Fraction")
+    ax.legend(fontsize=8, ncol=2, loc="upper center", bbox_to_anchor=(0.5, 1.18))
     ax.grid(axis="y", alpha=0.25)
     _save(fig, "fig_failure_breakdown.pdf")
 
@@ -146,34 +199,47 @@ def plot_candidate_shrinkage() -> None:
         _placeholder("fig_candidate_shrinkage.pdf", "Figure 6", "Awaiting aggregate data")
         return
 
-    frame = frame[frame["scheme"] != "exact"].copy()
-    fig, ax = plt.subplots(figsize=(7.8, 4.4))
+    fig, axes = plt.subplots(1, 2, figsize=(10.2, 4.1), gridspec_kw={"width_ratios": [1.65, 1.0]})
+    left, right = axes
+
+    hiroute = frame[frame["scheme"] == "hiroute"].copy()
+    ordered = (
+        hiroute.set_index("stage")
+        .reindex(SHRINKAGE_STAGE_ORDER)
+        .dropna(subset=["mean_shrinkage_ratio"])
+        .reset_index()
+    )
     x_positions = list(range(len(SHRINKAGE_STAGE_ORDER)))
-    for scheme, group in frame.groupby("scheme", sort=False):
-        ordered = (
-            group.set_index("stage")
-            .reindex(SHRINKAGE_STAGE_ORDER)
-            .dropna(subset=["mean_shrinkage_ratio"])
-            .reset_index()
-        )
-        if ordered.empty:
-            continue
-        ax.plot(
-            [SHRINKAGE_STAGE_ORDER.index(stage) for stage in ordered["stage"]],
-            ordered["mean_shrinkage_ratio"],
-            marker="o",
-            linewidth=2,
-            color=_scheme_color(scheme),
-            label=scheme,
-        )
-    ax.set_xticks(x_positions)
-    ax.set_xticklabels([SHRINKAGE_STAGE_LABELS[stage] for stage in SHRINKAGE_STAGE_ORDER])
-    ax.set_ylim(0, 1.05)
-    ax.set_ylabel("Mean Candidate Ratio vs All Domains")
-    ax.set_title("Figure 6: Candidate Shrinkage Through Hierarchical Filtering")
-    ax.grid(axis="x", alpha=0.25)
-    ax.grid(axis="y", alpha=0.25)
-    ax.legend(fontsize=8)
+    left.plot(
+        [SHRINKAGE_STAGE_ORDER.index(stage) for stage in ordered["stage"]],
+        ordered["mean_shrinkage_ratio"],
+        marker="o",
+        linewidth=2.2,
+        color=_scheme_color("hiroute"),
+    )
+    left.set_xticks(x_positions)
+    left.set_xticklabels([SHRINKAGE_STAGE_LABELS[stage] for stage in SHRINKAGE_STAGE_ORDER])
+    left.set_ylim(0, 1.05)
+    left.set_ylabel("Candidate Ratio vs All Domains")
+    left.set_title("HiRoute staged contraction", fontsize=10)
+    left.grid(axis="x", alpha=0.2)
+    left.grid(axis="y", alpha=0.25)
+
+    main_frame = _read_csv(repo_root() / "results" / "aggregate" / "main_success_overhead.csv")
+    main_frame = main_frame[main_frame["scheme"] != "exact"].copy()
+    ordered_schemes = [scheme for scheme in MAIN_SCHEME_ORDER if scheme in set(main_frame["scheme"])]
+    probe_rows = main_frame.set_index("scheme").reindex(ordered_schemes).dropna(subset=["mean_num_remote_probes"])
+    right.bar(
+        [_scheme_label(scheme) for scheme in probe_rows.index],
+        probe_rows["mean_num_remote_probes"],
+        yerr=probe_rows.get("ci_num_remote_probes", pd.Series(0.0, index=probe_rows.index)),
+        color=[_scheme_color(scheme) for scheme in probe_rows.index],
+        capsize=3,
+        alpha=0.9,
+    )
+    right.set_ylabel("Mean Remote Probes / Query")
+    right.set_title("Cross-method discovery breadth", fontsize=10)
+    right.grid(axis="y", alpha=0.25)
     _save(fig, "fig_candidate_shrinkage.pdf")
 
 
@@ -183,21 +249,44 @@ def plot_deadlines() -> None:
         _placeholder("fig_deadline_summary.pdf", "Figure 7", "Awaiting aggregate data")
         return
 
-    fig, ax = plt.subplots(figsize=(6.8, 4.0))
-    for scheme, group in frame.groupby("scheme", sort=False):
-        ax.plot(
+    frame = frame[frame["scheme"] != "exact"].copy()
+    if frame.empty:
+        _placeholder("fig_deadline_summary.pdf", "Figure 7", "No comparable discovery baselines found")
+        return
+
+    fig, axes = plt.subplots(1, 2, figsize=(10.0, 4.0), gridspec_kw={"width_ratios": [1.5, 1.0]})
+    left, right = axes
+    ordered_schemes = [scheme for scheme in MAIN_SCHEME_ORDER if scheme in set(frame["scheme"])]
+    for scheme in ordered_schemes:
+        group = frame[frame["scheme"] == scheme].sort_values("deadline_ms")
+        left.plot(
             group["deadline_ms"],
             group["success_before_deadline_rate"],
             marker="o",
             linewidth=2,
             color=_scheme_color(scheme),
-            label=scheme,
+            label=_scheme_label(scheme),
         )
-    ax.set_xlabel("Deadline (ms)")
-    ax.set_ylabel("Success Before Deadline")
-    ax.set_title("Figure 7: Deadline-Sensitive Success")
-    ax.grid(alpha=0.25)
-    ax.legend(fontsize=8)
+    left.set_xlabel("Deadline (ms)")
+    left.set_ylabel("Success Within Deadline")
+    left.grid(alpha=0.25)
+    left.legend(fontsize=8, loc="lower right")
+
+    latency_rows = (
+        frame.groupby("scheme", as_index=False)["median_success_latency_ms"]
+        .max()
+        .set_index("scheme")
+        .reindex(ordered_schemes)
+        .dropna(subset=["median_success_latency_ms"])
+    )
+    right.bar(
+        [_scheme_label(scheme) for scheme in latency_rows.index],
+        latency_rows["median_success_latency_ms"],
+        color=[_scheme_color(scheme) for scheme in latency_rows.index],
+        alpha=0.9,
+    )
+    right.set_ylabel("Median Successful Latency (ms)")
+    right.grid(axis="y", alpha=0.25)
     _save(fig, "fig_deadline_summary.pdf")
 
 

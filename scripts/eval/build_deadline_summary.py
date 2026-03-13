@@ -20,7 +20,10 @@ OUTPUT_FIELDS = [
     "topology_id",
     "deadline_ms",
     "success_before_deadline_rate",
+    "timeout_or_failure_rate",
     "mean_latency_ms",
+    "mean_success_latency_ms",
+    "median_success_latency_ms",
 ]
 DEFAULT_DEADLINES_MS = [50, 100, 200, 500]
 
@@ -43,16 +46,23 @@ def main() -> int:
 
     output_rows = []
     for (scheme, topology_id), group in frame.groupby(["registry_scheme", "registry_topology_id"], sort=False):
+        success_rows = group[group["success_at_1"] == 1]
+        mean_success_latency = float(success_rows["latency_ms"].mean()) if not success_rows.empty else float("nan")
+        median_success_latency = float(success_rows["latency_ms"].median()) if not success_rows.empty else float("nan")
         for deadline_ms in DEFAULT_DEADLINES_MS:
             on_time = (group["success_at_1"] == 1) & (group["latency_ms"] <= deadline_ms)
+            success_before_deadline = float(on_time.mean())
             output_rows.append(
                 {
                     "experiment_id": experiment["experiment_id"],
                     "scheme": scheme,
                     "topology_id": topology_id,
                     "deadline_ms": deadline_ms,
-                    "success_before_deadline_rate": round(float(on_time.mean()), 6),
+                    "success_before_deadline_rate": round(success_before_deadline, 6),
+                    "timeout_or_failure_rate": round(1.0 - success_before_deadline, 6),
                     "mean_latency_ms": round(group["latency_ms"].mean(), 6),
+                    "mean_success_latency_ms": round(mean_success_latency, 6),
+                    "median_success_latency_ms": round(median_success_latency, 6),
                 }
             )
 

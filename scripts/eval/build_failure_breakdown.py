@@ -23,6 +23,15 @@ OUTPUT_FIELDS = [
     "rate",
 ]
 
+FAILURE_ORDER = [
+    "predicate_miss",
+    "wrong_domain",
+    "wrong_object",
+    "no_reply",
+    "fetch_timeout",
+    "success",
+]
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
@@ -40,18 +49,27 @@ def main() -> int:
         print("ERROR: no canonical query logs found")
         return 1
 
+    if "success_at_1" in frame.columns:
+        frame = frame.copy()
+        frame["normalized_failure_type"] = frame["failure_type"].fillna("")
+        frame.loc[frame["success_at_1"] == 1, "normalized_failure_type"] = "success"
+        frame.loc[frame["normalized_failure_type"] == "none", "normalized_failure_type"] = "success"
+    else:
+        frame["normalized_failure_type"] = frame["failure_type"].fillna("unknown")
+
     output_rows = []
     for (scheme, topology_id), group in frame.groupby(["registry_scheme", "registry_topology_id"], sort=False):
-        counts = group["failure_type"].fillna("unknown").value_counts()
+        counts = group["normalized_failure_type"].value_counts()
         total = len(group)
-        for failure_type, count in counts.items():
+        for failure_type in FAILURE_ORDER:
+            count = int(counts.get(failure_type, 0))
             output_rows.append(
                 {
                     "experiment_id": experiment["experiment_id"],
                     "scheme": scheme,
                     "topology_id": topology_id,
                     "failure_type": failure_type,
-                    "count": int(count),
+                    "count": count,
                     "rate": round(float(count) / float(total), 6),
                 }
             )
