@@ -17,6 +17,8 @@ This audit cross-checks `Todo.md` and `paper/main.tex` against the current HiRou
 - The hierarchy builder now enforces a minimum object count per semantic microcluster, which removed the earlier flood of singleton level-2 cells.
 - Figure 6 now reads explicit staged search traces (`all_domains -> predicate_filtered_domains -> level0 -> level1 -> refined -> probed -> manifest`) instead of inferring everything from one predicate-shrinkage scalar.
 - Figure 8 now uses fixed-budget sweeps over objects per domain and active domain count, which restores the control-plane scaling experiment described in `paper/main.tex`.
+- The `oracle` baseline is now a true centralized semantic directory, and `exact` has been removed from the main semantic-discovery comparisons.
+- `exp_main_v1` now filters to `medium/high` ambiguity queries and `exp_ablation_v1` now filters to `high`-ambiguity queries, which fixes the earlier constraint-dominant ablation artifact.
 
 ## Residual Risk
 
