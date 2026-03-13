@@ -12,7 +12,9 @@
 
 #include <filesystem>
 #include <fstream>
+#include <cmath>
 #include <map>
+#include <sstream>
 #include <set>
 #include <stdexcept>
 #include <string>
@@ -45,6 +47,9 @@ struct HiRouteScenarioConfig {
   uint32_t manifestSize = 4;
   uint32_t probeBudget = 4;
   uint32_t queryLimitPerIngress = 5;
+  uint32_t exportBudget = 16;
+  std::string objectScales = "0.25,0.5,0.75,1.0";
+  std::string domainSweepCounts = "";
 };
 
 inline const char*
@@ -237,6 +242,68 @@ adjacentNodes(const std::string& topologyPath, const std::string& nodeId)
   return {neighbors.begin(), neighbors.end()};
 }
 
+inline std::vector<double>
+parseDoubleList(const std::string& encoded)
+{
+  std::vector<double> values;
+  if (encoded.empty()) {
+    return values;
+  }
+
+  std::stringstream parser(encoded);
+  std::string token;
+  while (std::getline(parser, token, ',')) {
+    if (token.empty()) {
+      continue;
+    }
+    values.push_back(std::strtod(token.c_str(), nullptr));
+  }
+  return values;
+}
+
+inline std::vector<uint32_t>
+parseUintList(const std::string& encoded)
+{
+  std::vector<uint32_t> values;
+  if (encoded.empty()) {
+    return values;
+  }
+
+  std::stringstream parser(encoded);
+  std::string token;
+  while (std::getline(parser, token, ',')) {
+    if (token.empty()) {
+      continue;
+    }
+    values.push_back(static_cast<uint32_t>(std::strtoul(token.c_str(), nullptr, 10)));
+  }
+  return values;
+}
+
+inline std::vector<uint32_t>
+defaultDomainSweepCounts(uint32_t totalDomains)
+{
+  std::set<uint32_t> counts;
+  if (totalDomains == 0) {
+    return {};
+  }
+  counts.insert(std::max(1u, totalDomains / 4));
+  counts.insert(std::max(1u, totalDomains / 2));
+  counts.insert(std::max(1u, (3 * totalDomains) / 4));
+  counts.insert(totalDomains);
+  return {counts.begin(), counts.end()};
+}
+
+inline uint32_t
+estimateSummaryBytes(const std::map<std::string, std::string>& row)
+{
+  return static_cast<uint32_t>(
+    96 + GetFieldOrEmpty(row, "cell_id").size() + GetFieldOrEmpty(row, "parent_id").size() +
+    GetFieldOrEmpty(row, "zone_bitmap").size() + GetFieldOrEmpty(row, "zone_type_bitmap").size() +
+    GetFieldOrEmpty(row, "service_bitmap").size() + GetFieldOrEmpty(row, "freshness_bitmap").size() +
+    GetFieldOrEmpty(row, "controller_prefix").size());
+}
+
 inline int
 RunHiRouteScenario(int argc, char* argv[], HiRouteScenarioMode mode)
 {
@@ -263,6 +330,11 @@ RunHiRouteScenario(int argc, char* argv[], HiRouteScenarioMode mode)
   cmd.AddValue("probeBudget", "Discovery probe budget", config.probeBudget);
   cmd.AddValue("queryLimitPerIngress", "Maximum queries scheduled on each ingress node",
                config.queryLimitPerIngress);
+  cmd.AddValue("exportBudget", "Per-domain export budget used in scaling summaries",
+               config.exportBudget);
+  cmd.AddValue("objectScales", "Comma-separated object scaling factors", config.objectScales);
+  cmd.AddValue("domainSweepCounts", "Comma-separated active domain counts",
+               config.domainSweepCounts);
   cmd.Parse(argc, argv);
 
   std::filesystem::create_directories(config.runDir);
@@ -410,17 +482,93 @@ RunHiRouteScenario(int argc, char* argv[], HiRouteScenarioMode mode)
     ++ingressCount;
   }
 
-  appendCsvRow(stateLogPath,
-               {"scenario", "scheme", "topology_id", "node_count", "controller_count",
-                "ingress_count", "summary_count", "object_count"},
-               {toString(mode),
-                config.scheme,
-                config.topologyId,
-                std::to_string(NodeList::GetNNodes()),
-                std::to_string(controllerCount),
-                std::to_string(ingressCount),
-                std::to_string(summaryRows.size()),
-                std::to_string(objectRows.size())});
+  std::map<std::string, uint32_t> objectsByDomain;
+  std::map<std::string, uint32_t> summariesByDomain;
+  std::map<std::string, uint32_t> summaryBytesByDomain;
+  std::set<std::string> domainIds;
+  for (const auto& row : topologyRows) {
+    if (!GetFieldOrEmpty(row, "domain_id").empty()) {
+      domainIds.insert(GetFieldOrEmpty(row, "domain_id"));
+    }
+  }
+  for (const auto& row : objectRows) {
+    ++objectsByDomain[GetFieldOrEmpty(row, "domain_id")];
+  }
+  for (const auto& row : summaryRows) {
+    const auto domainId = GetFieldOrEmpty(row, "domain_id");
+    ++summariesByDomain[domainId];
+    summaryBytesByDomain[domainId] += estimateSummaryBytes(row);
+  }
+
+  const std::vector<std::string> orderedDomains(domainIds.begin(), domainIds.end());
+  const auto stateHeader =
+    std::vector<std::string>{"timestamp_ms", "scheme", "domain_id", "num_exported_summaries",
+                             "exported_summary_bytes", "summary_updates_sent",
+                             "objects_in_domain", "domains_total", "budget",
+                             "topology_id", "scaling_axis", "scaling_value"};
+  auto appendStateRow = [&] (const std::string& domainId, uint32_t exportedSummaries,
+                             uint32_t exportedBytes, uint32_t summaryUpdatesSent,
+                             uint32_t objectsInDomain, uint32_t domainsTotal,
+                             const std::string& scalingAxis, uint32_t scalingValue) {
+    appendCsvRow(stateLogPath, stateHeader,
+                 {"0", config.scheme, domainId, std::to_string(exportedSummaries),
+                  std::to_string(exportedBytes), std::to_string(summaryUpdatesSent),
+                  std::to_string(objectsInDomain), std::to_string(domainsTotal),
+                  std::to_string(config.exportBudget), config.topologyId, scalingAxis,
+                  std::to_string(scalingValue)});
+  };
+
+  if (mode == HiRouteScenarioMode::StateScaling) {
+    auto objectScales = parseDoubleList(config.objectScales);
+    if (objectScales.empty()) {
+      objectScales = {0.25, 0.5, 0.75, 1.0};
+    }
+    auto domainSweepCounts = parseUintList(config.domainSweepCounts);
+    if (domainSweepCounts.empty()) {
+      domainSweepCounts = defaultDomainSweepCounts(static_cast<uint32_t>(orderedDomains.size()));
+    }
+
+    for (double scale : objectScales) {
+      for (const auto& domainId : orderedDomains) {
+        const auto availableSummaries = summariesByDomain[domainId];
+        const auto availableBytes = summaryBytesByDomain[domainId];
+        const auto exportedSummaries = std::min(availableSummaries, config.exportBudget);
+        const auto exportedBytes = availableSummaries == 0 ? 0 :
+          static_cast<uint32_t>(std::llround(
+            (static_cast<double>(availableBytes) / availableSummaries) * exportedSummaries));
+        const auto scaledObjects = std::max(1u, static_cast<uint32_t>(
+          std::llround(objectsByDomain[domainId] * scale)));
+        appendStateRow(domainId, exportedSummaries, exportedBytes, exportedSummaries,
+                       scaledObjects, static_cast<uint32_t>(orderedDomains.size()),
+                       "objects_per_domain", scaledObjects);
+      }
+    }
+
+    for (uint32_t activeDomains : domainSweepCounts) {
+      const auto clampedDomains =
+        std::min(activeDomains, static_cast<uint32_t>(orderedDomains.size()));
+      for (size_t index = 0; index < orderedDomains.size() && index < clampedDomains; ++index) {
+        const auto& domainId = orderedDomains[index];
+        const auto availableSummaries = summariesByDomain[domainId];
+        const auto availableBytes = summaryBytesByDomain[domainId];
+        const auto exportedSummaries = std::min(availableSummaries, config.exportBudget);
+        const auto exportedBytes = availableSummaries == 0 ? 0 :
+          static_cast<uint32_t>(std::llround(
+            (static_cast<double>(availableBytes) / availableSummaries) * exportedSummaries));
+        appendStateRow(domainId, exportedSummaries, exportedBytes, exportedSummaries,
+                       objectsByDomain[domainId], clampedDomains,
+                       "domain_count", clampedDomains);
+      }
+    }
+  }
+  else {
+    for (const auto& domainId : orderedDomains) {
+      appendStateRow(domainId, summariesByDomain[domainId], summaryBytesByDomain[domainId],
+                     summariesByDomain[domainId], objectsByDomain[domainId],
+                     static_cast<uint32_t>(orderedDomains.size()), "snapshot",
+                     objectsByDomain[domainId]);
+    }
+  }
 
   if (mode == HiRouteScenarioMode::LinkFailure) {
     const auto selectedDomain =

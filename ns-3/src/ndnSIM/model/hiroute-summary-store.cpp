@@ -94,6 +94,18 @@ HiRouteSummaryStore::GetChildren(const std::string& parentId) const
 }
 
 std::vector<const HiRouteSummaryEntry*>
+HiRouteSummaryStore::GetEntriesAtLevel(uint32_t level) const
+{
+  std::vector<const HiRouteSummaryEntry*> entries;
+  for (const auto& entry : m_entries) {
+    if (entry.level == level) {
+      entries.push_back(&entry);
+    }
+  }
+  return entries;
+}
+
+std::vector<const HiRouteSummaryEntry*>
 HiRouteSummaryStore::FilterByPredicate(const std::string& zoneConstraint,
                                        const std::string& zoneTypeConstraint,
                                        const std::string& serviceConstraint,

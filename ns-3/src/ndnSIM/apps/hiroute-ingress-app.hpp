@@ -59,7 +59,13 @@ private:
 
   struct ProbePlan {
     std::vector<ProbeTarget> probes;
+    size_t allDomainCount = 0;
     size_t predicateCandidateCount = 0;
+    size_t predicateFilteredDomainCount = 0;
+    size_t level0CellCount = 0;
+    size_t level1CellCount = 0;
+    size_t refinedCellCount = 0;
+    size_t probeTargetCount = 0;
   };
 
   enum class Phase { Idle, WaitingDiscovery, WaitingFetch };
@@ -119,6 +125,10 @@ private:
 
   void
   appendRow(std::ofstream& stream, const std::vector<std::string>& values);
+
+  void
+  logSearchStage(const std::string& queryId, const std::string& stage, size_t candidateCount,
+                 size_t selectedCount, size_t frontierSize, int64_t timestampMs);
 
   bool
   isRelevantObject(const std::string& queryId, const std::string& objectId) const;

@@ -25,6 +25,9 @@ public:
   GetChildren(const std::string& parentId) const;
 
   std::vector<const HiRouteSummaryEntry*>
+  GetEntriesAtLevel(uint32_t level) const;
+
+  std::vector<const HiRouteSummaryEntry*>
   FilterByPredicate(const std::string& zoneConstraint, const std::string& zoneTypeConstraint,
                     const std::string& serviceConstraint,
                     const std::string& freshnessConstraint) const;

@@ -15,28 +15,11 @@ HiRouteDiscoveryEngine::SetWeights(const Weights& weights)
 }
 
 std::vector<HiRouteDiscoveryEngine::Candidate>
-HiRouteDiscoveryEngine::SelectCandidates(const HiRouteSummaryStore& summaryStore,
-                                         const HiRouteDiscoveryRequest& request,
-                                         const HiRouteReliabilityCache& reliabilityCache,
-                                         size_t limit) const
+HiRouteDiscoveryEngine::RankCandidates(const std::vector<const HiRouteSummaryEntry*>& pool,
+                                       const HiRouteDiscoveryRequest& request,
+                                       const HiRouteReliabilityCache& reliabilityCache,
+                                       size_t limit) const
 {
-  std::vector<const HiRouteSummaryEntry*> pool;
-  if (!request.frontierHintCellId.empty()) {
-    pool = summaryStore.GetChildren(request.frontierHintCellId);
-    if (pool.empty()) {
-      if (const auto* cell = summaryStore.Find(request.frontierHintCellId)) {
-        pool.push_back(cell);
-      }
-    }
-  }
-
-  if (pool.empty()) {
-    pool = summaryStore.FilterByPredicate(request.predicate.zoneConstraint,
-                                          request.predicate.zoneTypeConstraint,
-                                          request.predicate.serviceConstraint,
-                                          request.predicate.freshnessConstraint);
-  }
-
   const auto requestedLimit = limit == 0 ? static_cast<size_t>(request.refinementBudget) : limit;
   const auto predicateKey = HiRouteReliabilityCache::MakePredicateKey(request.predicate);
   std::map<std::string, double> semanticHints;
@@ -84,6 +67,32 @@ HiRouteDiscoveryEngine::SelectCandidates(const HiRouteSummaryStore& summaryStore
     candidates.resize(maxCandidates);
   }
   return candidates;
+}
+
+std::vector<HiRouteDiscoveryEngine::Candidate>
+HiRouteDiscoveryEngine::SelectCandidates(const HiRouteSummaryStore& summaryStore,
+                                         const HiRouteDiscoveryRequest& request,
+                                         const HiRouteReliabilityCache& reliabilityCache,
+                                         size_t limit) const
+{
+  std::vector<const HiRouteSummaryEntry*> pool;
+  if (!request.frontierHintCellId.empty()) {
+    pool = summaryStore.GetChildren(request.frontierHintCellId);
+    if (pool.empty()) {
+      if (const auto* cell = summaryStore.Find(request.frontierHintCellId)) {
+        pool.push_back(cell);
+      }
+    }
+  }
+
+  if (pool.empty()) {
+    pool = summaryStore.FilterByPredicate(request.predicate.zoneConstraint,
+                                          request.predicate.zoneTypeConstraint,
+                                          request.predicate.serviceConstraint,
+                                          request.predicate.freshnessConstraint);
+  }
+
+  return RankCandidates(pool, request, reliabilityCache, limit);
 }
 
 double

@@ -119,6 +119,9 @@ STATE_LOG_FIELDS = [
     "objects_in_domain",
     "domains_total",
     "budget",
+    "topology_id",
+    "scaling_axis",
+    "scaling_value",
 ]
 
 FAILURE_EVENT_FIELDS = [
@@ -386,6 +389,9 @@ def _generate_mock_outputs(
                 "objects_in_domain": object_counts[domain_id],
                 "domains_total": domain_total,
                 "budget": max_budget,
+                "topology_id": topology_id,
+                "scaling_axis": "snapshot",
+                "scaling_value": object_counts[domain_id],
             }
         )
 
@@ -608,6 +614,9 @@ def _ndnsim_command(
         "manifestSize",
         "probeBudget",
         "queryLimitPerIngress",
+        "exportBudget",
+        "objectScales",
+        "domainSweepCounts",
     ]:
         if flag in params:
             command.append(f"--{flag}={params[flag]}")

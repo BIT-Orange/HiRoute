@@ -36,6 +36,12 @@ public:
   SetWeights(const Weights& weights);
 
   std::vector<Candidate>
+  RankCandidates(const std::vector<const HiRouteSummaryEntry*>& pool,
+                 const HiRouteDiscoveryRequest& request,
+                 const HiRouteReliabilityCache& reliabilityCache,
+                 size_t limit = 0) const;
+
+  std::vector<Candidate>
   SelectCandidates(const HiRouteSummaryStore& summaryStore, const HiRouteDiscoveryRequest& request,
                    const HiRouteReliabilityCache& reliabilityCache, size_t limit = 0) const;
 
