@@ -2,7 +2,7 @@
 
 ## Text
 
-- HiRoute's benefit is best understood through failure decomposition and deadline-sensitive usefulness, not just average latency.
+HiRoute's primary gain comes from cutting wrong-object failures, while deadline-sensitive usefulness depends on how much latency budget the application allows.
 
 ## Supported by
 
@@ -20,4 +20,4 @@
 
 ## Status
 
-drafted
+ready

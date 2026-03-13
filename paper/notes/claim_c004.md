@@ -2,7 +2,7 @@
 
 ## Text
 
-- The evaluation stack now supports a dedicated ablation output path and can be extended to a formal ablation experiment without changing the paper structure.
+The full HiRoute stack outperforms its ablations on object-level success, confirming that predicate filtering and hierarchical semantic refinement are both required for the final result.
 
 ## Supported by
 
@@ -14,8 +14,8 @@
 
 ## Source runs
 
-- Current promoted `exp_main_v1` runs until a dedicated ablation experiment is added
+- Promoted runs for `exp_ablation_v1`
 
 ## Status
 
-drafted
+ready

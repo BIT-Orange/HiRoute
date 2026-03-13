@@ -2,8 +2,8 @@
 
 ## Text
 
-In the first formal workflow pass, HiRoute improves service success over `flat_iroute` while using
-substantially less discovery overhead than `flood`.
+HiRoute improves object-level service success over `flat_iroute` and `flood` on `rf_3967_exodus`,
+trading higher discovery overhead for fewer wrong-object failures.
 
 ## Supported by
 
@@ -19,4 +19,4 @@ substantially less discovery overhead than `flood`.
 
 ## Status
 
-drafted
+ready

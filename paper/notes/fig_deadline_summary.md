@@ -14,8 +14,9 @@
 
 ## Observations
 
-- The pipeline now emits success-before-deadline curves suitable for the latency section.
+- At `200 ms`, `flat_iroute` remains ahead on deadline satisfaction (`0.683333`) while `hiroute` reaches `0.6`.
+- At `500 ms`, `hiroute` overtakes the semantic baselines at `0.858333`, compared with `0.8` for `flat_iroute` and `0.75` for `flood`.
 
 ## Caveats
 
-- Current values should be refreshed after the formal ndnSIM promoted runs replace the earlier promoted registry rows.
+- The deadline story is deadline-dependent: `hiroute` wins on eventual object resolution, but not on the tightest latency thresholds.

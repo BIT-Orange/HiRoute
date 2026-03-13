@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Compare end-to-end service success against discovery overhead for the first formal experiment.
+Compare end-to-end service success against discovery overhead on `rf_3967_exodus`.
 
 ## Built from
 
@@ -10,19 +10,17 @@ Compare end-to-end service success against discovery overhead for the first form
 
 ## Promoted runs
 
-- `exact`: `exp_main_v1__exact__smartcity_v1__seed1__20260312_122120`, `exp_main_v1__exact__smartcity_v1__seed2__20260312_122120`, `exp_main_v1__exact__smartcity_v1__seed3__20260312_122121`, `exp_main_v1__exact__smartcity_v1__seed4__20260312_122121`, `exp_main_v1__exact__smartcity_v1__seed5__20260312_122121`
-- `flood`: `exp_main_v1__flood__smartcity_v1__seed1__20260312_122121`, `exp_main_v1__flood__smartcity_v1__seed2__20260312_122121`, `exp_main_v1__flood__smartcity_v1__seed3__20260312_122122`, `exp_main_v1__flood__smartcity_v1__seed4__20260312_122122`, `exp_main_v1__flood__smartcity_v1__seed5__20260312_122122`
-- `flat_iroute`: `exp_main_v1__flat_iroute__smartcity_v1__seed1__20260312_122122`, `exp_main_v1__flat_iroute__smartcity_v1__seed2__20260312_122122`, `exp_main_v1__flat_iroute__smartcity_v1__seed3__20260312_122123`, `exp_main_v1__flat_iroute__smartcity_v1__seed4__20260312_122123`, `exp_main_v1__flat_iroute__smartcity_v1__seed5__20260312_122123`
-- `oracle`: `exp_main_v1__oracle__smartcity_v1__seed1__20260312_122123`, `exp_main_v1__oracle__smartcity_v1__seed2__20260312_122123`, `exp_main_v1__oracle__smartcity_v1__seed3__20260312_122124`, `exp_main_v1__oracle__smartcity_v1__seed4__20260312_122124`, `exp_main_v1__oracle__smartcity_v1__seed5__20260312_122124`
-- `hiroute`: `exp_main_v1__hiroute__smartcity_v1__seed1__20260312_122124`, `exp_main_v1__hiroute__smartcity_v1__seed2__20260312_122124`, `exp_main_v1__hiroute__smartcity_v1__seed3__20260312_122124`, `exp_main_v1__hiroute__smartcity_v1__seed4__20260312_122125`, `exp_main_v1__hiroute__smartcity_v1__seed5__20260312_122125`
+- Current promoted rows are the latest `exp_main_v1` entries in `runs/registry/promoted_runs.csv`.
+- Latest `hiroute` runs: `exp_main_v1__hiroute__smartcity_v1__rf_3967_exodus__seed1__20260313_020519`, `exp_main_v1__hiroute__smartcity_v1__rf_3967_exodus__seed2__20260313_020706`, `exp_main_v1__hiroute__smartcity_v1__rf_3967_exodus__seed3__20260313_020750`, `exp_main_v1__hiroute__smartcity_v1__rf_3967_exodus__seed4__20260313_020834`, `exp_main_v1__hiroute__smartcity_v1__rf_3967_exodus__seed5__20260313_020918`
+- Full per-scheme run lists are captured in the `source_run_ids` column of `results/aggregate/main_success_overhead.csv`.
 
 ## Observations
 
-- `hiroute` improves mean `success_at_1` over `flat_iroute` (`0.7050` vs `0.4975`).
-- `hiroute` uses much less discovery overhead than `flood` (`851.24` vs `1815.03` mean discovery bytes).
-- `oracle` remains the upper bound on success (`0.7925`) while `exact` remains the lowest-overhead but lowest-success baseline.
+- `hiroute` achieves the highest semantic-discovery success among the discovery baselines: `0.891667` vs `0.8` for both `flood` and `flat_iroute`.
+- The gain comes with higher probe and discovery cost: `1.808333` remote probes/query and `237.458333` discovery bytes/query for `hiroute`, compared with `1.225` / `106.841667` for `flood` and `1.008333` / `104.725` for `flat_iroute`.
+- `exact` remains the name-known lower bound at `1.0` success and zero discovery bytes; `oracle` remains below `hiroute` at `0.575` success because it skips hierarchical constraint-guided refinement.
 
 ## Caveats
 
-- These values come from the deterministic mock runner, not the final ndnSIM protocol path.
-- The current figure supports workflow traceability and baseline wiring; it is not yet a publishable protocol result.
+- These values come from promoted ndnSIM runs on `rf_3967_exodus`, not the earlier mock pipeline.
+- The main tradeoff is success vs discovery overhead, not lower latency than all baselines.

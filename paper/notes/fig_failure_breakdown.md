@@ -14,8 +14,9 @@
 
 ## Observations
 
-- The current pipeline exposes per-scheme failure composition rather than only top-line success.
+- `hiroute` reduces `wrong_object` failures to `0.108333`, compared with `0.2` for both `flood` and `flat_iroute`.
+- `oracle` splits its misses between `wrong_domain` (`0.225`) and `wrong_object` (`0.2`), while `hiroute`, `flood`, and `flat_iroute` only expose `wrong_object` in the promoted main experiment.
 
 ## Caveats
 
-- Current committed values come from the existing promoted registry; once formal ndnSIM promoted runs replace the older promoted set, this figure should be regenerated.
+- This figure is sourced from the current promoted ndnSIM main-experiment runs only.

@@ -14,8 +14,9 @@
 
 ## Observations
 
-- The evaluation pipeline now preserves a route from raw query traces to candidate-shrinkage aggregates.
+- The current implementation yields the same predicate-level shrinkage ratio (`0.007237` mean) across `oracle`, `hiroute`, `flood`, and `flat_iroute`; the differentiator is how many remote probes each strategy spends after predicate filtering.
+- `hiroute` reaches the best semantic success with the highest mean probe count (`1.808333`), which is consistent with the adaptive multi-probe policy added in the final ndnSIM pass.
 
 ## Caveats
 
-- Older promoted runs do not contain full raw shrinkage fields, so current committed values may include compatibility fallbacks.
+- The current shrinkage metric is driven by predicate candidate elimination. It does not yet separate post-manifest object shrinkage from pre-probe cell shrinkage.

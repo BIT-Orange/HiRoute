@@ -2,7 +2,7 @@
 
 ## Text
 
-- The workflow now binds state scaling and robustness sections to explicit aggregate files and figure outputs, even before the final official promoted runs are complete.
+HiRoute retains its success advantage on both Rocketfuel topologies and under the current stale-summary, link-failure, and domain-failure scenarios.
 
 ## Supported by
 
@@ -20,4 +20,4 @@
 
 ## Status
 
-drafted
+ready

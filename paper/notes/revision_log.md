@@ -11,3 +11,10 @@
 - Bound Figure 5, 6, 7, 8, 9, and 10 note files and claim stubs to explicit aggregate CSVs.
 - Replaced the paper placeholders for Figure 4-10 with `\includegraphics` bindings to `results/figures/*.pdf`.
 - Kept Figure 8 and Figure 9 in placeholder-PDF mode until official scaling and robustness runs are promoted.
+
+## 2026-03-13
+
+- Replaced the provisional `hiroute` promoted runs with the final multi-probe ndnSIM reruns on `rf_3967_exodus` and `rf_1239_sprint`.
+- Updated the main claim from an incorrect "lower overhead than flood" framing to the actual tradeoff: higher object-level success at higher discovery cost.
+- Promoted official Figure 8, Figure 9, and Figure 10 inputs and removed the remaining placeholder language from the paper notes.
+- Bound `exp_ablation_v1` into the experiment matrix and figure registry as the formal source for Figure 10.
