@@ -38,6 +38,26 @@ COLORS = {
     "full_hiroute": "#2451a4",
 }
 
+SHRINKAGE_STAGE_ORDER = [
+    "all_domains",
+    "predicate_filtered_domains",
+    "level0_cells",
+    "level1_cells",
+    "refined_cells",
+    "probed_cells",
+    "manifest_candidates",
+]
+
+SHRINKAGE_STAGE_LABELS = {
+    "all_domains": "All\ndomains",
+    "predicate_filtered_domains": "Predicate\nfiltered",
+    "level0_cells": "Level-0\ncells",
+    "level1_cells": "Level-1\ncells",
+    "refined_cells": "Refined\ncells",
+    "probed_cells": "Probed\ncells",
+    "manifest_candidates": "Manifest\ncandidates",
+}
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
@@ -126,16 +146,34 @@ def plot_candidate_shrinkage() -> None:
         _placeholder("fig_candidate_shrinkage.pdf", "Figure 6", "Awaiting aggregate data")
         return
 
-    frame = frame.sort_values("mean_candidate_shrinkage_ratio")
-    fig, ax = plt.subplots(figsize=(6.8, 4.0))
-    ax.barh(
-        frame["scheme"],
-        frame["mean_candidate_shrinkage_ratio"],
-        color=[_scheme_color(s) for s in frame["scheme"]],
-    )
-    ax.set_xlabel("Mean Candidate Shrinkage Ratio")
-    ax.set_title("Figure 6: Candidate Shrinkage")
+    frame = frame[frame["scheme"] != "exact"].copy()
+    fig, ax = plt.subplots(figsize=(7.8, 4.4))
+    x_positions = list(range(len(SHRINKAGE_STAGE_ORDER)))
+    for scheme, group in frame.groupby("scheme", sort=False):
+        ordered = (
+            group.set_index("stage")
+            .reindex(SHRINKAGE_STAGE_ORDER)
+            .dropna(subset=["mean_shrinkage_ratio"])
+            .reset_index()
+        )
+        if ordered.empty:
+            continue
+        ax.plot(
+            [SHRINKAGE_STAGE_ORDER.index(stage) for stage in ordered["stage"]],
+            ordered["mean_shrinkage_ratio"],
+            marker="o",
+            linewidth=2,
+            color=_scheme_color(scheme),
+            label=scheme,
+        )
+    ax.set_xticks(x_positions)
+    ax.set_xticklabels([SHRINKAGE_STAGE_LABELS[stage] for stage in SHRINKAGE_STAGE_ORDER])
+    ax.set_ylim(0, 1.05)
+    ax.set_ylabel("Mean Candidate Ratio vs All Domains")
+    ax.set_title("Figure 6: Candidate Shrinkage Through Hierarchical Filtering")
     ax.grid(axis="x", alpha=0.25)
+    ax.grid(axis="y", alpha=0.25)
+    ax.legend(fontsize=8)
     _save(fig, "fig_candidate_shrinkage.pdf")
 
 
@@ -169,23 +207,37 @@ def plot_state_scaling() -> None:
         _placeholder("fig_state_scaling.pdf", "Figure 8", "Awaiting scaling runs")
         return
 
-    fig, ax = plt.subplots(figsize=(6.8, 4.2))
-    for scheme, group in frame.groupby("scheme", sort=False):
-        ax.plot(
-            group["node_count"],
-            group["summary_count"],
-            marker="o",
-            linewidth=2,
-            color=_scheme_color(scheme),
-            label=scheme,
-        )
-    for _, row in frame.iterrows():
-        ax.text(row["node_count"] + 1, row["summary_count"], row["topology_id"], fontsize=8)
-    ax.set_xlabel("Topology Node Count")
-    ax.set_ylabel("Exported Summary Count")
-    ax.set_title("Figure 8: State Scaling")
-    ax.grid(alpha=0.25)
-    ax.legend(fontsize=8)
+    if "hiroute" in set(frame["scheme"]):
+        frame = frame[frame["scheme"] == "hiroute"].copy()
+
+    fig, axes = plt.subplots(1, 2, figsize=(10.4, 4.2), sharey=True)
+    panel_specs = [
+        ("objects_per_domain", "Objects per Domain", axes[0]),
+        ("domain_count", "Active Domains", axes[1]),
+    ]
+
+    for scaling_axis, xlabel, axis in panel_specs:
+        axis_rows = frame[frame["scaling_axis"] == scaling_axis].copy()
+        if axis_rows.empty:
+            axis.axis("off")
+            continue
+        for topology_id, group in axis_rows.groupby("topology_id", sort=False):
+            ordered = group.sort_values("scaling_value")
+            axis.plot(
+                ordered["scaling_value"],
+                ordered["mean_total_exported_summaries"],
+                marker="o",
+                linewidth=2,
+                color=_scheme_color("hiroute") if topology_id == "rf_3967_exodus" else "#1d7a74",
+                label=topology_id,
+            )
+        axis.set_xlabel(xlabel)
+        axis.grid(alpha=0.25)
+        axis.set_title(f"{xlabel} Sweep")
+    axes[0].set_ylabel("Mean Exported Summaries")
+    axes[0].legend(fontsize=8)
+    axes[1].legend(fontsize=8)
+    fig.suptitle("Figure 8: Routing-State Scaling Under Fixed Export Budget", fontsize=12)
     _save(fig, "fig_state_scaling.pdf")
 
 

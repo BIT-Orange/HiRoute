@@ -93,6 +93,33 @@ def main() -> int:
         print(f"ERROR: figure note is missing: {args.figure_note}")
         return 1
 
+    if args.aggregate and args.aggregate.exists():
+        aggregate_rows = read_csv_rows(args.aggregate)
+        if experiment["experiment_id"] == "exp_main_v1" and args.aggregate.name == "candidate_shrinkage.csv":
+            required_stages = {
+                "all_domains",
+                "predicate_filtered_domains",
+                "level0_cells",
+                "level1_cells",
+                "refined_cells",
+                "probed_cells",
+            }
+            seen_stages = {row.get("stage", "") for row in aggregate_rows}
+            missing_stages = sorted(required_stages - seen_stages)
+            if missing_stages:
+                print("ERROR: candidate shrinkage aggregate misses required stages: " +
+                      ", ".join(missing_stages))
+                return 1
+        if experiment["experiment_id"] == "exp_scaling_v1" and args.aggregate.name == "state_scaling_summary.csv":
+            axes = {row.get("scaling_axis", "") for row in aggregate_rows}
+            if axes != {"objects_per_domain", "domain_count"}:
+                print("ERROR: state scaling aggregate must contain both object and domain sweeps")
+                return 1
+            aggregate_topologies = {row.get("topology_id", "") for row in aggregate_rows}
+            if expected_topologies and aggregate_topologies != expected_topologies:
+                print("ERROR: state scaling aggregate does not cover every comparison topology")
+                return 1
+
     print("OK")
     return 0
 
