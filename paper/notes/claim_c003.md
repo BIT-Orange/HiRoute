@@ -2,7 +2,7 @@
 
 ## Text
 
-HiRoute retains its success advantage across the two Rocketfuel topologies, but the stronger robustness experiments show that the current implementation is more sensitive than `flat_iroute` and `flood` when a dominant controller domain becomes stale or unavailable.
+HiRoute keeps its exported discovery state bounded by the configured summary budget while the large Rocketfuel topology now scales to sixteen active data domains, and the repaired reliability-aware fallback materially improves robustness under stale summaries, link failures, and domain failures.
 
 ## Supported by
 

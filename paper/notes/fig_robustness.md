@@ -2,7 +2,7 @@
 
 ## Purpose
 
-- Compare service success and overhead under stale summaries and failure scenarios.
+- Measure HiRoute's service success and overhead under stale summaries, link failures, and domain failures.
 
 ## Built from
 
@@ -11,15 +11,15 @@
 ## Promoted runs
 
 - `exp_staleness_v1` and `exp_failures_v1` promoted runs.
-- Latest `hiroute` robustness runs: `exp_staleness_v1__hiroute__smartcity_v1__rf_3967_exodus__seed1__20260313_024922`, `exp_staleness_v1__hiroute__smartcity_v1__rf_3967_exodus__seed2__20260313_025427`, `exp_staleness_v1__hiroute__smartcity_v1__rf_3967_exodus__seed3__20260313_025513`, `exp_failures_v1__hiroute__smartcity_v1__rf_3967_exodus__link__seed1__20260313_025007`, `exp_failures_v1__hiroute__smartcity_v1__rf_3967_exodus__link__seed2__20260313_030937`, `exp_failures_v1__hiroute__smartcity_v1__rf_3967_exodus__link__seed3__20260313_031105`, `exp_failures_v1__hiroute__smartcity_v1__rf_3967_exodus__domain__seed1__20260313_025053`, `exp_failures_v1__hiroute__smartcity_v1__rf_3967_exodus__domain__seed2__20260313_031022`, `exp_failures_v1__hiroute__smartcity_v1__rf_3967_exodus__domain__seed3__20260313_031150`
+- Latest `hiroute` robustness runs: `exp_staleness_v1__hiroute__smartcity_v1__rf_3967_exodus__seed1__20260313_084545`, `exp_staleness_v1__hiroute__smartcity_v1__rf_3967_exodus__seed2__20260313_084629`, `exp_staleness_v1__hiroute__smartcity_v1__rf_3967_exodus__seed3__20260313_084713`, `exp_failures_v1__hiroute__smartcity_v1__rf_3967_exodus__link__seed1__20260313_084814`, `exp_failures_v1__hiroute__smartcity_v1__rf_3967_exodus__link__seed2__20260313_084858`, `exp_failures_v1__hiroute__smartcity_v1__rf_3967_exodus__link__seed3__20260313_084942`, `exp_failures_v1__hiroute__smartcity_v1__rf_3967_exodus__domain__seed1__20260313_085025`, `exp_failures_v1__hiroute__smartcity_v1__rf_3967_exodus__domain__seed2__20260313_085110`, `exp_failures_v1__hiroute__smartcity_v1__rf_3967_exodus__domain__seed3__20260313_085154`
 
 ## Observations
 
-- Under targeted stale-summary injection, `hiroute` drops to `0.641667` mean `success_at_1`, versus `0.733333` for `flat_iroute` and `0.575` for `oracle`.
-- Under targeted link failure, `hiroute` drops to `0.591667` and incurs the highest latency (`493.966667 ms`), while `flood` and `flat_iroute` remain at `0.708333` and `0.7`.
-- Under targeted domain failure, `hiroute` drops further to `0.441667`, below `flat_iroute` (`0.666667`), `flood` (`0.6`), and `oracle` (`0.575`).
+- Under targeted stale-summary injection, the repaired `hiroute` path now holds `0.868852` mean `success_at_1` with `307.180328 ms` mean latency.
+- Under targeted link failure, `hiroute` holds `0.803279` mean `success_at_1`, materially above the previous pre-fix `0.591667` level.
+- Under targeted domain failure, `hiroute` still degrades the most, but it recovers to `0.688525` mean `success_at_1` instead of the earlier `0.441667`.
 
 ## Caveats
 
 - This figure now reflects a stronger, dominant-domain-targeted stress model rather than the earlier mild injections.
-- The result should be read as a current implementation weakness: HiRoute is still too sensitive when a heavily demanded controller domain becomes stale or unavailable.
+- Domain failure is still the harshest case, so the result should be read as a repaired but not yet final robustness profile.
