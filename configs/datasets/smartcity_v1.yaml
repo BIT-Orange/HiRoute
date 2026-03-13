@@ -1,5 +1,5 @@
 dataset_id: smartcity_v1
-version: "2026-03-12"
+version: "2026-03-13"
 seed: 42
 sources:
   smartdatamodels_manifest: data/raw/smartdatamodels/raw_manifest.json

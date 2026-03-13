@@ -98,12 +98,14 @@ def main() -> int:
     membership_rows = []
     version = f"{manifest['dataset_id']}::{hierarchy['hierarchy_id']}"
     export_budget = max(int(value) for value in hierarchy["export_budgets"])
+    level1_partition_keys = list(hierarchy.get("level1_partition_keys", ["zone_id", "service_class"]))
+    minimum_objects_per_microcluster = int(hierarchy.get("minimum_objects_per_microcluster", 2))
 
     domain_groups: dict[str, list[dict[str, str]]] = defaultdict(list)
-    level1_groups: dict[tuple[str, str, str, str], list[dict[str, str]]] = defaultdict(list)
+    level1_groups: dict[tuple[str, ...], list[dict[str, str]]] = defaultdict(list)
     for row in objects:
         domain_groups[row["domain_id"]].append(row)
-        level1_groups[(row["domain_id"], row["zone_id"], row["service_class"], row["freshness_class"])].append(row)
+        level1_groups[(row["domain_id"], *(row[key] for key in level1_partition_keys))].append(row)
 
     def add_summary(level: int, domain_id: str, cell_id: str, parent_id: str, rows: list[dict[str, str]]) -> None:
         vectors = np.vstack([vectors_by_object[row["object_id"]] for row in rows])
@@ -142,13 +144,16 @@ def main() -> int:
         add_summary(0, domain_id, f"{domain_id}-root", "", rows)
 
     microclusters_total = int(hierarchy["semantic_microclusters_per_predicate_cell"])
-    for (domain_id, zone_id, service_class, freshness_class), rows in sorted(level1_groups.items()):
-        level1_cell = f"{domain_id}-{zone_id}-{service_class}-{freshness_class}"
+    for level1_key, rows in sorted(level1_groups.items()):
+        domain_id = level1_key[0]
+        level1_cell = "-".join(level1_key)
         add_summary(1, domain_id, level1_cell, f"{domain_id}-root", rows)
 
         ordered_rows = sorted(rows, key=lambda row: row["object_id"])
         vectors = np.vstack([vectors_by_object[row["object_id"]] for row in ordered_rows])
-        labels = _balanced_clusters(vectors, min(microclusters_total, len(ordered_rows)), int(hierarchy["seed"]))
+        max_clusters_from_size = max(1, len(ordered_rows) // max(1, minimum_objects_per_microcluster))
+        cluster_count = min(microclusters_total, max_clusters_from_size)
+        labels = _balanced_clusters(vectors, cluster_count, int(hierarchy["seed"]))
 
         grouped_members: dict[int, list[dict[str, str]]] = defaultdict(list)
         for row, label in zip(ordered_rows, labels):
