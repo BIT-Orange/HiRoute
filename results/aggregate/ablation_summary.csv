@@ -1,5 +1,5 @@
 experiment_id,scheme,topology_id,mean_success_at_1,success_before_200ms_rate,mean_latency_ms,mean_discovery_bytes,mean_manifest_hit_at_5
 exp_ablation_v1,predicates_plus_flat,rf_3967_exodus,0.775,0.633333,148.025,108.475,0.775
-exp_ablation_v1,full_hiroute,rf_3967_exodus,0.658333,0.541667,152.625,138.983333,0.658333
+exp_ablation_v1,full_hiroute,rf_3967_exodus,0.891667,0.6,230.433333,237.458333,0.891667
 exp_ablation_v1,predicates_only,rf_3967_exodus,0.8,0.683333,131.233333,104.725,0.8
 exp_ablation_v1,flat_semantic_only,rf_3967_exodus,0.775,0.016667,384.991667,417.516667,0.775

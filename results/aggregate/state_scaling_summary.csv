@@ -1,7 +1,7 @@
 experiment_id,scheme,topology_id,node_count,controller_count,ingress_count,summary_count,object_count,mean_success_at_1,mean_latency_ms,mean_discovery_bytes
 exp_scaling_v1,flat_iroute,rf_1239_sprint,315,16,16,1467,739,0.8,150.108333,104.725
 exp_scaling_v1,flat_iroute,rf_3967_exodus,79,8,8,1467,739,0.8,131.233333,104.725
-exp_scaling_v1,hiroute,rf_1239_sprint,315,16,16,1467,739,0.658333,156.883333,138.983333
-exp_scaling_v1,hiroute,rf_3967_exodus,79,8,8,1467,739,0.658333,152.625,138.983333
+exp_scaling_v1,hiroute,rf_1239_sprint,315,16,16,1467,739,0.891667,335.483333,237.458333
+exp_scaling_v1,hiroute,rf_3967_exodus,79,8,8,1467,739,0.891667,230.433333,237.458333
 exp_scaling_v1,oracle,rf_1239_sprint,315,16,16,1467,739,0.575,111.025,85.875
 exp_scaling_v1,oracle,rf_3967_exodus,79,8,8,1467,739,0.575,81.691667,85.875

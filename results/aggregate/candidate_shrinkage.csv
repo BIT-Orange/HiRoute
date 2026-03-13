@@ -1,6 +1,6 @@
 experiment_id,scheme,topology_id,mean_candidate_shrinkage_ratio,median_candidate_shrinkage_ratio,mean_remote_probes,mean_manifest_hit_at_r
 exp_main_v1,exact,rf_3967_exodus,0.0,0.0,0.0,1.0
 exp_main_v1,oracle,rf_3967_exodus,0.007237,0.002045,1.0,0.575
-exp_main_v1,hiroute,rf_3967_exodus,0.007237,0.002045,1.0,0.658333
+exp_main_v1,hiroute,rf_3967_exodus,0.007237,0.002045,1.808333,0.891667
 exp_main_v1,flood,rf_3967_exodus,0.007237,0.002045,1.225,0.8
 exp_main_v1,flat_iroute,rf_3967_exodus,0.007237,0.002045,1.008333,0.8
