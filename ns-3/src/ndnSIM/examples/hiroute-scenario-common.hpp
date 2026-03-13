@@ -571,6 +571,20 @@ RunHiRouteScenario(int argc, char* argv[], HiRouteScenarioMode mode)
                        "domain_count", clampedDomains);
       }
     }
+
+    ensureCsvHeader(config.runDir + "/query_log.csv",
+                    {"query_id", "scheme", "ingress_node_id", "start_time_ms", "remote_probes",
+                     "discovery_bytes", "candidate_shrinkage_ratio", "latency_ms",
+                     "success_at_1", "manifest_hit_at_r", "ndcg_at_r", "failure_type",
+                     "fetched_object_id"});
+    ensureCsvHeader(config.runDir + "/probe_log.csv",
+                    {"query_id", "scheme", "probe_index", "controller_prefix", "cell_id",
+                     "reply_entries", "selected_object_id", "success"});
+    ensureCsvHeader(config.runDir + "/search_trace.csv",
+                    {"query_id", "scheme", "stage", "candidate_count", "selected_count",
+                     "frontier_size", "timestamp_ms"});
+    Simulator::Destroy();
+    return 0;
   }
   else {
     for (const auto& domainId : orderedDomains) {
