@@ -249,7 +249,7 @@ The topology should come from converted Rocketfuel or similarly structured ISP-l
 
 \subsection{Baselines}
 
-The evaluation should compare \sysname{} against four baselines that represent distinct design positions. The first baseline is exact-name NDN retrieval, which assumes that the canonical name is already known and therefore reveals the lower bound on control overhead but not on interoperability. The second baseline is bounded flooding or broad topological probing for discovery. The third baseline is a flat semantic router that advertises one level of domain summaries or centroids without hierarchical refinement; this is the most important internal baseline because it isolates the value of the proposed hierarchy. The fourth baseline is a logically centralized semantic oracle that has global object knowledge and therefore approximates the upper bound on discovery quality at the cost of decentralization. If a tag-based or keyword-assisted design is already implemented in the codebase, it can be included as an additional baseline, but it should not replace the flat semantic baseline.
+The main semantic-discovery comparison should use only baselines that solve the same problem under comparable information assumptions. The core comparison set is therefore bounded flooding or broad topological probing for discovery, a flat semantic router that advertises one level of domain summaries or centroids without hierarchical refinement, and a logically centralized semantic directory that has global object knowledge and therefore serves as a quality upper reference at the cost of decentralization. The flat semantic router remains the most important internal baseline because it isolates the value of the proposed hierarchy. Exact-name NDN retrieval should still be implemented, but it should be reported only as a syntactic known-name reference that reveals the lower bound on fetch latency and control overhead once the canonical name is already known. It should not be treated as a peer semantic-discovery method on the main Pareto-style plots. If a tag-based or keyword-assisted design is already implemented in the codebase, it can be included as an additional semantic baseline, but it should not replace the flat semantic baseline.
 
 \subsection{Metrics}
 
@@ -276,7 +276,7 @@ Deadlines & 50 ms, 100 ms, 200 ms & Captures application sensitivity to delay. \
 
 \subsection{Controlled Factors}
 
-Four workload factors should be varied systematically. The first is naming heterogeneity, controlled by the number of naming templates or aliases per service class. The second is predicate selectivity, controlled by the breadth of the requested zone and service constraints. The third is semantic ambiguity, controlled by the degree of overlap among embedding clusters across domains. The fourth is control-plane staleness, controlled by delaying summary refresh or by invalidating object-to-summary assignments. These factors directly target the central claims of the design.
+Four workload factors should be varied systematically. The first is naming heterogeneity, controlled by the number of naming templates or aliases per service class. The second is predicate selectivity, controlled by the breadth of the requested zone and service constraints. The third is semantic ambiguity, controlled by the degree of overlap among embedding clusters across domains. The fourth is control-plane staleness, controlled by delaying summary refresh or by invalidating object-to-summary assignments. In practice the workload should be organized into three tiers: a constraint-dominant tier used only as a sanity check, a mixed-ambiguity tier used for the main semantic-discovery comparisons, and a semantic-confounded tier used for stress tests and ablations. These factors directly target the central claims of the design.
 
 \section{Performance Evaluation}
 
@@ -284,7 +284,7 @@ The evaluation is organized around the dimensions that determine whether semanti
 
 \subsection{End-to-End Service Success Versus Discovery Overhead}
 
-The first experiment should compare ServiceSuccess@1 against discovery overhead while increasing naming heterogeneity or semantic ambiguity. The central question is whether hierarchical constraint-guided resolution closes more of the gap to the centralized oracle than the flat semantic baseline does, without incurring flooding-like overhead.
+The first experiment should compare ServiceSuccess@1 against discovery overhead while increasing naming heterogeneity or semantic ambiguity. The main-paper version of this figure should use the mixed-ambiguity workload rather than the constraint-dominant sanity tier. The central question is whether hierarchical constraint-guided resolution closes more of the gap to the centralized oracle than the flat semantic baseline does, without incurring flooding-like overhead.
 
 \begin{figure}[t]
 \centering
@@ -293,11 +293,11 @@ The first experiment should compare ServiceSuccess@1 against discovery overhead 
 \label{fig:main}
 \end{figure}
 
-The expected interpretation is not simply that one method is better than another. A strong result should show where the gain comes from. If \sysname{} lies close to the flat semantic router in overhead but clearly above it in ServiceSuccess@1, the paper can argue that the improvement is due to better object-level resolution rather than to indiscriminate probing. If it lies close to flooding in success but far below flooding in overhead, the paper can argue that hierarchical refinement is an effective substitute for broad search.
+The expected interpretation is not simply that one method is better than another. A strong result should show where the gain comes from. The plotted frontier should therefore compare the distributed semantic-discovery methods and the centralized oracle, while exact-name retrieval remains a separate syntactic reference outside the main frontier. If \sysname{} lies close to the flat semantic router in overhead but clearly above it in ServiceSuccess@1, the paper can argue that the improvement is due to better object-level resolution rather than to indiscriminate probing. If it lies close to flooding in success but far below flooding in overhead, the paper can argue that hierarchical refinement is an effective substitute for broad search.
 
 \subsection{Failure Decomposition}
 
-A semantic routing paper becomes much stronger when it shows where errors arise. The second experiment should decompose failures into predicate miss, wrong-domain resolution, wrong-object resolution inside a relevant domain, and fetch-stage timeout or loss. This decomposition is particularly important because it exposes the difference between a domain-level semantic hint and an object-level answer.
+A semantic routing paper becomes much stronger when it shows where errors arise. The second experiment should decompose failures into predicate miss, wrong-domain resolution, wrong-object resolution inside a relevant domain, and fetch-stage timeout or loss. This decomposition is particularly important because it exposes the difference between a domain-level semantic hint and an object-level answer. As in the first figure, the focus should remain on the comparable discovery methods and the centralized oracle; exact-name retrieval is not informative in this failure taxonomy because it bypasses discovery once the canonical name is known.
 
 \begin{figure}[t]
 \centering
@@ -323,7 +323,7 @@ The most useful interpretation is whether the hierarchy reduces the effective se
 
 \subsection{Deadline-Sensitive Latency}
 
-Average latency is often too blunt for IoT applications. The fourth experiment should therefore report deadline satisfaction under several thresholds together with completion-time distributions for successful requests. This experiment should use the same workload as the first experiment so that latency is interpreted together with service success.
+Average latency is often too blunt for IoT applications. The fourth experiment should therefore report deadline satisfaction under several thresholds together with completion-time distributions for successful requests. This experiment should use the same workload as the first experiment so that latency is interpreted together with service success. The main comparison should again focus on the semantic-discovery methods and the centralized oracle, while exact-name retrieval is relegated to a separate syntactic reference if it is shown at all.
 
 \begin{figure}[t]
 \centering

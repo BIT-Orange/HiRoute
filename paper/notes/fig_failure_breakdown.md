@@ -15,8 +15,8 @@
 ## Observations
 
 - `oracle` now has the expected all-success profile, which confirms that the centralized upper reference is aligned with `qrels_object.csv`.
-- `hiroute` reduces `wrong_object` failures to `0.04918`, compared with `0.393443` for both `flood` and `flat_iroute`.
-- The current main workload also surfaces a smaller `predicate_miss` slice (`0.04918`) for `hiroute`, `flood`, and `flat_iroute`, which is useful because it separates predicate-stage misses from object-resolution mistakes.
+- On the filtered `medium/high` ambiguity workload, `hiroute` reduces `wrong_object` failures to `0.071429`, compared with `0.571429` for both `flood` and `flat_iroute`.
+- The filtered main workload still exposes a non-trivial `predicate_miss` slice (`0.071429`) for `hiroute`, `flood`, and `flat_iroute`, which makes the predicate-stage miss vs object-resolution miss split visible.
 
 ## Caveats
 

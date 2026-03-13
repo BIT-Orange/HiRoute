@@ -31,3 +31,6 @@
 - Reran all `exp_main_v1` schemes on commit `922a148`, which equalized the current promoted main-experiment inputs at `305` queries and restored the expected ordering `oracle > hiroute > flood/flat_iroute`.
 - Reworked Figure 6 into a two-panel mechanism figure: HiRoute-only staged contraction on the left, cross-method probes/query on the right.
 - Reworked Figure 7 into a two-panel deadline figure: success within deadline on the left, median successful latency on the right.
+- Added explicit query filters to the experiment configs so `exp_main_v1` now runs only the `medium/high` ambiguity workload and `exp_ablation_v1` now runs only the `high`-ambiguity stress workload.
+- Reran `exp_main_v1` on the filtered workload; the main comparison now uses `210` queries and preserves the expected ordering `oracle (1.0) > hiroute (0.857143) > flood/flat_iroute (0.357143)`.
+- Reran `exp_ablation_v1` on the filtered `high`-ambiguity workload; the ablation now clearly separates the full hierarchy from predicate-only filtering (`0.875` vs `0.208333`), which resolves the earlier constraint-dominant artifact.
