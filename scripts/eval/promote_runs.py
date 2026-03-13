@@ -89,14 +89,20 @@ def main() -> int:
             continue
         manifest_path = repo_root() / row["run_dir"] / "manifest.yaml"
         if allowed_scenarios and manifest_path.exists():
-            manifest = load_json_yaml(manifest_path)
+            try:
+                manifest = load_json_yaml(manifest_path)
+            except Exception:
+                continue
             if manifest.get("scenario", "") not in allowed_scenarios:
                 continue
             row = dict(row)
             row["_scenario"] = manifest.get("scenario", "")
         elif manifest_path.exists():
             row = dict(row)
-            row["_scenario"] = load_json_yaml(manifest_path).get("scenario", "")
+            try:
+                row["_scenario"] = load_json_yaml(manifest_path).get("scenario", "")
+            except Exception:
+                continue
         else:
             row = dict(row)
             row["_scenario"] = ""

@@ -82,7 +82,10 @@ def registry_rows(experiment: dict[str, Any] | str, source: str = "promoted") ->
         if allowed_scenarios and enriched.get("run_dir"):
             manifest_path = run_dir(enriched) / "manifest.yaml"
             if manifest_path.exists():
-                manifest = load_json_yaml(manifest_path)
+                try:
+                    manifest = load_json_yaml(manifest_path)
+                except Exception:
+                    continue
                 if manifest.get("scenario", "") not in allowed_scenarios:
                     continue
         rows.append(enriched)
