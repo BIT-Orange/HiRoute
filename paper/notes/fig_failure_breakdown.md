@@ -14,7 +14,7 @@
 
 ## Observations
 
-- `hiroute` reduces `wrong_object` failures to `0.108333`, compared with `0.2` for both `flood` and `flat_iroute`.
+- `hiroute` reduces `wrong_object` failures to `0.008333`, compared with `0.2` for both `flood` and `flat_iroute`.
 - `oracle` splits its misses between `wrong_domain` (`0.225`) and `wrong_object` (`0.2`), while `hiroute`, `flood`, and `flat_iroute` only expose `wrong_object` in the promoted main experiment.
 
 ## Caveats

@@ -14,8 +14,8 @@
 
 ## Observations
 
-- At `200 ms`, `flat_iroute` remains ahead on deadline satisfaction (`0.683333`) while `hiroute` reaches `0.6`.
-- At `500 ms`, `hiroute` overtakes the semantic baselines at `0.858333`, compared with `0.8` for `flat_iroute` and `0.75` for `flood`.
+- At `200 ms`, `flat_iroute` still remains slightly ahead on deadline satisfaction (`0.683333`) while `hiroute` reaches `0.675`.
+- At `500 ms`, `hiroute` clearly overtakes the semantic baselines at `0.891667`, compared with `0.8` for `flat_iroute` and `0.75` for `flood`.
 
 ## Caveats
 
