@@ -6,6 +6,7 @@ from pathlib import Path
 import sys
 from typing import Any
 
+import numpy as np
 import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -126,6 +127,7 @@ def log_frame(rows: list[dict[str, str]], filename: str, raw: bool = False) -> p
         frame["experiment_id"] = row["experiment_id"]
         frame["registry_scheme"] = row["scheme"]
         frame["registry_topology_id"] = row["topology_id"]
+        frame["budget"] = int(row.get("budget") or 0)
         frame["seed"] = int(row["seed"])
         manifest = read_manifest(row)
         frame["scenario"] = manifest.get("scenario", "")
@@ -143,3 +145,16 @@ def require_rows(experiment: dict[str, Any] | str, source: str) -> list[dict[str
         experiment_id = experiment["experiment_id"] if isinstance(experiment, dict) else experiment
         raise RuntimeError(f"no registry rows available for experiment '{experiment_id}' from source '{source}'")
     return rows
+
+
+def bootstrap_mean_ci(series: pd.Series, replicates: int = 1000, seed: int = 0) -> float:
+    values = series.dropna().to_numpy(dtype=float)
+    if values.size <= 1:
+        return 0.0
+    if np.allclose(values, values[0]):
+        return 0.0
+    rng = np.random.default_rng(seed)
+    samples = rng.choice(values, size=(replicates, values.size), replace=True)
+    means = samples.mean(axis=1)
+    lower, upper = np.quantile(means, [0.025, 0.975])
+    return float((upper - lower) / 2.0)

@@ -30,6 +30,7 @@ COLORS = {
     "flood": "#c94c3c",
     "flat": "#e4a52b",
     "flat_iroute": "#e4a52b",
+    "inf_tag_forwarding": "#7a8c2f",
     "oracle": "#2f7d57",
     "hiroute": "#2451a4",
     "predicates_only": "#b85c38",
@@ -52,6 +53,7 @@ SCHEME_LABELS = {
     "flood": "Flood",
     "flat": "Flat iRoute",
     "flat_iroute": "Flat iRoute",
+    "inf_tag_forwarding": "INF-style tags",
     "oracle": "Central directory",
     "hiroute": "HiRoute",
     "predicates_only": "Predicates only",
@@ -60,7 +62,7 @@ SCHEME_LABELS = {
     "full_hiroute": "Full HiRoute",
 }
 
-MAIN_SCHEME_ORDER = ["flat_iroute", "flood", "hiroute", "oracle"]
+MAIN_SCHEME_ORDER = ["flat_iroute", "inf_tag_forwarding", "flood", "hiroute", "oracle"]
 FAILURE_ORDER = ["predicate_miss", "wrong_domain", "wrong_object", "no_reply", "fetch_timeout", "success"]
 
 SHRINKAGE_STAGE_ORDER = [
@@ -133,18 +135,19 @@ def plot_main_success() -> None:
 
     fig, ax = plt.subplots(figsize=(6.4, 4.0))
     for scheme in MAIN_SCHEME_ORDER:
-        group = frame[frame["scheme"] == scheme]
+        group = frame[frame["scheme"] == scheme].copy()
         if group.empty:
             continue
-        row = group.iloc[0]
+        if "budget" in group.columns:
+            group = group.sort_values("budget")
         marker = "*" if scheme == "oracle" else "o"
-        markersize = 14 if scheme == "oracle" else 8
+        markersize = 12 if scheme == "oracle" else 7
         ax.errorbar(
-            row["mean_discovery_bytes"],
-            row["mean_success_at_1"],
-            xerr=row.get("ci_discovery_bytes", 0.0),
-            yerr=row.get("ci_success_at_1", 0.0),
-            fmt=marker,
+            group["mean_discovery_bytes"],
+            group["mean_success_at_1"],
+            xerr=group.get("ci_discovery_bytes", 0.0),
+            yerr=group.get("ci_success_at_1", 0.0),
+            fmt=f"{marker}-",
             markersize=markersize,
             linewidth=1.8,
             capsize=3,
@@ -169,6 +172,9 @@ def plot_failure_breakdown() -> None:
     if frame.empty:
         _placeholder("fig_failure_breakdown.pdf", "Figure 5", "No comparable discovery baselines found")
         return
+    if "budget" in frame.columns and frame["budget"].nunique() > 1:
+        selected_budget = 16 if 16 in set(frame["budget"]) else sorted(set(frame["budget"]))[0]
+        frame = frame[frame["budget"] == selected_budget].copy()
 
     pivot = frame.pivot(index="scheme", columns="failure_type", values="rate").fillna(0.0)
     ordered_index = [scheme for scheme in MAIN_SCHEME_ORDER if scheme in pivot.index]
@@ -227,6 +233,9 @@ def plot_candidate_shrinkage() -> None:
 
     main_frame = _read_csv(repo_root() / "results" / "aggregate" / "main_success_overhead.csv")
     main_frame = main_frame[main_frame["scheme"] != "exact"].copy()
+    if "budget" in main_frame.columns and main_frame["budget"].nunique() > 1:
+        selected_budget = 16 if 16 in set(main_frame["budget"]) else sorted(set(main_frame["budget"]))[0]
+        main_frame = main_frame[main_frame["budget"] == selected_budget].copy()
     ordered_schemes = [scheme for scheme in MAIN_SCHEME_ORDER if scheme in set(main_frame["scheme"])]
     probe_rows = main_frame.set_index("scheme").reindex(ordered_schemes).dropna(subset=["mean_num_remote_probes"])
     right.bar(
@@ -253,6 +262,9 @@ def plot_deadlines() -> None:
     if frame.empty:
         _placeholder("fig_deadline_summary.pdf", "Figure 7", "No comparable discovery baselines found")
         return
+    if "budget" in frame.columns and frame["budget"].nunique() > 1:
+        selected_budget = 16 if 16 in set(frame["budget"]) else sorted(set(frame["budget"]))[0]
+        frame = frame[frame["budget"] == selected_budget].copy()
 
     fig, axes = plt.subplots(1, 2, figsize=(10.0, 4.0), gridspec_kw={"width_ratios": [1.5, 1.0]})
     left, right = axes
@@ -363,37 +375,32 @@ def plot_ablation() -> None:
         _placeholder("fig_ablation.pdf", "Figure 10", "Awaiting ablation aggregate")
         return
 
-    fig, ax1 = plt.subplots(figsize=(7.0, 4.2))
+    if "budget" in frame.columns and frame["budget"].nunique() > 1:
+        selected_budget = 16 if 16 in set(frame["budget"]) else sorted(set(frame["budget"]))[0]
+        frame = frame[frame["budget"] == selected_budget].copy()
+
+    fig, axes = plt.subplots(1, 3, figsize=(12.0, 4.0), sharex=True)
     schemes = frame["scheme"].tolist()
     x_positions = list(range(len(schemes)))
-    width = 0.35
-    ax1.bar(
-        [position - width / 2 for position in x_positions],
-        frame["mean_success_at_1"],
-        width=width,
-        color=[_scheme_color(s) for s in schemes],
-        alpha=0.85,
-        label="ServiceSuccess@1",
-    )
-    ax1.bar(
-        [position + width / 2 for position in x_positions],
-        frame["success_before_200ms_rate"],
-        width=width,
-        color="#d8d8d8",
-        alpha=0.95,
-        label="Success<=200ms",
-    )
-    ax1.set_ylabel("Rate")
-    ax1.set_ylim(0, 1.0)
-    ax1.set_title("Figure 10: Ablation Summary")
-    ax1.grid(axis="y", alpha=0.25)
-    ax1.set_xticks(x_positions)
-    ax1.set_xticklabels(schemes, rotation=15, ha="right")
-    ax1.legend(fontsize=8, loc="upper left")
 
-    ax2 = ax1.twinx()
-    ax2.plot(schemes, frame["mean_discovery_bytes"], color="#111111", marker="o", linewidth=2)
-    ax2.set_ylabel("Mean Discovery Bytes")
+    panels = [
+        ("mean_success_at_1", "ServiceSuccess@1", 1.0),
+        ("wrong_object_rate", "Wrong-Object Rate", 1.0),
+        ("mean_discovery_bytes", "Mean Discovery Bytes", None),
+    ]
+    for axis, (column, ylabel, ymax) in zip(axes, panels):
+        axis.bar(
+            x_positions,
+            frame[column],
+            color=[_scheme_color(s) for s in schemes],
+            alpha=0.9,
+        )
+        axis.set_ylabel(ylabel)
+        if ymax is not None:
+            axis.set_ylim(0, ymax)
+        axis.grid(axis="y", alpha=0.25)
+        axis.set_xticks(x_positions)
+        axis.set_xticklabels([_scheme_label(s) for s in schemes], rotation=18, ha="right")
     _save(fig, "fig_ablation.pdf")
 
 

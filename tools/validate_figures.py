@@ -41,6 +41,9 @@ def main() -> int:
     if not expected_topologies and experiment.get("topology_id"):
         expected_topologies = {str(experiment["topology_id"])}
     expected_seeds = {str(seed) for seed in experiment.get("seeds", [])}
+    expected_budgets = {int(value) for value in experiment.get("budgets", [])}
+    if not expected_budgets:
+        expected_budgets = {int(experiment.get("default_budget") or 0)}
 
     promoted_rows = []
     for row in read_csv_rows(promoted_path):
@@ -52,26 +55,65 @@ def main() -> int:
             continue
         if expected_seeds and row["seed"] not in expected_seeds:
             continue
+        if expected_budgets and int(row.get("budget") or 0) not in expected_budgets:
+            continue
         promoted_rows.append(row)
     if not promoted_rows:
         print("ERROR: no promoted runs found for experiment")
         return 1
 
-    min_runs = int(experiment.get("promotion_rule", {}).get("min_runs_per_scheme", 1))
-    if experiment.get("comparison_topologies"):
-        schemes = Counter((row["scheme"], row["topology_id"]) for row in promoted_rows)
-        missing = [
-            f"{scheme}@{topology_id}"
-            for topology_id in expected_topologies
-            for scheme in experiment.get("schemes", [])
-            if schemes.get((scheme, topology_id), 0) < min_runs
-        ]
+    min_test_queries = int(
+        experiment.get("promotion_rule", {}).get("min_test_queries_per_scheme_budget_tier", 0) or 0
+    )
+    if min_test_queries > 0:
+        run_index_path = repo_root() / "runs" / "registry" / "runs.csv"
+        run_dir_by_id = {
+            row["run_id"]: row.get("run_dir", "")
+            for row in read_csv_rows(run_index_path)
+        } if run_index_path.exists() else {}
+        query_counts = Counter()
+        for row in promoted_rows:
+            run_dir = row.get("run_dir") or run_dir_by_id.get(row["run_id"], "")
+            if not run_dir:
+                continue
+            query_log_path = repo_root() / run_dir / "query_log.csv"
+            if not query_log_path.exists():
+                continue
+            query_count = len(read_csv_rows(query_log_path))
+            query_counts[(row["scheme"], row["topology_id"], int(row.get("budget") or 0))] += query_count
+
+        missing = []
+        target_topologies = expected_topologies or {row["topology_id"] for row in promoted_rows}
+        for topology_id in target_topologies:
+            for scheme in experiment.get("schemes", []):
+                for budget in sorted(expected_budgets):
+                    if query_counts.get((scheme, topology_id, budget), 0) < min_test_queries:
+                        missing.append(f"{scheme}@{topology_id}@budget{budget}")
+        if missing:
+            print("ERROR: promoted runs do not satisfy minimum test query counts: " + ", ".join(missing))
+            return 1
     else:
-        schemes = Counter(row["scheme"] for row in promoted_rows)
-        missing = [scheme for scheme in experiment.get("schemes", []) if schemes.get(scheme, 0) < min_runs]
-    if missing:
-        print(f"ERROR: promoted runs do not satisfy minimum counts for schemes: {', '.join(missing)}")
-        return 1
+        min_runs = int(experiment.get("promotion_rule", {}).get("min_runs_per_scheme", 1))
+        if experiment.get("comparison_topologies"):
+            schemes = Counter((row["scheme"], row["topology_id"], int(row.get("budget") or 0)) for row in promoted_rows)
+            missing = [
+                f"{scheme}@{topology_id}@budget{budget}"
+                for topology_id in expected_topologies
+                for scheme in experiment.get("schemes", [])
+                for budget in sorted(expected_budgets)
+                if schemes.get((scheme, topology_id, budget), 0) < min_runs
+            ]
+        else:
+            schemes = Counter((row["scheme"], int(row.get("budget") or 0)) for row in promoted_rows)
+            missing = [
+                f"{scheme}@budget{budget}"
+                for scheme in experiment.get("schemes", [])
+                for budget in sorted(expected_budgets)
+                if schemes.get((scheme, budget), 0) < min_runs
+            ]
+        if missing:
+            print(f"ERROR: promoted runs do not satisfy minimum counts for schemes: {', '.join(missing)}")
+            return 1
 
     dataset_ids = {row["dataset_id"] for row in promoted_rows}
     topology_ids = {row["topology_id"] for row in promoted_rows}
@@ -95,6 +137,67 @@ def main() -> int:
 
     if args.aggregate and args.aggregate.exists():
         aggregate_rows = read_csv_rows(args.aggregate)
+        aggregate_schemes = {row.get("scheme", "") for row in aggregate_rows}
+        if args.aggregate.name in {
+            "main_success_overhead.csv",
+            "failure_breakdown.csv",
+            "candidate_shrinkage.csv",
+            "deadline_summary.csv",
+            "ablation_summary.csv",
+        } and "exact" in aggregate_schemes:
+            print("ERROR: appendix exact baseline must not appear in main-paper aggregates")
+            return 1
+
+        workload_tiers = set(experiment.get("query_filters", {}).get("workload_tiers", []))
+        if args.aggregate.name in {"main_success_overhead.csv", "candidate_shrinkage.csv", "deadline_summary.csv"}:
+            if workload_tiers != {"routing_hard"}:
+                print("ERROR: routing aggregates must come from routing_hard workload")
+                return 1
+        if args.aggregate.name in {"failure_breakdown.csv", "ablation_summary.csv"}:
+            if workload_tiers != {"object_hard"}:
+                print("ERROR: failure and ablation aggregates must come from object_hard workload")
+                return 1
+
+        if args.aggregate.name == "main_success_overhead.csv":
+            budgets_by_scheme: dict[str, set[int]] = {}
+            for row in aggregate_rows:
+                budgets_by_scheme.setdefault(row.get("scheme", ""), set()).add(int(row.get("budget") or 0))
+            for scheme in {"flat_iroute", "hiroute", "inf_tag_forwarding"} & set(experiment.get("schemes", [])):
+                if len(budgets_by_scheme.get(scheme, set())) < len(expected_budgets):
+                    print(f"ERROR: routing frontier is missing budget points for {scheme}")
+                    return 1
+            if {"flat_iroute", "flood"}.issubset(aggregate_schemes):
+                flat_rows = {
+                    int(row.get("budget") or 0): row
+                    for row in aggregate_rows
+                    if row.get("scheme") == "flat_iroute"
+                }
+                flood_rows = {
+                    int(row.get("budget") or 0): row
+                    for row in aggregate_rows
+                    if row.get("scheme") == "flood"
+                }
+                common = sorted(set(flat_rows) & set(flood_rows))
+                if common:
+                    identical = True
+                    for budget in common:
+                        left = flat_rows[budget]
+                        right = flood_rows[budget]
+                        for field in [
+                            "mean_success_at_1",
+                            "mean_num_remote_probes",
+                            "mean_discovery_bytes",
+                            "mean_latency_ms",
+                        ]:
+                            if left.get(field) != right.get(field):
+                                identical = False
+                                break
+                        if not identical:
+                            break
+                    if identical:
+                        print("ERROR: flat_iroute and flood remain degenerate on all routing headline metrics")
+                        return 1
+
         if experiment["experiment_id"] == "exp_main_v1" and args.aggregate.name == "candidate_shrinkage.csv":
             required_stages = {
                 "all_domains",

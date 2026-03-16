@@ -18,6 +18,7 @@ OUTPUT_FIELDS = [
     "experiment_id",
     "scheme",
     "topology_id",
+    "budget",
     "failure_type",
     "count",
     "rate",
@@ -58,7 +59,9 @@ def main() -> int:
         frame["normalized_failure_type"] = frame["failure_type"].fillna("unknown")
 
     output_rows = []
-    for (scheme, topology_id), group in frame.groupby(["registry_scheme", "registry_topology_id"], sort=False):
+    for (scheme, topology_id, budget), group in frame.groupby(
+        ["registry_scheme", "registry_topology_id", "budget"], sort=False
+    ):
         counts = group["normalized_failure_type"].value_counts()
         total = len(group)
         for failure_type in FAILURE_ORDER:
@@ -68,6 +71,7 @@ def main() -> int:
                     "experiment_id": experiment["experiment_id"],
                     "scheme": scheme,
                     "topology_id": topology_id,
+                    "budget": int(budget),
                     "failure_type": failure_type,
                     "count": count,
                     "rate": round(float(count) / float(total), 6),

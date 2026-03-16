@@ -923,6 +923,9 @@ def main() -> int:
             "dataset_config": experiment["configs"]["dataset"],
             "topology_config": experiment["configs"]["topology"],
         },
+        "query_filters": experiment.get("query_filters", {}),
+        "statistics": experiment.get("statistics", {}),
+        "runner_params": experiment.get("runner", {}).get("params", {}),
         "inputs": experiment["inputs"],
         "outputs": {
             "query_log": "query_log.csv",
@@ -933,6 +936,7 @@ def main() -> int:
         },
         "status": status,
         "exit_code": exit_code,
+        "validated_query_count": int(experiment.get("_validation_query_count") or 0),
         "start_time": isoformat_z(start_time),
         "end_time": isoformat_z(end_time),
         "duration_sec": duration_sec,

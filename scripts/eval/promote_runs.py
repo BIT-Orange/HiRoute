@@ -21,6 +21,7 @@ FIELDS = [
     "scheme",
     "dataset_id",
     "topology_id",
+    "budget",
     "seed",
     "git_commit",
     "promotion_reason",
@@ -76,6 +77,9 @@ def main() -> int:
     expected_topologies = expected_topology_ids(experiment)
     expected_seeds = {str(seed) for seed in experiment.get("seeds", [])}
     expected_schemes = {str(scheme) for scheme in experiment.get("schemes", [])}
+    expected_budgets = {int(value) for value in experiment.get("budgets", [])}
+    if not expected_budgets:
+        expected_budgets = {int(experiment.get("default_budget") or 0)}
     allowed_scenarios = expected_scenarios(experiment)
 
     run_rows = []
@@ -89,6 +93,8 @@ def main() -> int:
         if expected_seeds and row["seed"] not in expected_seeds:
             continue
         if expected_schemes and row["scheme"] not in expected_schemes:
+            continue
+        if expected_budgets and int(row.get("budget") or 0) not in expected_budgets:
             continue
         manifest_path = repo_root() / row["run_dir"] / "manifest.yaml"
         if allowed_scenarios and manifest_path.exists():
@@ -114,29 +120,19 @@ def main() -> int:
         print("ERROR: no completed runs found for experiment")
         return 1
 
-    latest_by_key: dict[tuple[str, str, str, str], dict[str, str]] = {}
+    latest_by_key: dict[tuple[str, str, str, int, str], dict[str, str]] = {}
     for row in run_rows:
-        key = (row["scheme"], row["seed"], row["topology_id"], row.get("_scenario", ""))
+        key = (
+            row["scheme"],
+            row["seed"],
+            row["topology_id"],
+            int(row.get("budget") or 0),
+            row.get("_scenario", ""),
+        )
         existing = latest_by_key.get(key)
         if existing is None or row["start_time"] > existing["start_time"]:
             latest_by_key[key] = row
     run_rows = list(latest_by_key.values())
-
-    min_runs = int(experiment["promotion_rule"]["min_runs_per_scheme"])
-    if experiment.get("comparison_topologies"):
-        scheme_counts = Counter((row["scheme"], row["topology_id"]) for row in run_rows)
-        missing = [
-            f"{scheme}@{topology_id}"
-            for topology_id in expected_topologies
-            for scheme in experiment["schemes"]
-            if scheme_counts.get((scheme, topology_id), 0) < min_runs
-        ]
-    else:
-        scheme_counts = Counter(row["scheme"] for row in run_rows)
-        missing = [scheme for scheme in experiment["schemes"] if scheme_counts.get(scheme, 0) < min_runs]
-    if missing:
-        print(f"ERROR: missing enough completed runs for schemes: {', '.join(missing)}")
-        return 1
 
     dataset_ids = {row["dataset_id"] for row in run_rows}
     topology_ids = {row["topology_id"] for row in run_rows}
@@ -148,6 +144,7 @@ def main() -> int:
         return 1
 
     promoted_rows = []
+    query_counts: Counter[tuple[str, str, int]] = Counter()
     for row in run_rows:
         run_dir = repo_root() / row["run_dir"]
         missing_artifacts = [artifact for artifact in REQUIRED_ARTIFACTS if not (run_dir / artifact).exists()]
@@ -159,6 +156,8 @@ def main() -> int:
             if manifest.get("code", {}).get("git_dirty", True):
                 print(f"ERROR: {row['run_id']} was produced from a dirty git tree")
                 return 1
+        query_rows = list(csv.DictReader((run_dir / "query_log.csv").open("r", newline="", encoding="utf-8")))
+        query_counts[(row["scheme"], row["topology_id"], int(row.get("budget") or 0))] += len(query_rows)
         promoted_rows.append(
             {
                 "run_id": row["run_id"],
@@ -166,12 +165,55 @@ def main() -> int:
                 "scheme": row["scheme"],
                 "dataset_id": row["dataset_id"],
                 "topology_id": row["topology_id"],
+                "budget": int(row.get("budget") or 0),
                 "seed": row["seed"],
                 "git_commit": row["git_commit"],
-                "promotion_reason": "meets min run count and artifact completeness",
+                "promotion_reason": "meets promotion thresholds and artifact completeness",
                 "promoted_at": isoformat_z(),
             }
         )
+
+    promotion_rule = experiment.get("promotion_rule", {})
+    min_test_queries = int(promotion_rule.get("min_test_queries_per_scheme_budget_tier", 0) or 0)
+    if min_test_queries > 0:
+        missing = []
+        target_topologies = expected_topologies or {row["topology_id"] for row in run_rows}
+        target_budgets = expected_budgets or {int(row.get("budget") or 0) for row in run_rows}
+        for topology_id in target_topologies:
+            for scheme in experiment["schemes"]:
+                for budget in sorted(target_budgets):
+                    if query_counts.get((scheme, topology_id, budget), 0) < min_test_queries:
+                        missing.append(f"{scheme}@{topology_id}@budget{budget}")
+        if missing:
+            print(
+                "ERROR: promoted runs do not satisfy minimum test queries for "
+                + ", ".join(missing)
+            )
+            return 1
+    else:
+        min_runs = int(promotion_rule["min_runs_per_scheme"])
+        if experiment.get("comparison_topologies"):
+            scheme_counts = Counter(
+                (row["scheme"], row["topology_id"], int(row.get("budget") or 0)) for row in run_rows
+            )
+            missing = [
+                f"{scheme}@{topology_id}@budget{budget}"
+                for topology_id in expected_topologies
+                for scheme in experiment["schemes"]
+                for budget in sorted(expected_budgets)
+                if scheme_counts.get((scheme, topology_id, budget), 0) < min_runs
+            ]
+        else:
+            scheme_counts = Counter((row["scheme"], int(row.get("budget") or 0)) for row in run_rows)
+            missing = [
+                f"{scheme}@budget{budget}"
+                for scheme in experiment["schemes"]
+                for budget in sorted(expected_budgets)
+                if scheme_counts.get((scheme, budget), 0) < min_runs
+            ]
+        if missing:
+            print(f"ERROR: missing enough completed runs for schemes: {', '.join(missing)}")
+            return 1
 
     existing = [row for row in read_csv(promoted_path) if row["experiment_id"] != experiment["experiment_id"]]
     with promoted_path.open("w", newline="", encoding="utf-8") as handle:

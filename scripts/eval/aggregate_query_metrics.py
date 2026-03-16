@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from scripts.eval.eval_support import load_experiment, log_frame, require_rows
+from scripts.eval.eval_support import bootstrap_mean_ci, load_experiment, log_frame, require_rows
 from tools.workflow_support import repo_root, write_csv
 
 
@@ -20,6 +20,7 @@ OUTPUT_FIELDS = [
     "experiment_id",
     "scheme",
     "topology_id",
+    "budget",
     "run_count",
     "query_count",
     "mean_success_at_1",
@@ -34,13 +35,6 @@ OUTPUT_FIELDS = [
     "ci_latency_ms",
     "source_run_ids",
 ]
-
-
-def _ci95(series: pd.Series) -> float:
-    if len(series) <= 1:
-        return 0.0
-    return float(1.96 * series.std(ddof=1) / (len(series) ** 0.5))
-
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
@@ -58,44 +52,52 @@ def main() -> int:
         print("ERROR: no canonical query logs found")
         return 1
 
+    bootstrap_replicates = int(experiment.get("statistics", {}).get("bootstrap_replicates", 1000))
     frame["discovery_bytes_total"] = frame["discovery_tx_bytes"] + frame["discovery_rx_bytes"]
     output_rows = []
-    for (scheme, topology_id), group in frame.groupby(["registry_scheme", "registry_topology_id"], sort=False):
+    for (scheme, topology_id, budget), group in frame.groupby(
+        ["registry_scheme", "registry_topology_id", "budget"], sort=False
+    ):
         run_ids = sorted(group["run_id"].unique().tolist())
-        per_run = (
-            group.groupby("run_id", as_index=False)
-            .agg(
-                success_at_1=("success_at_1", "mean"),
-                num_remote_probes=("num_remote_probes", "mean"),
-                discovery_bytes_total=("discovery_bytes_total", "mean"),
-                latency_ms=("latency_ms", "mean"),
-            )
-        )
         output_rows.append(
             {
                 "experiment_id": experiment["experiment_id"],
                 "scheme": scheme,
                 "topology_id": topology_id,
+                "budget": int(budget),
                 "run_count": len(run_ids),
                 "query_count": int(len(group)),
                 "mean_success_at_1": round(group["success_at_1"].mean(), 6),
-                "ci_success_at_1": round(_ci95(per_run["success_at_1"]), 6),
+                "ci_success_at_1": round(
+                    bootstrap_mean_ci(group["success_at_1"], bootstrap_replicates), 6
+                ),
                 "mean_manifest_hit_at_5": round(group["manifest_hit_at_5"].mean(), 6),
                 "mean_ndcg_at_5": round(group["ndcg_at_5"].mean(), 6),
                 "mean_num_remote_probes": round(group["num_remote_probes"].mean(), 6),
-                "ci_num_remote_probes": round(_ci95(per_run["num_remote_probes"]), 6),
+                "ci_num_remote_probes": round(
+                    bootstrap_mean_ci(group["num_remote_probes"], bootstrap_replicates, seed=1), 6
+                ),
                 "mean_discovery_bytes": round(group["discovery_bytes_total"].mean(), 6),
-                "ci_discovery_bytes": round(_ci95(per_run["discovery_bytes_total"]), 6),
+                "ci_discovery_bytes": round(
+                    bootstrap_mean_ci(group["discovery_bytes_total"], bootstrap_replicates, seed=2), 6
+                ),
                 "mean_latency_ms": round(group["latency_ms"].mean(), 6),
-                "ci_latency_ms": round(_ci95(per_run["latency_ms"]), 6),
+                "ci_latency_ms": round(
+                    bootstrap_mean_ci(group["latency_ms"], bootstrap_replicates, seed=3), 6
+                ),
                 "source_run_ids": "|".join(run_ids),
             }
         )
 
-    aggregate_path = repo_root() / "results" / "aggregate" / "main_success_overhead.csv"
-    table_path = repo_root() / "results" / "tables" / "main_success_overhead_table.csv"
+    if experiment["experiment_id"] == "exp_sanity_appendix_v2":
+        aggregate_path = repo_root() / "results" / "tables" / "appendix_sanity_success_overhead.csv"
+        table_path = aggregate_path
+    else:
+        aggregate_path = repo_root() / "results" / "aggregate" / "main_success_overhead.csv"
+        table_path = repo_root() / "results" / "tables" / "main_success_overhead_table.csv"
     write_csv(aggregate_path, OUTPUT_FIELDS, output_rows)
-    write_csv(table_path, OUTPUT_FIELDS, output_rows)
+    if table_path != aggregate_path:
+        write_csv(table_path, OUTPUT_FIELDS, output_rows)
     print(str(aggregate_path.relative_to(repo_root())))
     return 0
 

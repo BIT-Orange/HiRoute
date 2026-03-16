@@ -146,6 +146,37 @@ def _validate_query_slice(experiment: dict[str, Any], errors: list[str]) -> None
     experiment["_validation_query_count"] = surviving
     if surviving == 0:
         errors.append(f"no eligible queries remain after split/tier/topology filtering for {experiment['experiment_id']}")
+        return
+
+    min_test_queries = int(
+        experiment.get("promotion_rule", {}).get("min_test_queries_per_scheme_budget_tier", 0) or 0
+    )
+    if min_test_queries > 0 and surviving < min_test_queries:
+        errors.append(
+            f"eligible query slice is too small for promotion threshold: {surviving} < {min_test_queries}"
+        )
+
+
+def _validate_ablation_contract(experiment: dict[str, Any], errors: list[str]) -> None:
+    ablation_schemes = {
+        "predicates_only",
+        "flat_semantic_only",
+        "predicates_plus_flat",
+        "full_hiroute",
+    }
+    experiment_schemes = {str(scheme) for scheme in experiment.get("schemes", [])}
+    if experiment_schemes != ablation_schemes:
+        return
+
+    runner = experiment.get("runner", {})
+    params = runner.get("params", {}) if isinstance(runner, dict) else {}
+    if runner.get("type") != "ndnsim":
+        errors.append("ablation experiments must use the ndnsim runner")
+    if int(experiment.get("default_budget") or 0) == 0:
+        errors.append("ablation experiments must set a single default budget")
+    for required_flag in ["manifestSize", "probeBudget", "queryLimitPerIngress"]:
+        if required_flag not in params:
+            errors.append(f"ablation experiments must pin runner.params.{required_flag}")
 
 
 def validate_context(
@@ -217,6 +248,7 @@ def validate_context(
 
     if not errors:
         _validate_query_slice(experiment, errors)
+        _validate_ablation_contract(experiment, errors)
 
     return experiment, errors
 

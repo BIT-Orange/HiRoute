@@ -28,6 +28,7 @@ OUTPUT_FIELDS = [
     "experiment_id",
     "scheme",
     "topology_id",
+    "budget",
     "stage",
     "mean_candidate_count",
     "mean_selected_count",
@@ -52,6 +53,10 @@ def main() -> int:
     if frame.empty:
         print("ERROR: staged search traces are missing")
         return 1
+
+    selected_budget = int(experiment.get("default_budget") or 0)
+    if selected_budget:
+        frame = frame[frame["budget"] == selected_budget].copy()
 
     frame = frame[frame["stage"].isin(STAGE_ORDER)].copy()
     frame = frame[frame["registry_scheme"] != "exact"].copy()
@@ -100,6 +105,7 @@ def main() -> int:
                     "experiment_id": experiment["experiment_id"],
                     "scheme": scheme,
                     "topology_id": topology_id,
+                    "budget": selected_budget,
                     "stage": stage,
                     "mean_candidate_count": round(stage_rows["candidate_count"].mean(), 6),
                     "mean_selected_count": round(stage_rows["selected_count"].mean(), 6),

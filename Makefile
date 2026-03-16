@@ -1,12 +1,13 @@
 PYTHON ?= .venv/bin/python3
 PIP ?= .venv/bin/pip
-EXP ?= configs/experiments/exp_main_v1.yaml
+EXP ?= configs/experiments/exp_routing_main_v2.yaml
 SCHEME ?= hiroute
 SEED ?= 1
 MODE ?= official
 TOPOLOGY ?= configs/topologies/rocketfuel_3967_exodus.yaml
 TOPOLOGY_ID ?=
 VARIANT ?=
+BUDGET ?=
 
 .PHONY: venv download-smartdatamodels extract-sdm-subjects build-service-ontology embed-texts download-rocketfuel convert-topologies topology-map dataset validate-dataset run aggregate promote figures paper-check
 
@@ -36,16 +37,16 @@ topology-map:
 	$(PYTHON) scripts/build_dataset/build_topology_mapping.py --topology-config $(TOPOLOGY)
 
 embed-texts:
-	$(PYTHON) scripts/build_dataset/embed_texts.py --config configs/datasets/smartcity_v1.yaml
+	$(PYTHON) scripts/build_dataset/embed_texts.py --config configs/datasets/smartcity_v2.yaml
 
 dataset:
-	$(PYTHON) scripts/build_dataset/build_all.py --config configs/datasets/smartcity_v1.yaml --topology-config $(TOPOLOGY)
+	$(PYTHON) scripts/build_dataset/build_all.py --config configs/datasets/smartcity_v2.yaml --topology-config $(TOPOLOGY)
 
 validate-dataset:
 	$(PYTHON) scripts/build_dataset/validate_dataset.py --topology-config $(TOPOLOGY)
 
 run:
-	$(PYTHON) scripts/run/run_experiment.py --experiment $(EXP) --scheme $(SCHEME) --seed $(SEED) --mode $(MODE) $(if $(TOPOLOGY_ID),--topology-id $(TOPOLOGY_ID),) $(if $(VARIANT),--variant $(VARIANT),)
+	$(PYTHON) scripts/run/run_experiment.py --experiment $(EXP) --scheme $(SCHEME) --seed $(SEED) --mode $(MODE) $(if $(TOPOLOGY_ID),--topology-id $(TOPOLOGY_ID),) $(if $(VARIANT),--variant $(VARIANT),) $(if $(BUDGET),--budget $(BUDGET),)
 
 aggregate:
 	$(PYTHON) scripts/eval/aggregate_experiment.py --experiment $(EXP)

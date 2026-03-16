@@ -73,6 +73,16 @@ def dump_json_yaml(path: Path, payload: Any) -> None:
 
 def ensure_csv(path: Path, fieldnames: list[str]) -> None:
     if path.exists():
+        with path.open("r", newline="", encoding="utf-8") as handle:
+            reader = csv.DictReader(handle)
+            if reader.fieldnames == fieldnames:
+                return
+            existing_rows = list(reader)
+        with path.open("w", newline="", encoding="utf-8") as handle:
+            writer = csv.DictWriter(handle, fieldnames=fieldnames)
+            writer.writeheader()
+            for row in existing_rows:
+                writer.writerow({field: row.get(field, "") for field in fieldnames})
         return
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", newline="", encoding="utf-8") as handle:

@@ -1,0 +1,73 @@
+{
+  "experiment_id": "exp_sanity_appendix_v2",
+  "dataset_id": "smartcity_v2",
+  "topology_id": "rf_3967_exodus",
+  "scenario": "hiroute-main",
+  "schemes": [
+    "exact",
+    "flat_iroute",
+    "flood",
+    "hiroute",
+    "oracle"
+  ],
+  "seeds": [
+    1
+  ],
+  "budgets": [
+    16
+  ],
+  "default_budget": 16,
+  "statistics": {
+    "ci_method": "bootstrap_query",
+    "bootstrap_replicates": 1000
+  },
+  "outputs": [
+    "results/tables/appendix_sanity_success_overhead.csv"
+  ],
+  "promotion_rule": {
+    "min_runs_per_scheme": 1,
+    "min_test_queries_per_scheme_budget_tier": 240,
+    "max_missing_logs": 0,
+    "require_clean_git": true
+  },
+  "configs": {
+    "dataset": "configs/datasets/smartcity_v2.yaml",
+    "hierarchy": "configs/hierarchy/hiroute_hkm_v1.yaml",
+    "topology": "configs/topologies/rocketfuel_3967_exodus.yaml",
+    "baselines": {
+      "exact": "configs/baselines/exact.yaml",
+      "flat_iroute": "configs/baselines/flat_iroute.yaml",
+      "flood": "configs/baselines/flood.yaml",
+      "hiroute": "configs/baselines/hiroute.yaml",
+      "oracle": "configs/baselines/oracle.yaml"
+    }
+  },
+  "inputs": {
+    "objects_csv": "data/processed/smartcity_v2/objects_master.csv",
+    "queries_csv": "data/processed/smartcity_v2/rf_3967_exodus/queries_master.csv",
+    "query_embedding_index_csv": "data/processed/smartcity_v2/rf_3967_exodus/query_embedding_index.csv",
+    "qrels_object_csv": "data/processed/smartcity_v2/rf_3967_exodus/qrels_object.csv",
+    "qrels_domain_csv": "data/processed/smartcity_v2/rf_3967_exodus/qrels_domain.csv",
+    "hslsa_csv": "data/processed/smartcity_v2/hslsa_export.csv",
+    "controller_local_index_csv": "data/processed/smartcity_v2/controller_local_index.csv",
+    "topology_mapping_csv": "data/processed/ndnsim/topology_mapping_rf_3967_exodus.csv"
+  },
+  "query_filters": {
+    "splits": [
+      "test"
+    ],
+    "workload_tiers": [
+      "constraint_dominant"
+    ]
+  },
+  "runner": {
+    "type": "ndnsim",
+    "ns3_root": "ns-3",
+    "params": {
+      "stopSeconds": 16,
+      "manifestSize": 5,
+      "probeBudget": 5,
+      "queryLimitPerIngress": 0
+    }
+  }
+}

@@ -18,11 +18,12 @@ OUTPUT_FIELDS = [
     "experiment_id",
     "scheme",
     "topology_id",
+    "budget",
     "mean_success_at_1",
-    "success_before_200ms_rate",
-    "mean_latency_ms",
+    "wrong_object_rate",
     "mean_discovery_bytes",
     "mean_manifest_hit_at_5",
+    "mean_latency_ms",
 ]
 
 
@@ -42,20 +43,27 @@ def main() -> int:
         print("ERROR: no canonical query logs found")
         return 1
 
+    selected_budget = int(experiment.get("default_budget") or 0)
+    if selected_budget:
+        frame = frame[frame["budget"] == selected_budget].copy()
+
     frame["discovery_bytes_total"] = frame["discovery_tx_bytes"] + frame["discovery_rx_bytes"]
     output_rows = []
-    for (scheme, topology_id), group in frame.groupby(["registry_scheme", "registry_topology_id"], sort=False):
-        deadline_hits = ((group["success_at_1"] == 1) & (group["latency_ms"] <= 200)).mean()
+    for (scheme, topology_id, budget), group in frame.groupby(
+        ["registry_scheme", "registry_topology_id", "budget"], sort=False
+    ):
+        wrong_object_rate = (group["failure_type"] == "wrong_object").mean()
         output_rows.append(
             {
                 "experiment_id": experiment["experiment_id"],
                 "scheme": scheme,
                 "topology_id": topology_id,
+                "budget": int(budget),
                 "mean_success_at_1": round(group["success_at_1"].mean(), 6),
-                "success_before_200ms_rate": round(float(deadline_hits), 6),
-                "mean_latency_ms": round(group["latency_ms"].mean(), 6),
+                "wrong_object_rate": round(float(wrong_object_rate), 6),
                 "mean_discovery_bytes": round(group["discovery_bytes_total"].mean(), 6),
                 "mean_manifest_hit_at_5": round(group["manifest_hit_at_5"].mean(), 6),
+                "mean_latency_ms": round(group["latency_ms"].mean(), 6),
             }
         )
 
