@@ -8,6 +8,7 @@ import platform
 import subprocess
 import sys
 from datetime import datetime, timezone
+from json import JSONDecodeError
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -65,7 +66,29 @@ def load_json_yaml(path: Path) -> Any:
     text = path.read_text(encoding="utf-8")
     if yaml is not None:
         return yaml.safe_load(text)
-    return json.loads(text)
+    try:
+        return json.loads(text)
+    except JSONDecodeError:
+        venv_python = REPO_ROOT / ".venv" / "bin" / "python"
+        if not venv_python.exists():
+            raise
+        result = subprocess.run(
+            [
+                str(venv_python),
+                "-c",
+                (
+                    "import json, sys, yaml; "
+                    "print(json.dumps(yaml.safe_load(open(sys.argv[1], encoding='utf-8').read())))"
+                ),
+                str(path),
+            ],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        if result.returncode != 0:
+            raise
+        return json.loads(result.stdout)
 
 
 def dump_json_yaml(path: Path, payload: Any) -> None:
