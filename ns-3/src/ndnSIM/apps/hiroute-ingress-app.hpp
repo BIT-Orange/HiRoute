@@ -118,6 +118,9 @@ private:
   bool
   advanceToNextProbe(const std::string& terminalFailureType);
 
+  bool
+  advanceToNextStaticProbe(const std::string& terminalFailureType);
+
   std::string
   makeProbeKey(const ProbeTarget& target) const;
 
@@ -148,6 +151,12 @@ private:
 
   bool
   usesAdaptiveReliability() const;
+
+  bool
+  usesSequentialManifestFallback() const;
+
+  bool
+  usesStaticProbeFallback() const;
 
 private:
   std::string m_queryCsvPath;

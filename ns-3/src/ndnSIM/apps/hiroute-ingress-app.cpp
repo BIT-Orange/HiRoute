@@ -678,6 +678,27 @@ HiRouteIngressApp::advanceToNextProbe(const std::string& terminalFailureType)
   return false;
 }
 
+bool
+HiRouteIngressApp::advanceToNextStaticProbe(const std::string& terminalFailureType)
+{
+  if (!usesStaticProbeFallback()) {
+    return false;
+  }
+
+  m_activeQuery.manifest.clear();
+  m_activeQuery.manifestFetchIndex = 0;
+  m_activeQuery.manifestHit = false;
+  if (m_activeQuery.probeIndex + 1 >= m_activeQuery.plan.probes.size() ||
+      m_activeQuery.remoteProbes >= m_maxProbeBudget) {
+    m_activeQuery.failureType = terminalFailureType;
+    return false;
+  }
+
+  ++m_activeQuery.probeIndex;
+  sendDiscoveryProbe();
+  return true;
+}
+
 void
 HiRouteIngressApp::onPhaseTimeout()
 {
@@ -694,12 +715,16 @@ HiRouteIngressApp::onPhaseTimeout()
       finishActiveQuery(false, "");
       return;
     }
-    ++m_activeQuery.probeIndex;
-    sendDiscoveryProbe();
+    if (advanceToNextStaticProbe("no_reply")) {
+      return;
+    }
+    m_activeQuery.failureType = "no_reply";
+    finishActiveQuery(false, "");
     return;
   }
 
-  if (usesAdaptiveReliability() && m_activeQuery.manifestFetchIndex + 1 < m_activeQuery.manifest.size()) {
+  if (usesSequentialManifestFallback() &&
+      m_activeQuery.manifestFetchIndex + 1 < m_activeQuery.manifest.size()) {
     ++m_activeQuery.manifestFetchIndex;
     sendFetchInterest(m_activeQuery.manifest[m_activeQuery.manifestFetchIndex]);
     return;
@@ -753,8 +778,11 @@ HiRouteIngressApp::handleDiscoveryReply(shared_ptr<const Data> data)
       finishActiveQuery(false, "");
       return;
     }
-    ++m_activeQuery.probeIndex;
-    sendDiscoveryProbe();
+    if (advanceToNextStaticProbe("wrong_domain")) {
+      return;
+    }
+    m_activeQuery.failureType = "wrong_domain";
+    finishActiveQuery(false, "");
     return;
   }
 
@@ -777,7 +805,7 @@ HiRouteIngressApp::handleFetchReply(shared_ptr<const Data> data)
                                      isRelevantObject(m_activeQuery.query.queryId, objectId));
   }
   if (!isRelevantObject(m_activeQuery.query.queryId, objectId) &&
-      usesAdaptiveReliability() &&
+      usesSequentialManifestFallback() &&
       m_activeQuery.manifestFetchIndex + 1 < m_activeQuery.manifest.size()) {
     ++m_activeQuery.manifestFetchIndex;
     sendFetchInterest(m_activeQuery.manifest[m_activeQuery.manifestFetchIndex]);
@@ -785,6 +813,10 @@ HiRouteIngressApp::handleFetchReply(shared_ptr<const Data> data)
   }
 
   if (!isRelevantObject(m_activeQuery.query.queryId, objectId) && advanceToNextProbe("wrong_object")) {
+    return;
+  }
+  if (!isRelevantObject(m_activeQuery.query.queryId, objectId) &&
+      advanceToNextStaticProbe("wrong_object")) {
     return;
   }
   finishActiveQuery(isRelevantObject(m_activeQuery.query.queryId, objectId), objectId);
@@ -919,6 +951,18 @@ bool
 HiRouteIngressApp::usesAdaptiveReliability() const
 {
   return m_strategyMode == "hiroute" || m_strategyMode == "full_hiroute";
+}
+
+bool
+HiRouteIngressApp::usesSequentialManifestFallback() const
+{
+  return m_strategyMode != "exact";
+}
+
+bool
+HiRouteIngressApp::usesStaticProbeFallback() const
+{
+  return !usesAdaptiveReliability() && m_strategyMode != "exact" && m_strategyMode != "oracle";
 }
 
 std::string
