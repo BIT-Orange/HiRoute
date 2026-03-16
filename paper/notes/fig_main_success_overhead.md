@@ -10,16 +10,17 @@ Compare end-to-end service success against discovery overhead on `rf_3967_exodus
 
 ## Promoted runs
 
-- Current promoted rows are the latest `exp_main_v1` entries in `runs/registry/promoted_runs.csv`.
-- The current `source_run_ids` in `results/aggregate/main_success_overhead.csv` point to the `20260313_120501` to `20260313_122901` filtered reruns on commit `55e2e2f`.
+- Current promoted rows are the latest `exp_routing_main_v2` entries in `runs/registry/promoted_runs.csv`.
+- The current `source_run_ids` in `results/aggregate/main_success_overhead.csv` point to the `20260316_111715` and `20260316_111716` reruns on commit `c4e7cfc`.
 
 ## Observations
 
-- On the filtered `medium/high` ambiguity workload, `oracle` remains the intended centralized upper reference at `1.0` `ServiceSuccess@1` with `73.952381` discovery bytes/query.
-- Among comparable distributed discovery schemes, `hiroute` reaches `0.857143` `ServiceSuccess@1`, substantially above `0.357143` for both `flood` and `flat_iroute`.
-- The gain comes with higher discovery cost: `2.214286` remote probes/query and `251.5` discovery bytes/query for `hiroute`, compared with `0.952381` / `69.142857` for `flood` and `0.952381` / `86.285714` for `flat_iroute`.
+- On the topology-consistent `routing_hard` workload, `oracle` remains the centralized upper reference at `1.0` `ServiceSuccess@1`, `116.966667` discovery bytes/query, and `121.533333 ms` mean latency.
+- After enforcing shared manifest fallback and full-query completion, the distributed schemes all reach near-perfect success on this workload. The remaining signal is discovery cost: `flat_iroute` and `inf_tag_forwarding` stay at `1.0` success but cost about `386.291667` discovery bytes/query and `2.8625` remote probes/query.
+- `hiroute` now forms the useful budget frontier: at budget `8` it reaches `1.0` success with `332.033333` bytes/query, and by budget `64` it still reaches `1.0` success while dropping to `261.3625` bytes/query and `1.620833` probes/query. This is materially lower overhead than the flat and INF-style baselines, but it is not a large success-gap result anymore.
+- `flood` also reaches `1.0` success on the current routing bundle at `255.975` bytes/query, so the paper-grade takeaway is now frontier shape rather than success separation.
 
 ## Caveats
 
 - `exact` is intentionally excluded from the main semantic-discovery plot; it remains a syntactic known-name reference rather than a comparable semantic baseline.
-- These values come from promoted ndnSIM runs on `rf_3967_exodus` filtered to `medium/high` ambiguity queries.
+- These values come from promoted ndnSIM runs on `rf_3967_exodus` filtered to `split=test` and `workload_tier=routing_hard` with query-bootstrap confidence intervals.

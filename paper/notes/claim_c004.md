@@ -2,7 +2,11 @@
 
 ## Text
 
-The full HiRoute stack outperforms its ablations on object-level success, confirming that predicate filtering and hierarchical semantic refinement are both required for the final result.
+The current corrected ablation no longer supports a strong causal superiority claim. Instead it
+shows that `flat_semantic_only` is insufficient by itself, while `predicates_only`,
+`predicates_plus_flat`, and `full_hiroute` all reach full success on the present object-hard
+bundle. This indicates the workload must be hardened before Figure 10 can support a
+publication-grade ablation claim.
 
 ## Supported by
 
@@ -14,8 +18,8 @@ The full HiRoute stack outperforms its ablations on object-level success, confir
 
 ## Source runs
 
-- Promoted runs for `exp_ablation_v1`
+- Promoted runs for `exp_ablation_v2`
 
 ## Status
 
-ready
+revised

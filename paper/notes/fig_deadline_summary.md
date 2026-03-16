@@ -10,15 +10,15 @@
 
 ## Promoted runs
 
-- `exp_main_v1` promoted runs recorded in `runs/registry/promoted_runs.csv`
+- `exp_routing_main_v2` promoted runs recorded in `runs/registry/promoted_runs.csv`
 
 ## Observations
 
-- On the filtered `medium/high` ambiguity workload, `oracle` dominates the comparable methods on deadline-sensitive usefulness, reaching `1.0` success within `200 ms`.
-- `hiroute` still improves eventual useful retrieval over the decentralized baselines, reaching `0.619048` success within `500 ms` versus `0.357143` for both `flat_iroute` and `flood`.
-- The right-hand latency panel now reports median latency among successful queries instead of mixing incomparable curves and the exact-name reference in one panel.
+- `oracle` remains the centralized latency upper reference, reaching `0.916667` success within `200 ms` and `1.0` by `500 ms`, with median successful latency `107 ms`.
+- Among the distributed methods on the corrected routing bundle, `hiroute` reaches `0.866667` success within `500 ms`, slightly above `flood` (`0.854167`) and above `flat_iroute` / `inf_tag_forwarding` (`0.833333`), while also keeping a lower median successful latency (`202 ms` vs `275.5 ms` for `flood` and `238 ms` for `flat_iroute` / `inf_tag_forwarding`).
+- The deadline story is therefore still useful, but it now supports a latency-efficiency tradeoff claim rather than a raw success-gap claim.
 
 ## Caveats
 
 - `exact` is intentionally left out of the plotted semantic-discovery comparison and should only be referenced as a syntactic lower-bound appendix point.
-- The deadline story is deadline-dependent: `hiroute` wins on eventual object resolution, but not on the tightest latency thresholds.
+- The tight-deadline regime still favors the centralized oracle.

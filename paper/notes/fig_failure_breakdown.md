@@ -10,15 +10,15 @@
 
 ## Promoted runs
 
-- `exp_main_v1` promoted runs recorded in `runs/registry/promoted_runs.csv`
+- `exp_object_main_v2` promoted runs recorded in `runs/registry/promoted_runs.csv`
 
 ## Observations
 
-- `oracle` now has the expected all-success profile, which confirms that the centralized upper reference is aligned with `qrels_object.csv`.
-- On the filtered `medium/high` ambiguity workload, `hiroute` reduces `wrong_object` failures to `0.071429`, compared with `0.571429` for both `flood` and `flat_iroute`.
-- The filtered main workload still exposes a non-trivial `predicate_miss` slice (`0.071429`) for `hiroute`, `flood`, and `flat_iroute`, which makes the predicate-stage miss vs object-resolution miss split visible.
+- On the current `object_hard` bundle, every distributed method and the centralized oracle finish with `1.0` success after shared manifest fallback is enabled.
+- As a result, the figure now functions as an evaluation sanity check: the local resolver, qrels, and runtime slicing are consistent, but the workload is no longer discriminative enough to support a strong object-resolution superiority claim.
+- This outcome is still informative because it shows the earlier v1 failure gap was partly an artifact of inconsistent fallback and incomplete runtime coverage.
 
 ## Caveats
 
-- `exact` is intentionally omitted from the plotted semantic-discovery comparison even though the aggregate retains it for reference bookkeeping.
-- This figure is sourced from the current promoted ndnSIM main-experiment runs only.
+- `exact` remains omitted from the semantic-discovery comparison.
+- This figure should currently be treated as `sanity-only`; the next paper-grade iteration needs a harder object-level bundle that still respects the corrected query/qrels and fallback semantics.

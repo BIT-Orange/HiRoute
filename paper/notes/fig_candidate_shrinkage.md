@@ -10,13 +10,13 @@
 
 ## Promoted runs
 
-- `exp_main_v1` promoted runs recorded in `runs/registry/promoted_runs.csv`
+- `exp_routing_main_v2` promoted runs recorded in `runs/registry/promoted_runs.csv`
 
 ## Observations
 
-- In the left panel, `hiroute` keeps about `0.502976` of the original domain frontier after predicate screening and shrinks it further to `0.422619` by the probed-cell stage on the filtered workload.
-- In the right panel, the cross-method comparison is no longer a fake shared stage trace; it now reports discovery breadth directly through mean remote probes/query.
-- This separation makes the mechanism claim legible: HiRoute's hierarchy contracts the frontier before probing, while the method comparison stays on a quantity every scheme actually shares.
+- In the left panel, `hiroute` still provides the clearest mechanism signal in the v2 results. At budget `16`, the frontier shrinks from `1.0` at `all_domains` to `0.409896` by the `refined_cells/probed_cells` stage, while `flat_iroute`, `flood`, and `inf_tag_forwarding` stay around `0.603125`.
+- In the right panel, the cross-method comparison now reports discovery breadth directly through mean remote probes/query. At budget `16`, `hiroute` uses `2.325` probes/query, below `2.8625` for both `flat_iroute` and `inf_tag_forwarding`, though still above `2.1875` for `flood`.
+- This figure is therefore still a valid mechanism figure even though the main routing workload no longer separates methods on success.
 
 ## Caveats
 

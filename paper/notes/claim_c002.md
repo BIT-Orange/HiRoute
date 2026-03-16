@@ -2,10 +2,11 @@
 
 ## Text
 
-On the filtered `medium/high` ambiguity workload, HiRoute's primary gain comes from cutting
-wrong-object failures relative to the decentralized baselines, while the centralized oracle remains
-the deadline-sensitive upper reference and deadline-sensitive usefulness still depends on how much
-latency budget the application allows.
+After enforcing topology-consistent query bundles, shared local resolver semantics, sequential
+manifest fallback, and full-query completion, the current `object_hard` bundle no longer
+separates distributed methods on success. Figure 5 should therefore be read as a sanity check,
+while Figure 7 still supports a bounded-latency efficiency story in which HiRoute outperforms
+the flat and INF-style baselines at moderate deadlines without surpassing the centralized oracle.
 
 ## Supported by
 
@@ -19,8 +20,8 @@ latency budget the application allows.
 
 ## Source runs
 
-- Promoted runs for `exp_main_v1`
+- Promoted runs for `exp_object_main_v2` and `exp_routing_main_v2`
 
 ## Status
 
-ready
+revised
