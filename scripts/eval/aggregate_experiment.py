@@ -47,6 +47,23 @@ SCRIPT_MAP = {
     "exp_sanity_appendix_v2": [
         "scripts/eval/aggregate_query_metrics.py",
     ],
+    "exp_routing_main_v3": [
+        "scripts/eval/aggregate_query_metrics.py",
+        "scripts/eval/build_candidate_shrinkage.py",
+        "scripts/eval/build_deadline_summary.py",
+    ],
+    "exp_object_main_v3": [
+        "scripts/eval/build_failure_breakdown.py",
+    ],
+    "exp_ablation_v3": [
+        "scripts/eval/build_ablation_summary.py",
+    ],
+    "exp_scaling_v3": [
+        "scripts/eval/build_state_scaling_summary.py",
+    ],
+    "exp_robustness_v3": [
+        "scripts/eval/build_robustness_summary.py",
+    ],
 }
 
 

@@ -22,6 +22,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
+from scripts.eval.eval_support import aggregate_output_path, figure_output_path, is_v3_experiment, load_experiment
 from tools.workflow_support import repo_root
 
 
@@ -31,6 +32,7 @@ COLORS = {
     "flat": "#e4a52b",
     "flat_iroute": "#e4a52b",
     "inf_tag_forwarding": "#7a8c2f",
+    "central_directory": "#2f7d57",
     "oracle": "#2f7d57",
     "hiroute": "#2451a4",
     "predicates_only": "#b85c38",
@@ -54,6 +56,7 @@ SCHEME_LABELS = {
     "flat": "Flat iRoute",
     "flat_iroute": "Flat iRoute",
     "inf_tag_forwarding": "INF-style tags",
+    "central_directory": "Central directory",
     "oracle": "Central directory",
     "hiroute": "HiRoute",
     "predicates_only": "Predicates only",
@@ -62,7 +65,7 @@ SCHEME_LABELS = {
     "full_hiroute": "Full HiRoute",
 }
 
-MAIN_SCHEME_ORDER = ["flat_iroute", "inf_tag_forwarding", "flood", "hiroute", "oracle"]
+MAIN_SCHEME_ORDER = ["flat_iroute", "inf_tag_forwarding", "flood", "hiroute", "central_directory", "oracle"]
 FAILURE_ORDER = ["predicate_miss", "wrong_domain", "wrong_object", "no_reply", "fetch_timeout", "success"]
 
 SHRINKAGE_STAGE_ORDER = [
@@ -99,7 +102,7 @@ def _read_csv(path: Path) -> pd.DataFrame:
 
 
 def _save(fig: plt.Figure, filename: str) -> None:
-    output_path = repo_root() / "results" / "figures" / filename
+    output_path = _figure_path(filename)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     fig.tight_layout()
     fig.savefig(output_path, format="pdf", bbox_inches="tight")
@@ -122,8 +125,23 @@ def _scheme_label(scheme: str) -> str:
     return SCHEME_LABELS.get(scheme, scheme.replace("_", " "))
 
 
+CURRENT_EXPERIMENT: dict | None = None
+
+
+def _aggregate_path(filename: str) -> Path:
+    if CURRENT_EXPERIMENT is not None:
+        return aggregate_output_path(CURRENT_EXPERIMENT, filename)
+    return repo_root() / "results" / "aggregate" / filename
+
+
+def _figure_path(filename: str) -> Path:
+    if CURRENT_EXPERIMENT is not None:
+        return figure_output_path(CURRENT_EXPERIMENT, filename)
+    return repo_root() / "results" / "figures" / filename
+
+
 def plot_main_success() -> None:
-    frame = _read_csv(repo_root() / "results" / "aggregate" / "main_success_overhead.csv")
+    frame = _read_csv(_aggregate_path("main_success_overhead.csv"))
     if frame.empty:
         _placeholder("fig_main_success_overhead.pdf", "Figure 4", "Awaiting aggregate data")
         return
@@ -163,7 +181,7 @@ def plot_main_success() -> None:
 
 
 def plot_failure_breakdown() -> None:
-    frame = _read_csv(repo_root() / "results" / "aggregate" / "failure_breakdown.csv")
+    frame = _read_csv(_aggregate_path("failure_breakdown.csv"))
     if frame.empty:
         _placeholder("fig_failure_breakdown.pdf", "Figure 5", "Awaiting aggregate data")
         return
@@ -172,8 +190,13 @@ def plot_failure_breakdown() -> None:
     if frame.empty:
         _placeholder("fig_failure_breakdown.pdf", "Figure 5", "No comparable discovery baselines found")
         return
-    if "budget" in frame.columns and frame["budget"].nunique() > 1:
-        selected_budget = 16 if 16 in set(frame["budget"]) else sorted(set(frame["budget"]))[0]
+    if CURRENT_EXPERIMENT and CURRENT_EXPERIMENT.get("manifest_sizes"):
+        selected_manifest = int(CURRENT_EXPERIMENT.get("default_manifest_size") or 0)
+        if selected_manifest:
+            frame = frame[frame["manifest_size"] == selected_manifest].copy()
+    elif "budget" in frame.columns and frame["budget"].nunique() > 1:
+        selected_budget = int(CURRENT_EXPERIMENT.get("default_budget") or 16) if CURRENT_EXPERIMENT else 16
+        selected_budget = selected_budget if selected_budget in set(frame["budget"]) else sorted(set(frame["budget"]))[0]
         frame = frame[frame["budget"] == selected_budget].copy()
 
     pivot = frame.pivot(index="scheme", columns="failure_type", values="rate").fillna(0.0)
@@ -200,7 +223,7 @@ def plot_failure_breakdown() -> None:
 
 
 def plot_candidate_shrinkage() -> None:
-    frame = _read_csv(repo_root() / "results" / "aggregate" / "candidate_shrinkage.csv")
+    frame = _read_csv(_aggregate_path("candidate_shrinkage.csv"))
     if frame.empty:
         _placeholder("fig_candidate_shrinkage.pdf", "Figure 6", "Awaiting aggregate data")
         return
@@ -231,11 +254,12 @@ def plot_candidate_shrinkage() -> None:
     left.grid(axis="x", alpha=0.2)
     left.grid(axis="y", alpha=0.25)
 
-    main_frame = _read_csv(repo_root() / "results" / "aggregate" / "main_success_overhead.csv")
+    main_frame = _read_csv(_aggregate_path("main_success_overhead.csv"))
     main_frame = main_frame[main_frame["scheme"] != "exact"].copy()
-    if "budget" in main_frame.columns and main_frame["budget"].nunique() > 1:
-        selected_budget = 16 if 16 in set(main_frame["budget"]) else sorted(set(main_frame["budget"]))[0]
-        main_frame = main_frame[main_frame["budget"] == selected_budget].copy()
+    if CURRENT_EXPERIMENT and CURRENT_EXPERIMENT.get("budgets"):
+        selected_budget = int(CURRENT_EXPERIMENT.get("default_budget") or 0)
+        if selected_budget:
+            main_frame = main_frame[main_frame["budget"] == selected_budget].copy()
     ordered_schemes = [scheme for scheme in MAIN_SCHEME_ORDER if scheme in set(main_frame["scheme"])]
     probe_rows = main_frame.set_index("scheme").reindex(ordered_schemes).dropna(subset=["mean_num_remote_probes"])
     right.bar(
@@ -253,7 +277,7 @@ def plot_candidate_shrinkage() -> None:
 
 
 def plot_deadlines() -> None:
-    frame = _read_csv(repo_root() / "results" / "aggregate" / "deadline_summary.csv")
+    frame = _read_csv(_aggregate_path("deadline_summary.csv"))
     if frame.empty:
         _placeholder("fig_deadline_summary.pdf", "Figure 7", "Awaiting aggregate data")
         return
@@ -262,9 +286,10 @@ def plot_deadlines() -> None:
     if frame.empty:
         _placeholder("fig_deadline_summary.pdf", "Figure 7", "No comparable discovery baselines found")
         return
-    if "budget" in frame.columns and frame["budget"].nunique() > 1:
-        selected_budget = 16 if 16 in set(frame["budget"]) else sorted(set(frame["budget"]))[0]
-        frame = frame[frame["budget"] == selected_budget].copy()
+    if CURRENT_EXPERIMENT and CURRENT_EXPERIMENT.get("budgets"):
+        selected_budget = int(CURRENT_EXPERIMENT.get("default_budget") or 0)
+        if selected_budget:
+            frame = frame[frame["budget"] == selected_budget].copy()
 
     fig, axes = plt.subplots(1, 2, figsize=(10.0, 4.0), gridspec_kw={"width_ratios": [1.5, 1.0]})
     left, right = axes
@@ -303,7 +328,7 @@ def plot_deadlines() -> None:
 
 
 def plot_state_scaling() -> None:
-    frame = _read_csv(repo_root() / "results" / "aggregate" / "state_scaling_summary.csv")
+    frame = _read_csv(_aggregate_path("state_scaling_summary.csv"))
     if frame.empty:
         _placeholder("fig_state_scaling.pdf", "Figure 8", "Awaiting scaling runs")
         return
@@ -343,7 +368,7 @@ def plot_state_scaling() -> None:
 
 
 def plot_robustness() -> None:
-    frame = _read_csv(repo_root() / "results" / "aggregate" / "robustness_summary.csv")
+    frame = _read_csv(_aggregate_path("robustness_summary.csv"))
     if frame.empty:
         _placeholder("fig_robustness.pdf", "Figure 9", "Awaiting staleness and failure runs")
         return
@@ -370,13 +395,18 @@ def plot_robustness() -> None:
 
 
 def plot_ablation() -> None:
-    frame = _read_csv(repo_root() / "results" / "aggregate" / "ablation_summary.csv")
+    frame = _read_csv(_aggregate_path("ablation_summary.csv"))
     if frame.empty:
         _placeholder("fig_ablation.pdf", "Figure 10", "Awaiting ablation aggregate")
         return
 
-    if "budget" in frame.columns and frame["budget"].nunique() > 1:
-        selected_budget = 16 if 16 in set(frame["budget"]) else sorted(set(frame["budget"]))[0]
+    if CURRENT_EXPERIMENT and CURRENT_EXPERIMENT.get("manifest_sizes"):
+        selected_manifest = int(CURRENT_EXPERIMENT.get("default_manifest_size") or 0)
+        if selected_manifest:
+            frame = frame[frame["manifest_size"] == selected_manifest].copy()
+    elif "budget" in frame.columns and frame["budget"].nunique() > 1:
+        selected_budget = int(CURRENT_EXPERIMENT.get("default_budget") or 16) if CURRENT_EXPERIMENT else 16
+        selected_budget = selected_budget if selected_budget in set(frame["budget"]) else sorted(set(frame["budget"]))[0]
         frame = frame[frame["budget"] == selected_budget].copy()
 
     fig, axes = plt.subplots(1, 3, figsize=(12.0, 4.0), sharex=True)
@@ -405,7 +435,10 @@ def plot_ablation() -> None:
 
 
 def main() -> int:
-    _ = parse_args()
+    global CURRENT_EXPERIMENT
+    args = parse_args()
+    if args.experiment:
+        CURRENT_EXPERIMENT = load_experiment(args.experiment)
     plt.rcParams.update(
         {
             "font.size": 10,
@@ -420,7 +453,10 @@ def main() -> int:
     plot_state_scaling()
     plot_robustness()
     plot_ablation()
-    print("results/figures")
+    if CURRENT_EXPERIMENT and is_v3_experiment(CURRENT_EXPERIMENT):
+        print("results/figures/v3")
+    else:
+        print("results/figures")
     return 0
 
 

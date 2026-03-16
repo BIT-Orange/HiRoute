@@ -10,8 +10,8 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from scripts.eval.eval_support import load_experiment, log_frame, require_rows
-from tools.workflow_support import repo_root, write_csv
+from scripts.eval.eval_support import aggregate_output_path, load_experiment, log_frame, require_rows, sweep_field
+from tools.workflow_support import write_csv
 
 
 STAGE_ORDER = [
@@ -29,6 +29,7 @@ OUTPUT_FIELDS = [
     "scheme",
     "topology_id",
     "budget",
+    "manifest_size",
     "stage",
     "mean_candidate_count",
     "mean_selected_count",
@@ -54,9 +55,13 @@ def main() -> int:
         print("ERROR: staged search traces are missing")
         return 1
 
+    active_sweep_field = sweep_field(experiment)
     selected_budget = int(experiment.get("default_budget") or 0)
-    if selected_budget:
+    selected_manifest_size = int(experiment.get("default_manifest_size") or 0)
+    if active_sweep_field == "budget" and selected_budget:
         frame = frame[frame["budget"] == selected_budget].copy()
+    if active_sweep_field == "manifest_size" and selected_manifest_size:
+        frame = frame[frame["manifest_size"] == selected_manifest_size].copy()
 
     frame = frame[frame["stage"].isin(STAGE_ORDER)].copy()
     frame = frame[frame["registry_scheme"] != "exact"].copy()
@@ -105,7 +110,10 @@ def main() -> int:
                     "experiment_id": experiment["experiment_id"],
                     "scheme": scheme,
                     "topology_id": topology_id,
-                    "budget": selected_budget,
+                    "budget": selected_budget if active_sweep_field == "budget" else int(group["budget"].max()),
+                    "manifest_size": (
+                        selected_manifest_size if active_sweep_field == "manifest_size" else int(group["manifest_size"].max())
+                    ),
                     "stage": stage,
                     "mean_candidate_count": round(stage_rows["candidate_count"].mean(), 6),
                     "mean_selected_count": round(stage_rows["selected_count"].mean(), 6),
@@ -115,9 +123,9 @@ def main() -> int:
                 }
             )
 
-    aggregate_path = repo_root() / "results" / "aggregate" / "candidate_shrinkage.csv"
+    aggregate_path = aggregate_output_path(experiment, "candidate_shrinkage.csv")
     write_csv(aggregate_path, OUTPUT_FIELDS, output_rows)
-    print(str(aggregate_path.relative_to(repo_root())))
+    print(str(aggregate_path.relative_to(Path.cwd())))
     return 0
 
 

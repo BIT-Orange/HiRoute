@@ -10,8 +10,8 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from scripts.eval.eval_support import load_experiment, log_frame, require_rows
-from tools.workflow_support import repo_root, write_csv
+from scripts.eval.eval_support import aggregate_output_path, load_experiment, log_frame, require_rows
+from tools.workflow_support import write_csv
 
 
 OUTPUT_FIELDS = [
@@ -30,6 +30,7 @@ OUTPUT_FIELDS = [
 ROBUSTNESS_EXPERIMENTS = {
     "exp_staleness_v1": ["exp_staleness_v1", "exp_failures_v1"],
     "exp_failures_v1": ["exp_staleness_v1", "exp_failures_v1"],
+    "exp_robustness_v3": ["exp_robustness_v3"],
 }
 
 
@@ -70,7 +71,7 @@ def main() -> int:
         source_experiment_ids = sorted(group["experiment_id"].unique().tolist())
         output_rows.append(
             {
-                "experiment_id": "exp_robustness_v1",
+                "experiment_id": "exp_robustness_v3" if experiment["experiment_id"] == "exp_robustness_v3" else "exp_robustness_v1",
                 "source_experiment_id": "|".join(source_experiment_ids),
                 "scenario": scenario,
                 "scenario_variant": scenario_variant,
@@ -83,9 +84,9 @@ def main() -> int:
             }
         )
 
-    aggregate_path = repo_root() / "results" / "aggregate" / "robustness_summary.csv"
+    aggregate_path = aggregate_output_path(experiment, "robustness_summary.csv")
     write_csv(aggregate_path, OUTPUT_FIELDS, output_rows)
-    print(str(aggregate_path.relative_to(repo_root())))
+    print(str(aggregate_path.relative_to(Path.cwd())))
     return 0
 
 

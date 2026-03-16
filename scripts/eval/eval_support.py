@@ -21,6 +21,52 @@ def load_experiment(path: Path) -> dict[str, Any]:
     return load_json_yaml(experiment_path)
 
 
+def _resolve(path_str: str) -> Path:
+    path = Path(path_str)
+    return path if path.is_absolute() else repo_root() / path
+
+
+def is_v3_experiment(experiment: dict[str, Any]) -> bool:
+    return str(experiment.get("dataset_id", "")).endswith("_v3") or str(experiment.get("experiment_id", "")).endswith("_v3")
+
+
+def sweep_field(experiment: dict[str, Any]) -> str:
+    return "manifest_size" if experiment.get("manifest_sizes") else "budget"
+
+
+def expected_sweep_values(experiment: dict[str, Any]) -> list[int]:
+    if experiment.get("manifest_sizes"):
+        return [int(value) for value in experiment.get("manifest_sizes", [])]
+    if experiment.get("budgets"):
+        return [int(value) for value in experiment.get("budgets", [])]
+    default_manifest = int(experiment.get("default_manifest_size") or 0)
+    if default_manifest:
+        return [default_manifest]
+    default_budget = int(experiment.get("default_budget") or 0)
+    return [default_budget] if default_budget else []
+
+
+def aggregate_output_path(experiment: dict[str, Any], filename: str) -> Path:
+    base = repo_root() / "results" / "aggregate"
+    if is_v3_experiment(experiment):
+        base = base / "v3"
+    return base / filename
+
+
+def table_output_path(experiment: dict[str, Any], filename: str) -> Path:
+    base = repo_root() / "results" / "tables"
+    if is_v3_experiment(experiment):
+        base = base / "v3"
+    return base / filename
+
+
+def figure_output_path(experiment: dict[str, Any], filename: str) -> Path:
+    base = repo_root() / "results" / "figures"
+    if is_v3_experiment(experiment):
+        base = base / "v3"
+    return base / filename
+
+
 def _runs_index() -> dict[str, dict[str, str]]:
     runs_path = repo_root() / "runs" / "registry" / "runs.csv"
     if not runs_path.exists():
@@ -60,6 +106,8 @@ def registry_rows(experiment: dict[str, Any] | str, source: str = "promoted") ->
         expected_seeds = {str(seed) for seed in experiment.get("seeds", [])}
         expected_schemes = {str(scheme) for scheme in experiment.get("schemes", [])}
         allowed_scenarios = expected_scenarios(experiment)
+        sweep_values = {int(value) for value in expected_sweep_values(experiment)}
+        manifest_sizes = {int(value) for value in experiment.get("manifest_sizes", [])}
     else:
         experiment_id = experiment
         expected_dataset_id = ""
@@ -67,6 +115,8 @@ def registry_rows(experiment: dict[str, Any] | str, source: str = "promoted") ->
         expected_seeds = set()
         expected_schemes = set()
         allowed_scenarios = set()
+        sweep_values = set()
+        manifest_sizes = set()
 
     run_index = _runs_index()
     rows = []
@@ -80,6 +130,11 @@ def registry_rows(experiment: dict[str, Any] | str, source: str = "promoted") ->
         if expected_seeds and row["seed"] not in expected_seeds:
             continue
         if expected_schemes and row["scheme"] not in expected_schemes:
+            continue
+        if manifest_sizes:
+            if int(row.get("manifest_size") or 0) not in manifest_sizes:
+                continue
+        elif sweep_values and int(row.get("budget") or 0) not in sweep_values:
             continue
         enriched = dict(row)
         if "run_dir" not in enriched or not enriched["run_dir"]:
@@ -128,6 +183,7 @@ def log_frame(rows: list[dict[str, str]], filename: str, raw: bool = False) -> p
         frame["registry_scheme"] = row["scheme"]
         frame["registry_topology_id"] = row["topology_id"]
         frame["budget"] = int(row.get("budget") or 0)
+        frame["manifest_size"] = int(row.get("manifest_size") or 0)
         frame["seed"] = int(row["seed"])
         manifest = read_manifest(row)
         frame["scenario"] = manifest.get("scenario", "")
@@ -158,3 +214,31 @@ def bootstrap_mean_ci(series: pd.Series, replicates: int = 1000, seed: int = 0) 
     means = samples.mean(axis=1)
     lower, upper = np.quantile(means, [0.025, 0.975])
     return float((upper - lower) / 2.0)
+
+
+def qrels_maps_by_topology(experiment: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    inputs = experiment.get("inputs", {})
+    topology_ids = expected_topology_ids(experiment) or {str(experiment.get("topology_id", ""))}
+    payload: dict[str, dict[str, Any]] = {}
+    for topology_id in topology_ids:
+        qrels_domain_path = inputs.get("qrels_domain_csvs", {}).get(topology_id, inputs.get("qrels_domain_csv"))
+        qrels_object_path = inputs.get("qrels_object_csvs", {}).get(topology_id, inputs.get("qrels_object_csv"))
+        strong_domains: dict[str, set[str]] = {}
+        weak_domains: dict[str, set[str]] = {}
+        relevant_objects: dict[str, set[str]] = {}
+        if qrels_domain_path:
+            for row in read_csv(_resolve(qrels_domain_path)):
+                if row.get("is_relevant_domain", "1") == "1":
+                    strong_domains.setdefault(row["query_id"], set()).add(row["domain_id"])
+                elif row.get("relevance_strength", "") == "weak":
+                    weak_domains.setdefault(row["query_id"], set()).add(row["domain_id"])
+        if qrels_object_path:
+            for row in read_csv(_resolve(qrels_object_path)):
+                if int(row.get("relevance") or 0) >= 2:
+                    relevant_objects.setdefault(row["query_id"], set()).add(row["object_id"])
+        payload[topology_id] = {
+            "strong_domains": strong_domains,
+            "weak_domains": weak_domains,
+            "relevant_objects": relevant_objects,
+        }
+    return payload

@@ -10,8 +10,8 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from scripts.eval.eval_support import load_experiment, log_frame, require_rows
-from tools.workflow_support import repo_root, write_csv
+from scripts.eval.eval_support import aggregate_output_path, load_experiment, log_frame, require_rows, sweep_field
+from tools.workflow_support import write_csv
 
 
 OUTPUT_FIELDS = [
@@ -19,6 +19,7 @@ OUTPUT_FIELDS = [
     "scheme",
     "topology_id",
     "budget",
+    "manifest_size",
     "mean_success_at_1",
     "wrong_object_rate",
     "mean_discovery_bytes",
@@ -43,22 +44,30 @@ def main() -> int:
         print("ERROR: no canonical query logs found")
         return 1
 
+    active_sweep_field = sweep_field(experiment)
     selected_budget = int(experiment.get("default_budget") or 0)
-    if selected_budget:
+    selected_manifest_size = int(experiment.get("default_manifest_size") or 0)
+    if active_sweep_field == "budget" and selected_budget:
         frame = frame[frame["budget"] == selected_budget].copy()
+    if active_sweep_field == "manifest_size" and selected_manifest_size:
+        frame = frame[frame["manifest_size"] == selected_manifest_size].copy()
 
     frame["discovery_bytes_total"] = frame["discovery_tx_bytes"] + frame["discovery_rx_bytes"]
     output_rows = []
-    for (scheme, topology_id, budget), group in frame.groupby(
-        ["registry_scheme", "registry_topology_id", "budget"], sort=False
+    for keys, group in frame.groupby(
+        ["registry_scheme", "registry_topology_id", active_sweep_field], sort=False
     ):
+        scheme, topology_id, sweep_value = keys
+        budget = int(sweep_value) if active_sweep_field == "budget" else int(group["budget"].max())
+        manifest_size = int(sweep_value) if active_sweep_field == "manifest_size" else int(group["manifest_size"].max())
         wrong_object_rate = (group["failure_type"] == "wrong_object").mean()
         output_rows.append(
             {
                 "experiment_id": experiment["experiment_id"],
                 "scheme": scheme,
                 "topology_id": topology_id,
-                "budget": int(budget),
+                "budget": budget,
+                "manifest_size": manifest_size,
                 "mean_success_at_1": round(group["success_at_1"].mean(), 6),
                 "wrong_object_rate": round(float(wrong_object_rate), 6),
                 "mean_discovery_bytes": round(group["discovery_bytes_total"].mean(), 6),
@@ -67,9 +76,9 @@ def main() -> int:
             }
         )
 
-    aggregate_path = repo_root() / "results" / "aggregate" / "ablation_summary.csv"
+    aggregate_path = aggregate_output_path(experiment, "ablation_summary.csv")
     write_csv(aggregate_path, OUTPUT_FIELDS, output_rows)
-    print(str(aggregate_path.relative_to(repo_root())))
+    print(str(aggregate_path.relative_to(Path.cwd())))
     return 0
 
 

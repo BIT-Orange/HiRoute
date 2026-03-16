@@ -10,8 +10,8 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from scripts.eval.eval_support import load_experiment, log_frame, require_rows
-from tools.workflow_support import repo_root, write_csv
+from scripts.eval.eval_support import aggregate_output_path, load_experiment, log_frame, require_rows, sweep_field
+from tools.workflow_support import write_csv
 
 
 OUTPUT_FIELDS = [
@@ -19,6 +19,7 @@ OUTPUT_FIELDS = [
     "scheme",
     "topology_id",
     "budget",
+    "manifest_size",
     "failure_type",
     "count",
     "rate",
@@ -58,10 +59,14 @@ def main() -> int:
     else:
         frame["normalized_failure_type"] = frame["failure_type"].fillna("unknown")
 
+    active_sweep_field = sweep_field(experiment)
     output_rows = []
-    for (scheme, topology_id, budget), group in frame.groupby(
-        ["registry_scheme", "registry_topology_id", "budget"], sort=False
+    for keys, group in frame.groupby(
+        ["registry_scheme", "registry_topology_id", active_sweep_field], sort=False
     ):
+        scheme, topology_id, sweep_value = keys
+        budget = int(sweep_value) if active_sweep_field == "budget" else int(group["budget"].max())
+        manifest_size = int(sweep_value) if active_sweep_field == "manifest_size" else int(group["manifest_size"].max())
         counts = group["normalized_failure_type"].value_counts()
         total = len(group)
         for failure_type in FAILURE_ORDER:
@@ -71,16 +76,17 @@ def main() -> int:
                     "experiment_id": experiment["experiment_id"],
                     "scheme": scheme,
                     "topology_id": topology_id,
-                    "budget": int(budget),
+                    "budget": budget,
+                    "manifest_size": manifest_size,
                     "failure_type": failure_type,
                     "count": count,
                     "rate": round(float(count) / float(total), 6),
                 }
             )
 
-    aggregate_path = repo_root() / "results" / "aggregate" / "failure_breakdown.csv"
+    aggregate_path = aggregate_output_path(experiment, "failure_breakdown.csv")
     write_csv(aggregate_path, OUTPUT_FIELDS, output_rows)
-    print(str(aggregate_path.relative_to(repo_root())))
+    print(str(aggregate_path.relative_to(Path.cwd())))
     return 0
 
 

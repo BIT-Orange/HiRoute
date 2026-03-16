@@ -10,8 +10,8 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from scripts.eval.eval_support import load_experiment, log_frame, require_rows
-from tools.workflow_support import repo_root, write_csv
+from scripts.eval.eval_support import aggregate_output_path, load_experiment, log_frame, require_rows, sweep_field
+from tools.workflow_support import write_csv
 
 
 OUTPUT_FIELDS = [
@@ -19,6 +19,7 @@ OUTPUT_FIELDS = [
     "scheme",
     "topology_id",
     "budget",
+    "manifest_size",
     "deadline_ms",
     "success_before_deadline_rate",
     "timeout_or_failure_rate",
@@ -45,9 +46,13 @@ def main() -> int:
         print("ERROR: no canonical query logs found")
         return 1
 
+    active_sweep_field = sweep_field(experiment)
     selected_budget = int(experiment.get("default_budget") or 0)
-    if selected_budget:
+    selected_manifest_size = int(experiment.get("default_manifest_size") or 0)
+    if active_sweep_field == "budget" and selected_budget:
         frame = frame[frame["budget"] == selected_budget].copy()
+    if active_sweep_field == "manifest_size" and selected_manifest_size:
+        frame = frame[frame["manifest_size"] == selected_manifest_size].copy()
 
     output_rows = []
     for (scheme, topology_id, budget), group in frame.groupby(
@@ -65,6 +70,7 @@ def main() -> int:
                     "scheme": scheme,
                     "topology_id": topology_id,
                     "budget": int(budget),
+                    "manifest_size": int(group["manifest_size"].max()),
                     "deadline_ms": deadline_ms,
                     "success_before_deadline_rate": round(success_before_deadline, 6),
                     "timeout_or_failure_rate": round(1.0 - success_before_deadline, 6),
@@ -74,9 +80,9 @@ def main() -> int:
                 }
             )
 
-    aggregate_path = repo_root() / "results" / "aggregate" / "deadline_summary.csv"
+    aggregate_path = aggregate_output_path(experiment, "deadline_summary.csv")
     write_csv(aggregate_path, OUTPUT_FIELDS, output_rows)
-    print(str(aggregate_path.relative_to(repo_root())))
+    print(str(aggregate_path.relative_to(Path.cwd())))
     return 0
 
 

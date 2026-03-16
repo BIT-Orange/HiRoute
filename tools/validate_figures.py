@@ -42,11 +42,17 @@ def main() -> int:
         expected_topologies = {str(experiment["topology_id"])}
     expected_seeds = {str(seed) for seed in experiment.get("seeds", [])}
     expected_budgets = {int(value) for value in experiment.get("budgets", [])}
+    expected_manifest_sizes = {int(value) for value in experiment.get("manifest_sizes", [])}
     if not expected_budgets:
         expected_budgets = {int(experiment.get("default_budget") or 0)}
+    if not expected_manifest_sizes:
+        default_manifest_size = int(experiment.get("default_manifest_size") or 0)
+        expected_manifest_sizes = {default_manifest_size} if default_manifest_size else set()
     frontier_schemes = {str(value) for value in experiment.get("frontier_schemes", [])}
     reference_schemes = {str(value) for value in experiment.get("reference_schemes", [])}
     default_budget = int(experiment.get("default_budget") or 0)
+    default_manifest_size = int(experiment.get("default_manifest_size") or 0)
+    is_v3 = str(experiment.get("dataset_id", "")).endswith("_v3") or str(experiment.get("experiment_id", "")).endswith("_v3")
 
     promoted_rows = []
     for row in read_csv_rows(promoted_path):
@@ -59,10 +65,14 @@ def main() -> int:
         if expected_seeds and row["seed"] not in expected_seeds:
             continue
         row_budget = int(row.get("budget") or 0)
+        row_manifest_size = int(row.get("manifest_size") or 0)
         if frontier_schemes or reference_schemes:
             if row["scheme"] in reference_schemes and row_budget != default_budget:
                 continue
             if row["scheme"] in frontier_schemes and row_budget not in expected_budgets:
+                continue
+        elif expected_manifest_sizes:
+            if row_manifest_size not in expected_manifest_sizes:
                 continue
         elif expected_budgets and row_budget not in expected_budgets:
             continue
@@ -89,47 +99,74 @@ def main() -> int:
             if not query_log_path.exists():
                 continue
             query_count = len(read_csv_rows(query_log_path))
-            query_counts[(row["scheme"], row["topology_id"], int(row.get("budget") or 0))] += query_count
+            sweep_value = int(row.get("manifest_size") or 0) if expected_manifest_sizes else int(row.get("budget") or 0)
+            query_counts[(row["scheme"], row["topology_id"], sweep_value)] += query_count
 
         missing = []
         target_topologies = expected_topologies or {row["topology_id"] for row in promoted_rows}
         for topology_id in target_topologies:
             for scheme in experiment.get("schemes", []):
-                required_budgets = (
-                    {default_budget}
-                    if scheme in reference_schemes and default_budget
-                    else sorted(expected_budgets)
-                )
-                for budget in sorted(required_budgets):
-                    if query_counts.get((scheme, topology_id, budget), 0) < min_test_queries:
-                        missing.append(f"{scheme}@{topology_id}@budget{budget}")
+                if expected_manifest_sizes:
+                    required_values = (
+                        {default_manifest_size}
+                        if scheme in reference_schemes and default_manifest_size
+                        else sorted(expected_manifest_sizes)
+                    )
+                    label = "manifest"
+                else:
+                    required_values = (
+                        {default_budget}
+                        if scheme in reference_schemes and default_budget
+                        else sorted(expected_budgets)
+                    )
+                    label = "budget"
+                for value in sorted(required_values):
+                    if query_counts.get((scheme, topology_id, value), 0) < min_test_queries:
+                        missing.append(f"{scheme}@{topology_id}@{label}{value}")
         if missing:
             print("ERROR: promoted runs do not satisfy minimum test query counts: " + ", ".join(missing))
             return 1
     else:
         min_runs = int(experiment.get("promotion_rule", {}).get("min_runs_per_scheme", 1))
         if experiment.get("comparison_topologies"):
-            schemes = Counter((row["scheme"], row["topology_id"], int(row.get("budget") or 0)) for row in promoted_rows)
+            schemes = Counter(
+                (
+                    row["scheme"],
+                    row["topology_id"],
+                    int(row.get("manifest_size") or 0) if expected_manifest_sizes else int(row.get("budget") or 0),
+                )
+                for row in promoted_rows
+            )
             missing = [
-                f"{scheme}@{topology_id}@budget{budget}"
+                f"{scheme}@{topology_id}@{'manifest' if expected_manifest_sizes else 'budget'}{budget}"
                 for topology_id in expected_topologies
                 for scheme in experiment.get("schemes", [])
                 for budget in (
-                    [default_budget]
-                    if scheme in reference_schemes and default_budget
-                    else sorted(expected_budgets)
+                    [default_manifest_size]
+                    if expected_manifest_sizes and scheme in reference_schemes and default_manifest_size
+                    else [default_budget]
+                    if (not expected_manifest_sizes and scheme in reference_schemes and default_budget)
+                    else sorted(expected_manifest_sizes if expected_manifest_sizes else expected_budgets)
                 )
                 if schemes.get((scheme, topology_id, budget), 0) < min_runs
             ]
         else:
-            schemes = Counter((row["scheme"], int(row.get("budget") or 0)) for row in promoted_rows)
+            schemes = Counter(
+                (
+                    row["scheme"],
+                    int(row.get("manifest_size") or 0) if expected_manifest_sizes else int(row.get("budget") or 0),
+                )
+                for row in promoted_rows
+            )
             missing = [
-                f"{scheme}@budget{budget}"
+                f"{scheme}@{'manifest' if expected_manifest_sizes else 'budget'}{budget}"
                 for scheme in experiment.get("schemes", [])
                 for budget in (
-                    [default_budget]
-                    if scheme in reference_schemes and default_budget
-                    else sorted(expected_budgets)
+                    [default_manifest_size]
+                    if expected_manifest_sizes and scheme in reference_schemes and default_manifest_size
+                    else [default_budget]
+                    if (not expected_manifest_sizes and scheme in reference_schemes and default_budget)
+                    else sorted(expected_manifest_sizes if expected_manifest_sizes else expected_budgets)
                 )
                 if schemes.get((scheme, budget), 0) < min_runs
             ]
@@ -158,6 +195,13 @@ def main() -> int:
         return 1
 
     if args.aggregate and args.aggregate.exists():
+        aggregate_path_text = str(args.aggregate)
+        if is_v3 and "/v3/" not in aggregate_path_text:
+            print("ERROR: smartcity_v3 main figures must use v3 aggregate paths")
+            return 1
+        if not is_v3 and "/v3/" in aggregate_path_text:
+            print("ERROR: non-v3 experiments must not read v3 aggregates")
+            return 1
         aggregate_rows = read_csv_rows(args.aggregate)
         aggregate_schemes = {row.get("scheme", "") for row in aggregate_rows}
         if args.aggregate.name in {
@@ -169,33 +213,40 @@ def main() -> int:
         } and "exact" in aggregate_schemes:
             print("ERROR: appendix exact baseline must not appear in main-paper aggregates")
             return 1
+        if is_v3 and "sanity_appendix_v3" in {row.get("workload_tier", "") for row in aggregate_rows}:
+            print("ERROR: smartcity_v3 main figures must not include sanity_appendix_v3 data")
+            return 1
 
         workload_tiers = set(experiment.get("query_filters", {}).get("workload_tiers", []))
         if args.aggregate.name in {"main_success_overhead.csv", "candidate_shrinkage.csv", "deadline_summary.csv"}:
-            if workload_tiers != {"routing_hard"}:
+            expected_tier = {"routing_hard_v3"} if is_v3 else {"routing_hard"}
+            if workload_tiers != expected_tier:
                 print("ERROR: routing aggregates must come from routing_hard workload")
                 return 1
         if args.aggregate.name in {"failure_breakdown.csv", "ablation_summary.csv"}:
-            if workload_tiers != {"object_hard"}:
+            expected_tier = {"object_hard_v3"} if is_v3 else {"object_hard"}
+            if workload_tiers != expected_tier:
                 print("ERROR: failure and ablation aggregates must come from object_hard workload")
                 return 1
 
         if args.aggregate.name == "main_success_overhead.csv":
+            sweep_key = "manifest_size" if expected_manifest_sizes else "budget"
             budgets_by_scheme: dict[str, set[int]] = {}
             for row in aggregate_rows:
-                budgets_by_scheme.setdefault(row.get("scheme", ""), set()).add(int(row.get("budget") or 0))
+                budgets_by_scheme.setdefault(row.get("scheme", ""), set()).add(int(row.get(sweep_key) or 0))
+            expected_points = expected_manifest_sizes if expected_manifest_sizes else expected_budgets
             for scheme in {"flat_iroute", "hiroute", "inf_tag_forwarding"} & set(experiment.get("schemes", [])):
-                if len(budgets_by_scheme.get(scheme, set())) < len(expected_budgets):
+                if len(budgets_by_scheme.get(scheme, set())) < len(expected_points):
                     print(f"ERROR: routing frontier is missing budget points for {scheme}")
                     return 1
             if {"flat_iroute", "flood"}.issubset(aggregate_schemes):
                 flat_rows = {
-                    int(row.get("budget") or 0): row
+                    int(row.get(sweep_key) or 0): row
                     for row in aggregate_rows
                     if row.get("scheme") == "flat_iroute"
                 }
                 flood_rows = {
-                    int(row.get("budget") or 0): row
+                    int(row.get(sweep_key) or 0): row
                     for row in aggregate_rows
                     if row.get("scheme") == "flood"
                 }
@@ -220,7 +271,7 @@ def main() -> int:
                         print("ERROR: flat_iroute and flood remain degenerate on all routing headline metrics")
                         return 1
 
-        if experiment["experiment_id"] == "exp_main_v1" and args.aggregate.name == "candidate_shrinkage.csv":
+        if experiment["experiment_id"] in {"exp_main_v1", "exp_routing_main_v3"} and args.aggregate.name == "candidate_shrinkage.csv":
             required_stages = {
                 "all_domains",
                 "predicate_filtered_domains",
@@ -235,7 +286,7 @@ def main() -> int:
                 print("ERROR: candidate shrinkage aggregate misses required stages: " +
                       ", ".join(missing_stages))
                 return 1
-        if experiment["experiment_id"] == "exp_scaling_v1" and args.aggregate.name == "state_scaling_summary.csv":
+        if experiment["experiment_id"] in {"exp_scaling_v1", "exp_scaling_v3"} and args.aggregate.name == "state_scaling_summary.csv":
             axes = {row.get("scaling_axis", "") for row in aggregate_rows}
             if axes != {"objects_per_domain", "domain_count"}:
                 print("ERROR: state scaling aggregate must contain both object and domain sweeps")
