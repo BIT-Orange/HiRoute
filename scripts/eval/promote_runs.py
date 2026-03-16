@@ -22,6 +22,7 @@ FIELDS = [
     "dataset_id",
     "topology_id",
     "budget",
+    "manifest_size",
     "seed",
     "git_commit",
     "promotion_reason",
@@ -78,12 +79,21 @@ def main() -> int:
     expected_seeds = {str(seed) for seed in experiment.get("seeds", [])}
     expected_schemes = {str(scheme) for scheme in experiment.get("schemes", [])}
     expected_budgets = {int(value) for value in experiment.get("budgets", [])}
+    expected_manifest_sizes = {int(value) for value in experiment.get("manifest_sizes", [])}
     if not expected_budgets:
         expected_budgets = {int(experiment.get("default_budget") or 0)}
+    if not expected_manifest_sizes:
+        default_manifest_size = int(experiment.get("default_manifest_size") or 0)
+        expected_manifest_sizes = {default_manifest_size} if default_manifest_size else set()
     frontier_schemes = {str(value) for value in experiment.get("frontier_schemes", [])}
     reference_schemes = {str(value) for value in experiment.get("reference_schemes", [])}
     default_budget = int(experiment.get("default_budget") or 0)
+    default_manifest_size = int(experiment.get("default_manifest_size") or 0)
     allowed_scenarios = expected_scenarios(experiment)
+
+    if experiment.get("dataset_id") == "smartcity_v3" and experiment.get("runner", {}).get("type") != "ndnsim":
+        print("ERROR: smartcity_v3 promoted runs must come from runner.type=ndnsim")
+        return 1
 
     run_rows = []
     for row in read_csv(runs_path):
@@ -98,10 +108,14 @@ def main() -> int:
         if expected_schemes and row["scheme"] not in expected_schemes:
             continue
         row_budget = int(row.get("budget") or 0)
+        row_manifest_size = int(row.get("manifest_size") or 0)
         if frontier_schemes or reference_schemes:
             if row["scheme"] in reference_schemes and row_budget != default_budget:
                 continue
             if row["scheme"] in frontier_schemes and row_budget not in expected_budgets:
+                continue
+        elif expected_manifest_sizes:
+            if row_manifest_size not in expected_manifest_sizes:
                 continue
         elif expected_budgets and row_budget not in expected_budgets:
             continue
@@ -136,6 +150,7 @@ def main() -> int:
             row["seed"],
             row["topology_id"],
             int(row.get("budget") or 0),
+            int(row.get("manifest_size") or 0),
             row.get("_scenario", ""),
         )
         existing = latest_by_key.get(key)
@@ -165,8 +180,12 @@ def main() -> int:
             if manifest.get("code", {}).get("git_dirty", True):
                 print(f"ERROR: {row['run_id']} was produced from a dirty git tree")
                 return 1
+            if experiment.get("dataset_id") == "smartcity_v3" and manifest.get("runner_type") != "ndnsim":
+                print(f"ERROR: {row['run_id']} was not produced by ndnsim")
+                return 1
         query_rows = list(csv.DictReader((run_dir / "query_log.csv").open("r", newline="", encoding="utf-8")))
-        query_counts[(row["scheme"], row["topology_id"], int(row.get("budget") or 0))] += len(query_rows)
+        sweep_value = int(row.get("manifest_size") or 0) if expected_manifest_sizes else int(row.get("budget") or 0)
+        query_counts[(row["scheme"], row["topology_id"], sweep_value)] += len(query_rows)
         promoted_rows.append(
             {
                 "run_id": row["run_id"],
@@ -175,6 +194,7 @@ def main() -> int:
                 "dataset_id": row["dataset_id"],
                 "topology_id": row["topology_id"],
                 "budget": int(row.get("budget") or 0),
+                "manifest_size": int(row.get("manifest_size") or 0),
                 "seed": row["seed"],
                 "git_commit": row["git_commit"],
                 "promotion_reason": "meets promotion thresholds and artifact completeness",
@@ -190,14 +210,23 @@ def main() -> int:
         target_budgets = expected_budgets or {int(row.get("budget") or 0) for row in run_rows}
         for topology_id in target_topologies:
             for scheme in experiment["schemes"]:
-                required_budgets = (
-                    {default_budget}
-                    if scheme in reference_schemes and default_budget
-                    else sorted(target_budgets)
-                )
-                for budget in sorted(required_budgets):
-                    if query_counts.get((scheme, topology_id, budget), 0) < min_test_queries:
-                        missing.append(f"{scheme}@{topology_id}@budget{budget}")
+                if expected_manifest_sizes:
+                    required_values = (
+                        {default_manifest_size}
+                        if scheme in reference_schemes and default_manifest_size
+                        else sorted(expected_manifest_sizes)
+                    )
+                    label = "manifest"
+                else:
+                    required_values = (
+                        {default_budget}
+                        if scheme in reference_schemes and default_budget
+                        else sorted(target_budgets)
+                    )
+                    label = "budget"
+                for value in sorted(required_values):
+                    if query_counts.get((scheme, topology_id, value), 0) < min_test_queries:
+                        missing.append(f"{scheme}@{topology_id}@{label}{value}")
         if missing:
             print(
                 "ERROR: promoted runs do not satisfy minimum test queries for "
@@ -208,30 +237,45 @@ def main() -> int:
         min_runs = int(promotion_rule["min_runs_per_scheme"])
         if experiment.get("comparison_topologies"):
             scheme_counts = Counter(
-                (row["scheme"], row["topology_id"], int(row.get("budget") or 0)) for row in run_rows
+                (
+                    row["scheme"],
+                    row["topology_id"],
+                    int(row.get("manifest_size") or 0) if expected_manifest_sizes else int(row.get("budget") or 0),
+                )
+                for row in run_rows
             )
             missing = [
-                f"{scheme}@{topology_id}@budget{budget}"
+                f"{scheme}@{topology_id}@{'manifest' if expected_manifest_sizes else 'budget'}{value}"
                 for topology_id in expected_topologies
                 for scheme in experiment["schemes"]
-                for budget in (
-                    [default_budget]
-                    if scheme in reference_schemes and default_budget
-                    else sorted(expected_budgets)
+                for value in (
+                    [default_manifest_size]
+                    if expected_manifest_sizes and scheme in reference_schemes and default_manifest_size
+                    else [default_budget]
+                    if (not expected_manifest_sizes and scheme in reference_schemes and default_budget)
+                    else sorted(expected_manifest_sizes if expected_manifest_sizes else expected_budgets)
                 )
-                if scheme_counts.get((scheme, topology_id, budget), 0) < min_runs
+                if scheme_counts.get((scheme, topology_id, value), 0) < min_runs
             ]
         else:
-            scheme_counts = Counter((row["scheme"], int(row.get("budget") or 0)) for row in run_rows)
-            missing = [
-                f"{scheme}@budget{budget}"
-                for scheme in experiment["schemes"]
-                for budget in (
-                    [default_budget]
-                    if scheme in reference_schemes and default_budget
-                    else sorted(expected_budgets)
+            scheme_counts = Counter(
+                (
+                    row["scheme"],
+                    int(row.get("manifest_size") or 0) if expected_manifest_sizes else int(row.get("budget") or 0),
                 )
-                if scheme_counts.get((scheme, budget), 0) < min_runs
+                for row in run_rows
+            )
+            missing = [
+                f"{scheme}@{'manifest' if expected_manifest_sizes else 'budget'}{value}"
+                for scheme in experiment["schemes"]
+                for value in (
+                    [default_manifest_size]
+                    if expected_manifest_sizes and scheme in reference_schemes and default_manifest_size
+                    else [default_budget]
+                    if (not expected_manifest_sizes and scheme in reference_schemes and default_budget)
+                    else sorted(expected_manifest_sizes if expected_manifest_sizes else expected_budgets)
+                )
+                if scheme_counts.get((scheme, value), 0) < min_runs
             ]
         if missing:
             print(f"ERROR: missing enough completed runs for schemes: {', '.join(missing)}")

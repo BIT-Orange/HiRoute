@@ -45,6 +45,7 @@ RUNS_FIELDS = [
     "dataset_id",
     "topology_id",
     "budget",
+    "manifest_size",
     "seed",
     "git_commit",
     "start_time",
@@ -59,6 +60,7 @@ FAILED_FIELDS = [
     "experiment_id",
     "scheme",
     "budget",
+    "manifest_size",
     "seed",
     "git_commit",
     "error_stage",
@@ -152,6 +154,12 @@ SEARCH_STAGES = [
 def _resolve(path_str: str) -> Path:
     path = Path(path_str)
     return path if path.is_absolute() else repo_root() / path
+
+
+def _scheme_runtime_alias(scheme: str) -> str:
+    return {
+        "central_directory": "oracle",
+    }.get(scheme, scheme)
 
 
 def _copy_snapshots(experiment: dict[str, Any], scheme: str, config_snapshot_dir: Path) -> None:
@@ -739,6 +747,7 @@ def _ndnsim_command(
     topology_config = load_json_yaml(_resolve(experiment["configs"]["topology"]))
     params = runner.get("params", {})
     selected_budget = int(experiment.get("_selected_budget") or 0)
+    selected_manifest_size = int(experiment.get("_selected_manifest_size") or 0)
 
     runtime_paths = _prepare_runtime_inputs(experiment, run_dir)
     command = [
@@ -753,7 +762,7 @@ def _ndnsim_command(
         f"--controllerLocalIndexCsv={runtime_paths.get('controller_local_index_csv', _resolve(experiment['inputs']['controller_local_index_csv']))}",
         f"--runDir={run_dir}",
         f"--topologyId={experiment['topology_id']}",
-        f"--scheme={scheme}",
+        f"--scheme={_scheme_runtime_alias(scheme)}",
     ]
     for flag in [
         "stopSeconds",
@@ -771,6 +780,8 @@ def _ndnsim_command(
             command.append(f"--{flag}={params[flag]}")
     if selected_budget > 0:
         command.append(f"--exportBudget={selected_budget}")
+    if selected_manifest_size > 0:
+        command.append(f"--manifestSize={selected_manifest_size}")
     return ns3_root, command
 
 
@@ -804,6 +815,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--topology-id")
     parser.add_argument("--variant")
     parser.add_argument("--budget", type=int)
+    parser.add_argument("--manifest-size", type=int)
     return parser.parse_args()
 
 
@@ -818,6 +830,7 @@ def main() -> int:
         args.topology_id,
         args.variant,
         args.budget,
+        args.manifest_size,
     )
     experiment["_experiment_path"] = str(experiment_path)
 
@@ -829,6 +842,7 @@ def main() -> int:
         experiment["topology_id"],
         experiment.get("_runner_variant"),
         int(experiment.get("_selected_budget") or 0) or None,
+        int(experiment.get("_selected_manifest_size") or 0) or None,
     )
     run_root = repo_root() / "runs" / ("pending" if args.mode == "dry" else "completed")
     run_dir = run_root / run_id
@@ -845,6 +859,7 @@ def main() -> int:
                     "experiment_id": experiment.get("experiment_id", "unknown"),
                     "scheme": args.scheme,
                     "budget": int(experiment.get("_selected_budget") or 0),
+                    "manifest_size": int(experiment.get("_selected_manifest_size") or 0),
                     "seed": args.seed,
                     "git_commit": git_commit,
                     "error_stage": "pre_run_validation",
@@ -909,6 +924,7 @@ def main() -> int:
         "dataset_id": experiment["dataset_id"],
         "topology_id": experiment["topology_id"],
         "budget": int(experiment.get("_selected_budget") or 0),
+        "manifest_size": int(experiment.get("_selected_manifest_size") or 0),
         "scenario": experiment["scenario"],
         "seed": args.seed,
         "code": {
@@ -926,6 +942,7 @@ def main() -> int:
         "query_filters": experiment.get("query_filters", {}),
         "statistics": experiment.get("statistics", {}),
         "runner_params": experiment.get("runner", {}).get("params", {}),
+        "runner_type": experiment.get("runner", {}).get("type", "mock"),
         "inputs": experiment["inputs"],
         "outputs": {
             "query_log": "query_log.csv",
@@ -941,6 +958,23 @@ def main() -> int:
         "end_time": isoformat_z(end_time),
         "duration_sec": duration_sec,
     }
+    state_log_path = run_dir / "state_log.csv"
+    if state_log_path.exists():
+        state_rows = read_csv(state_log_path)
+        if state_rows:
+            per_timestamp: dict[str, int] = defaultdict(int)
+            domain_counts: dict[str, set[str]] = defaultdict(set)
+            for row in state_rows:
+                timestamp_ms = row.get("timestamp_ms", "")
+                per_timestamp[timestamp_ms] += int(float(row.get("num_exported_summaries") or 0))
+                domain_counts[timestamp_ms].add(row.get("domain_id", ""))
+            latest_timestamp = sorted(per_timestamp)[-1]
+            effective_total = per_timestamp[latest_timestamp]
+            effective_domains = max(1, len([value for value in domain_counts[latest_timestamp] if value]))
+            manifest["effective_exported_summaries_total"] = effective_total
+            manifest["effective_exported_summaries_per_domain_mean"] = round(
+                float(effective_total) / float(effective_domains), 6
+            )
     for input_key in [
         "objects_csv",
         "queries_csv",
@@ -968,6 +1002,7 @@ def main() -> int:
                 "dataset_id": experiment["dataset_id"],
                 "topology_id": experiment["topology_id"],
                 "budget": int(experiment.get("_selected_budget") or 0),
+                "manifest_size": int(experiment.get("_selected_manifest_size") or 0),
                 "seed": args.seed,
                 "git_commit": git_commit,
                 "start_time": isoformat_z(start_time),
@@ -992,6 +1027,7 @@ def main() -> int:
                 "experiment_id": experiment["experiment_id"],
                 "scheme": args.scheme,
                 "budget": int(experiment.get("_selected_budget") or 0),
+                "manifest_size": int(experiment.get("_selected_manifest_size") or 0),
                 "seed": args.seed,
                 "git_commit": git_commit,
                 "error_stage": "runner",

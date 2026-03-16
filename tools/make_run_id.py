@@ -21,6 +21,7 @@ def make_run_id(
     topology_id: str | None = None,
     variant: str | None = None,
     budget: int | None = None,
+    manifest_size: int | None = None,
 ) -> str:
     timestamp = timestamp or utc_timestamp()
     parts = [
@@ -33,6 +34,8 @@ def make_run_id(
         parts.append(sanitize_token(variant))
     if budget is not None:
         parts.append(f"budget{budget}")
+    if manifest_size is not None:
+        parts.append(f"manifest{manifest_size}")
     parts.extend([f"seed{seed}", timestamp])
     return "__".join(parts)
 
@@ -46,6 +49,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--topology-id")
     parser.add_argument("--variant")
     parser.add_argument("--budget", type=int)
+    parser.add_argument("--manifest-size", type=int)
     return parser.parse_args()
 
 
@@ -61,6 +65,7 @@ def main() -> int:
             args.topology_id,
             args.variant,
             args.budget,
+            args.manifest_size,
         )
     )
     return 0

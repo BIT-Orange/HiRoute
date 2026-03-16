@@ -1,0 +1,13 @@
+{
+  "scheme_id": "central_directory",
+  "description": "Centralized semantic directory with global object knowledge.",
+  "mock_profile": {
+    "success_bias": 0.88,
+    "manifest_bias": 0.92,
+    "ndcg_bias": 0.86,
+    "probe_bias": 1.0,
+    "discovery_byte_bias": 180.0,
+    "fetch_byte_bias": 120.0,
+    "latency_bias": 40.0
+  }
+}

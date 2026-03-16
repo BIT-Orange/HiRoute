@@ -95,6 +95,19 @@ def _resolve_budget(experiment: dict[str, Any], budget: int | None, errors: list
     experiment["_selected_budget"] = int(selected or 0)
 
 
+def _resolve_manifest_size(experiment: dict[str, Any], manifest_size: int | None, errors: list[str]) -> None:
+    configured = [int(value) for value in experiment.get("manifest_sizes", [])]
+    selected = manifest_size
+    if selected is None:
+        selected = int(experiment.get("default_manifest_size") or 0)
+    if not selected:
+        runner_params = experiment.get("runner", {}).get("params", {})
+        selected = int(runner_params.get("manifestSize") or 0)
+    if configured and selected and selected not in configured:
+        errors.append(f"manifest size '{selected}' is not listed in experiment manifest_sizes")
+    experiment["_selected_manifest_size"] = int(selected or 0)
+
+
 def _query_explicit_domains(query_row: dict[str, str]) -> set[str]:
     domains = set()
     zone_constraint = query_row.get("zone_constraint", "")
@@ -173,10 +186,44 @@ def _validate_ablation_contract(experiment: dict[str, Any], errors: list[str]) -
     if runner.get("type") != "ndnsim":
         errors.append("ablation experiments must use the ndnsim runner")
     if int(experiment.get("default_budget") or 0) == 0:
-        errors.append("ablation experiments must set a single default budget")
+        if int(experiment.get("default_manifest_size") or 0) == 0:
+            errors.append("ablation experiments must set a single default budget or default_manifest_size")
     for required_flag in ["manifestSize", "probeBudget", "queryLimitPerIngress"]:
         if required_flag not in params:
             errors.append(f"ablation experiments must pin runner.params.{required_flag}")
+
+
+def _validate_v3_contract(experiment: dict[str, Any], mode: str, errors: list[str]) -> None:
+    if experiment.get("dataset_id") != "smartcity_v3":
+        return
+
+    runner = experiment.get("runner", {})
+    if runner.get("type") != "ndnsim":
+        errors.append("smartcity_v3 official experiments must use runner.type=ndnsim")
+
+    query_filters = experiment.get("query_filters", {}) or {}
+    workload_tiers = set(str(value) for value in query_filters.get("workload_tiers", []))
+    allowed_v3_tiers = {"routing_hard_v3", "object_hard_v3", "sanity_appendix_v3"}
+    if workload_tiers and not workload_tiers.issubset(allowed_v3_tiers):
+        errors.append("smartcity_v3 experiments must only reference v3 workload tiers")
+
+    if mode == "official" and experiment["experiment_id"] in {
+        "exp_routing_main_v3",
+        "exp_object_main_v3",
+        "exp_ablation_v3",
+    }:
+        if set(query_filters.get("splits", [])) != {"test"}:
+            errors.append("official v3 main/object/ablation experiments must use split=test only")
+
+    if experiment["experiment_id"] == "exp_routing_main_v3":
+        if workload_tiers != {"routing_hard_v3"}:
+            errors.append("exp_routing_main_v3 must use routing_hard_v3 only")
+    if experiment["experiment_id"] in {"exp_object_main_v3", "exp_ablation_v3"}:
+        if workload_tiers != {"object_hard_v3"}:
+            errors.append(f"{experiment['experiment_id']} must use object_hard_v3 only")
+    if experiment["experiment_id"] == "exp_sanity_appendix_v3":
+        if workload_tiers != {"sanity_appendix_v3"}:
+            errors.append("exp_sanity_appendix_v3 must use sanity_appendix_v3 only")
 
 
 def validate_context(
@@ -187,6 +234,7 @@ def validate_context(
     topology_id: str | None = None,
     variant: str | None = None,
     budget: int | None = None,
+    manifest_size: int | None = None,
 ) -> tuple[dict[str, Any], list[str]]:
     experiment = load_json_yaml(experiment_path)
     errors: list[str] = []
@@ -199,6 +247,7 @@ def validate_context(
     _resolve_topology(experiment, topology_id, errors)
     _resolve_variant(experiment, variant, errors)
     _resolve_budget(experiment, budget, errors)
+    _resolve_manifest_size(experiment, manifest_size, errors)
 
     configs = experiment.get("configs", {})
     inputs = experiment.get("inputs", {})
@@ -249,6 +298,7 @@ def validate_context(
     if not errors:
         _validate_query_slice(experiment, errors)
         _validate_ablation_contract(experiment, errors)
+        _validate_v3_contract(experiment, mode, errors)
 
     return experiment, errors
 
@@ -262,6 +312,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--topology-id")
     parser.add_argument("--variant")
     parser.add_argument("--budget", type=int)
+    parser.add_argument("--manifest-size", type=int)
     return parser.parse_args()
 
 
@@ -275,6 +326,7 @@ def main() -> int:
         args.topology_id,
         args.variant,
         args.budget,
+        args.manifest_size,
     )
     if errors:
         for error in errors:
