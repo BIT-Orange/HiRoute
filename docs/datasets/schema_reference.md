@@ -7,6 +7,7 @@
 - `zone_id`
 - `zone_type`
 - `service_class`
+- `semantic_facet`
 - `freshness_class`
 - `time_bucket`
 - `vendor_template_id`
@@ -33,6 +34,10 @@
 - `ambiguity_level`
 - `difficulty`
 - `intended_domain_count`
+- `ground_truth_count`
+- `query_family`
+- `workload_tier`
+- `intent_facet`
 - `query_text_id`
 
 ## `data/processed/ndnsim/object_embedding_index.csv`
@@ -58,6 +63,7 @@
 
 - `query_id`
 - `object_id`
+- `domain_id`
 - `relevance`
 
 ## `data/processed/eval/qrels_domain.csv`
@@ -76,6 +82,7 @@
 - `zone_type_bitmap`
 - `service_bitmap`
 - `freshness_bitmap`
+- `semantic_tag_bitmap`
 - `centroid_row`
 - `radius`
 - `object_count`

@@ -24,6 +24,7 @@ FIELDS = [
     "zone_id",
     "zone_type",
     "service_class",
+    "semantic_facet",
     "freshness_class",
     "time_bucket",
     "vendor_template_id",
@@ -63,6 +64,7 @@ def main() -> int:
     templates = list(rules["naming_templates"])
     freshness_classes = list(rules["freshness_classes"].keys())
     time_buckets = list(rules["time_buckets"])
+    semantic_facets = rules.get("semantic_facets", {})
     domain_profiles = rules["domain_profiles"]
     profile_order = list(rules["domain_profile_order"])
     zone_types = list(rules["zone_types"])
@@ -100,12 +102,15 @@ def main() -> int:
                     object_text_id = f"text-{object_id}"
                     template_index = (domain_index + zone_index + object_index) % len(templates)
                     template = templates[template_index]
+                    facet_choices = semantic_facets.get(service_class, [service_class])
+                    semantic_facet = facet_choices[(domain_index + zone_index + object_index) % len(facet_choices)]
                     record = {
                         "object_id": object_id,
                         "domain_id": domain_id,
                         "zone_id": zone_id,
                         "zone_type": zone_type,
                         "service_class": service_class,
+                        "semantic_facet": semantic_facet,
                         "freshness_class": freshness_classes[(zone_index + object_index) % len(freshness_classes)],
                         "time_bucket": time_buckets[(object_index + zone_index) % len(time_buckets)],
                         "vendor_template_id": f"tpl-{template_index + 1:02d}",
@@ -125,10 +130,12 @@ def main() -> int:
                             "object_id": object_id,
                             "description_text": (
                                 f"{ontology_row['source_subject']} publishes {service_class.replace('_', ' ')} "
-                                f"for {zone_type} in {domain_id} during the {record['time_bucket']}."
+                                f"for {zone_type} in {domain_id} during the {record['time_bucket']} "
+                                f"with emphasis on {semantic_facet.replace('_', ' ')}."
                             ),
                             "keywords": [
                                 service_class,
+                                semantic_facet,
                                 zone_type,
                                 domain_id,
                                 record["freshness_class"],
@@ -136,7 +143,8 @@ def main() -> int:
                             ],
                             "metadata_summary": (
                                 f"{service_class} object in {zone_id}, profile={profile_name}, "
-                                f"freshness={record['freshness_class']}, property={ontology_row['primary_property']}."
+                                f"facet={semantic_facet}, freshness={record['freshness_class']}, "
+                                f"property={ontology_row['primary_property']}."
                             ),
                         }
                     )

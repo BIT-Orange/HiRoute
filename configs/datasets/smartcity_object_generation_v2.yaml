@@ -1,0 +1,135 @@
+seed: 52
+domains_total: 16
+zones_per_domain: 4
+base_objects_per_service_per_zone: 2
+max_objects_per_service_per_zone: 5
+zone_types:
+  - school_area
+  - residential
+  - downtown
+  - industrial
+  - transport_hub
+  - stadium_area
+freshness_classes:
+  realtime: 5000
+  recent: 60000
+  archival: 600000
+time_buckets:
+  - morning
+  - afternoon
+  - evening
+naming_templates:
+  - "/{domain_id}/{zone_id}/{service_class}/{object_id}"
+  - "/city/{domain_id}/services/{service_class}/zones/{zone_id}/objects/{object_id}"
+  - "/org/{domain_id}/zone/{zone_id}/telemetry/{service_class}/{object_id}"
+  - "/iot/{service_class}/{domain_id}/{zone_id}/{object_id}"
+semantic_facets:
+  temperature:
+    - hotspot
+    - anomaly
+    - trend
+  humidity:
+    - saturation
+    - comfort
+    - drift
+  rainfall:
+    - shower
+    - accumulation
+    - stormwatch
+  air_quality_pm25:
+    - haze
+    - anomaly
+    - exposure
+  air_quality_co2:
+    - emission
+    - ventilation
+    - anomaly
+  traffic_speed:
+    - congestion
+    - corridor
+    - recovery
+  parking_availability:
+    - vacancy
+    - turnover
+    - spillover
+  bus_arrival:
+    - punctuality
+    - crowding
+    - disruption
+  street_light_state:
+    - outage
+    - dimming
+    - stability
+  noise_level:
+    - event_spike
+    - ambient
+    - disturbance
+domain_profiles:
+  environment:
+    service_weights:
+      temperature: 1.4
+      humidity: 1.3
+      rainfall: 1.2
+      air_quality_pm25: 1.2
+      air_quality_co2: 1.2
+      traffic_speed: 0.7
+      parking_availability: 0.7
+      bus_arrival: 0.7
+      street_light_state: 0.8
+      noise_level: 1.0
+  mobility:
+    service_weights:
+      temperature: 0.8
+      humidity: 0.8
+      rainfall: 0.8
+      air_quality_pm25: 1.0
+      air_quality_co2: 1.0
+      traffic_speed: 1.5
+      parking_availability: 1.5
+      bus_arrival: 1.5
+      street_light_state: 1.0
+      noise_level: 1.0
+  public_space:
+    service_weights:
+      temperature: 1.0
+      humidity: 1.0
+      rainfall: 0.9
+      air_quality_pm25: 1.1
+      air_quality_co2: 1.1
+      traffic_speed: 1.0
+      parking_availability: 1.0
+      bus_arrival: 1.0
+      street_light_state: 1.4
+      noise_level: 1.3
+domain_profile_order:
+  - environment
+  - mobility
+  - public_space
+zone_type_service_bias:
+  school_area:
+    traffic_speed: 1.2
+    noise_level: 1.2
+    air_quality_pm25: 1.1
+  residential:
+    parking_availability: 1.1
+    air_quality_co2: 1.1
+    street_light_state: 1.1
+  downtown:
+    bus_arrival: 1.3
+    traffic_speed: 1.2
+    parking_availability: 1.2
+  industrial:
+    air_quality_pm25: 1.3
+    air_quality_co2: 1.3
+    noise_level: 1.2
+  transport_hub:
+    bus_arrival: 1.4
+    traffic_speed: 1.3
+    parking_availability: 1.2
+  stadium_area:
+    parking_availability: 1.3
+    noise_level: 1.4
+    street_light_state: 1.2
+payload_size_bytes:
+  min: 128
+  max: 384

@@ -1,4 +1,4 @@
-"""Run the full formal smartcity_v1 dataset build pipeline."""
+"""Run the full formal dataset build pipeline."""
 
 from __future__ import annotations
 
@@ -59,24 +59,28 @@ def _replace_registry_row(registry_path: Path, row: dict[str, str]) -> None:
 def main() -> int:
     args = parse_args()
     manifest = load_dataset_manifest(args.config)
-    topology_config = load_json_yaml(
-        ROOT / (args.topology_config or Path(manifest["topology"]["default_config"]))
-    )
+    topology_configs = []
+    if manifest.get("topology", {}).get("query_bundles"):
+        seen = set()
+        for bundle in manifest["topology"]["query_bundles"].values():
+            topology_config_path = str(bundle["topology_config"])
+            if topology_config_path in seen:
+                continue
+            seen.add(topology_config_path)
+            topology_configs.append((topology_config_path, load_json_yaml(ROOT / topology_config_path)))
+    else:
+        default_topology_config = str(args.topology_config or Path(manifest["topology"]["default_config"]))
+        topology_configs.append((default_topology_config, load_json_yaml(ROOT / default_topology_config)))
 
     _run("scripts/preprocess/extract_sdm_subjects.py", [])
     _run("scripts/preprocess/build_service_ontology.py", [])
-    topology_config_arg = str(args.topology_config or manifest["topology"]["default_config"])
-    _run("scripts/build_dataset/build_topology_mapping.py", ["--topology-config", topology_config_arg])
+    for topology_config_arg, _ in topology_configs:
+        _run("scripts/build_dataset/build_topology_mapping.py", ["--topology-config", topology_config_arg])
     _run("scripts/build_dataset/build_objects.py", ["--config", str(args.config)])
-    _run(
-        "scripts/build_dataset/build_queries_and_qrels.py",
-        [
-            "--config",
-            str(args.config),
-            "--topology-mapping",
-            topology_config["mapping_output_path"],
-        ],
-    )
+    query_args = ["--config", str(args.config)]
+    if not manifest.get("topology", {}).get("query_bundles"):
+        query_args.extend(["--topology-mapping", topology_configs[0][1]["mapping_output_path"]])
+    _run("scripts/build_dataset/build_queries_and_qrels.py", query_args)
     _run(
         "scripts/build_dataset/embed_texts.py",
         ["--config", str(args.config), "--backend", "sentence-transformers"],
@@ -100,7 +104,7 @@ def main() -> int:
         "hslsa_csv": manifest["outputs"]["hslsa_csv"],
         "controller_local_index_csv": manifest["outputs"]["controller_local_index_csv"],
         "cell_membership_csv": manifest["outputs"]["cell_membership_csv"],
-        "topology_mapping_csv": topology_config["mapping_output_path"],
+        "topology_mapping_csv": topology_configs[0][1]["mapping_output_path"],
     }
     _replace_registry_row(repo_root() / "data" / "registry" / "dataset_versions.csv", row)
     print(manifest["dataset_id"])

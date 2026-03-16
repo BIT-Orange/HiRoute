@@ -1,9 +1,10 @@
-"""Validate the formal smartcity_v1 dataset artifacts."""
+"""Validate the formal dataset artifacts."""
 
 from __future__ import annotations
 
 import argparse
 import csv
+import subprocess
 import sys
 from pathlib import Path
 
@@ -33,7 +34,7 @@ REQUIRED_COLUMNS = {
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--config", type=Path, default=Path("configs/datasets/smartcity_v1.yaml"))
+    parser.add_argument("--config", type=Path, default=Path("configs/datasets/smartcity_v2.yaml"))
     parser.add_argument("--topology-config", type=Path, default=Path("configs/topologies/rocketfuel_3967_exodus.yaml"))
     return parser.parse_args()
 
@@ -48,6 +49,11 @@ def _validate_csv(path: Path, columns: list[str]) -> None:
             raise ValueError(f"{path} has no data rows")
 
 
+def _resolve(path_str: str) -> Path:
+    path = Path(path_str)
+    return path if path.is_absolute() else repo_root() / path
+
+
 def main() -> int:
     args = parse_args()
     manifest = load_dataset_manifest(args.config)
@@ -55,6 +61,17 @@ def main() -> int:
 
     for key, columns in REQUIRED_COLUMNS.items():
         _validate_csv(output_path(manifest, key), columns)
+    if manifest["dataset_id"] == "smartcity_v2":
+        _validate_csv(
+            output_path(manifest, "objects_csv"),
+            ["semantic_facet"],
+        )
+        _validate_csv(
+            output_path(manifest, "queries_csv"),
+            ["query_family", "workload_tier", "intent_facet", "ground_truth_count"],
+        )
+        _validate_csv(output_path(manifest, "qrels_object_csv"), ["domain_id"])
+        _validate_csv(output_path(manifest, "hslsa_csv"), ["semantic_tag_bitmap"])
     _validate_csv(repo_root() / topology["mapping_output_path"], ["node_id", "role", "domain_id", "controller_prefix"])
 
     object_embeddings = np.load(output_path(manifest, "object_embeddings_npy"))
@@ -67,6 +84,22 @@ def main() -> int:
         raise ValueError("query embedding index count mismatch")
     if len(summary_embeddings) != len(list(csv.DictReader(output_path(manifest, "summary_embedding_index_csv").open("r", newline="", encoding="utf-8")))):
         raise ValueError("summary embedding index count mismatch")
+
+    for bundle_id, bundle in manifest.get("topology", {}).get("query_bundles", {}).items():
+        _validate_csv(_resolve(bundle["queries_csv"]), ["query_id", "split", "workload_tier", "intent_facet"])
+        _validate_csv(_resolve(bundle["qrels_object_csv"]), ["query_id", "object_id", "domain_id", "relevance"])
+        _validate_csv(_resolve(bundle["qrels_domain_csv"]), ["query_id", "domain_id", "is_relevant_domain"])
+        _validate_csv(_resolve(bundle["query_embedding_index_csv"]), ["query_id", "query_text_id", "embedding_row"])
+
+    audit_result = subprocess.run(
+        [sys.executable, "scripts/build_dataset/audit_query_workloads.py", "--config", str(args.config)],
+        cwd=repo_root(),
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if audit_result.returncode != 0:
+        raise ValueError(audit_result.stdout or audit_result.stderr)
 
     print("OK")
     return 0

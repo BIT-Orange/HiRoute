@@ -136,6 +136,26 @@ def main() -> int:
             for index, row in enumerate(ordered_queries)
         ],
     )
+    for bundle_id, bundle in manifest.get("topology", {}).get("query_bundles", {}).items():
+        bundle_queries = read_csv(
+            (ROOT / bundle["queries_csv"]) if not Path(bundle["queries_csv"]).is_absolute() else Path(bundle["queries_csv"])
+        )
+        query_ids = {row["query_id"] for row in bundle_queries}
+        bundle_index_rows = [
+            {
+                "query_id": row["query_id"],
+                "query_text_id": row["query_text_id"],
+                "embedding_row": index,
+            }
+            for index, row in enumerate(ordered_queries)
+            if row["query_id"] in query_ids
+        ]
+        bundle_index_path = (ROOT / bundle["query_embedding_index_csv"]) if not Path(bundle["query_embedding_index_csv"]).is_absolute() else Path(bundle["query_embedding_index_csv"])
+        write_csv(
+            bundle_index_path,
+            ["query_id", "query_text_id", "embedding_row"],
+            bundle_index_rows,
+        )
     LOGGER.info(
         "embedded %s objects and %s queries using %s backend",
         len(ordered_objects),

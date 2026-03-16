@@ -1,0 +1,208 @@
+seed: 53
+workload_tiers:
+  constraint_dominant:
+    dev: 40
+    test: 240
+    families:
+      precise_template: 0.7
+      paraphrase: 0.3
+    relevant_domains:
+      min: 1
+      max: 1
+    relevant_objects_per_domain:
+      min: 1
+      max: 3
+    allow_explicit_zone: true
+    require_zone_constraint: true
+    require_freshness_constraint: true
+    allow_text_domain_mention: true
+  routing_hard:
+    dev: 40
+    test: 240
+    families:
+      paraphrase: 0.55
+      ambiguous: 0.45
+    relevant_domains:
+      min: 1
+      max: 3
+    relevant_objects_per_domain:
+      min: 1
+      max: 2
+    allow_explicit_zone: false
+    require_zone_constraint: false
+    require_freshness_constraint: true
+    allow_text_domain_mention: false
+  object_hard:
+    dev: 40
+    test: 240
+    families:
+      paraphrase: 0.4
+      ambiguous: 0.6
+    relevant_domains:
+      min: 2
+      max: 4
+    relevant_objects_per_domain:
+      min: 2
+      max: 3
+    allow_explicit_zone: false
+    require_zone_constraint: false
+    require_freshness_constraint: false
+    allow_text_domain_mention: false
+service_synonyms:
+  temperature:
+    - temperature
+    - thermal reading
+    - ambient heat
+  humidity:
+    - humidity
+    - moisture level
+    - ambient humidity
+  rainfall:
+    - rainfall
+    - rain intensity
+    - precipitation level
+  air_quality_pm25:
+    - pm25
+    - particulate pollution
+    - fine dust level
+  air_quality_co2:
+    - co2
+    - carbon dioxide
+    - carbon level
+  traffic_speed:
+    - traffic speed
+    - vehicle flow speed
+    - road speed
+  parking_availability:
+    - parking availability
+    - open parking spots
+    - vacant parking
+  bus_arrival:
+    - bus arrival
+    - next bus
+    - bus waiting time
+  street_light_state:
+    - street light state
+    - lamp status
+    - lighting state
+  noise_level:
+    - noise level
+    - sound level
+    - ambient noise
+intent_phrases:
+  hotspot:
+    - hotspot
+    - hot spot
+    - unusually hot
+  anomaly:
+    - anomaly
+    - anomalous
+    - abnormal
+  trend:
+    - trend
+    - changing trend
+    - drift
+  saturation:
+    - saturated
+    - saturated humidity
+    - moisture buildup
+  comfort:
+    - comfort
+    - comfort-oriented
+    - pedestrian comfort
+  drift:
+    - drift
+    - gradual drift
+    - trend shift
+  shower:
+    - shower
+    - shower burst
+    - passing rain
+  accumulation:
+    - accumulation
+    - accumulated rain
+    - sustained rainfall
+  stormwatch:
+    - stormwatch
+    - storm alert
+    - storm signal
+  haze:
+    - haze
+    - hazy conditions
+    - smog
+  exposure:
+    - exposure
+    - exposure risk
+    - exposure alert
+  emission:
+    - emission
+    - emissions
+    - elevated emissions
+  ventilation:
+    - ventilation
+    - poor ventilation
+    - stale air
+  congestion:
+    - congestion
+    - congested traffic
+    - bottleneck
+  corridor:
+    - corridor
+    - corridor flow
+    - arterial movement
+  recovery:
+    - recovery
+    - recovery phase
+    - easing congestion
+  vacancy:
+    - vacancy
+    - available spaces
+    - vacancies
+  turnover:
+    - turnover
+    - parking turnover
+    - turnover pattern
+  spillover:
+    - spillover
+    - spillover parking
+    - overflow parking
+  punctuality:
+    - punctuality
+    - on-time service
+    - lateness
+  crowding:
+    - crowding
+    - crowded service
+    - crowding pressure
+  disruption:
+    - disruption
+    - disrupted service
+    - service disruption
+  outage:
+    - outage
+    - outage risk
+    - light outage
+  dimming:
+    - dimming
+    - dim lighting
+    - dim state
+  stability:
+    - stability
+    - stable lighting
+    - flicker stability
+  event_spike:
+    - event spike
+    - sudden spike
+    - burst event
+  ambient:
+    - ambient
+    - baseline ambient
+    - ordinary background
+  disturbance:
+    - disturbance
+    - disturbance signal
+    - unusual disturbance
+tier_difficulty:
+  constraint_dominant: easy
+  routing_hard: medium
+  object_hard: hard
