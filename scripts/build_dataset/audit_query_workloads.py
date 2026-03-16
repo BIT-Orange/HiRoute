@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import argparse
-import csv
+import json
 import re
 import sys
 from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Any
+
+import numpy as np
 
 ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
@@ -40,10 +42,30 @@ def _rows_by_query(rows: list[dict[str, str]], key: str) -> dict[str, list[dict[
     return grouped
 
 
-def _audit_bundle(bundle_id: str,
-                  bundle: dict[str, Any],
-                  object_domain_by_id: dict[str, str],
-                  object_zone_by_id: dict[str, str]) -> list[str]:
+def _cosine(left: np.ndarray, right: np.ndarray) -> float:
+    denominator = float(np.linalg.norm(left) * np.linalg.norm(right))
+    if denominator == 0.0:
+        return 0.0
+    return float(np.dot(left, right) / denominator)
+
+
+def _parse_embedding_rows(index_path: Path, vector_path: Path, id_key: str) -> dict[str, np.ndarray]:
+    rows = read_csv(index_path)
+    vectors = np.load(vector_path)
+    return {row[id_key]: vectors[int(row["embedding_row"])] for row in rows}
+
+
+def _audit_bundle_v3(
+    bundle_id: str,
+    bundle: dict[str, Any],
+    object_rows: list[dict[str, str]],
+    manifest: dict[str, Any],
+    object_vectors: dict[str, np.ndarray],
+    query_vectors: dict[str, np.ndarray],
+    object_domain_by_id: dict[str, str],
+    object_zone_by_id: dict[str, str],
+    thresholds: dict[str, float],
+) -> tuple[list[str], dict[str, Any]]:
     errors: list[str] = []
     topology = load_json_yaml(_resolve(bundle["topology_config"]))
     active_domains = {row["domain_id"] for row in read_csv(repo_root() / topology["mapping_output_path"]) if row["domain_id"]}
@@ -54,28 +76,56 @@ def _audit_bundle(bundle_id: str,
     qrels_object_by_query = _rows_by_query(qrels_object, "query_id")
     qrels_domain_by_query = _rows_by_query(qrels_domain, "query_id")
     test_counts = Counter(row["workload_tier"] for row in queries if row["split"] == "test")
-
-    for tier in ("constraint_dominant", "routing_hard", "object_hard"):
+    for tier in ("routing_hard_v3", "object_hard_v3", "sanity_appendix_v3"):
         if test_counts[tier] < 240:
             errors.append(f"{bundle_id}: {tier} has only {test_counts[tier]} test queries")
+
+    objects_by_domain = defaultdict(list)
+    for row in object_rows:
+        if row["domain_id"] in active_domains:
+            objects_by_domain[row["domain_id"]].append(row)
+
+    summary: dict[str, dict[str, list[float] | int]] = {
+        "routing_hard_v3": {
+            "query_count": 0,
+            "mean_relevant_domains": [],
+            "mean_confuser_domains": [],
+            "mean_candidates_per_relevant_domain": [],
+            "explicit_domain_mentions": 0,
+            "topology_inconsistent_queries": 0,
+        },
+        "object_hard_v3": {
+            "query_count": 0,
+            "mean_relevant_domains": [],
+            "mean_confuser_objects_per_query": [],
+            "manifest_rescue_potential_mean": [],
+            "top1_top2_margin_mean": [],
+            "topology_inconsistent_queries": 0,
+        },
+        "sanity_appendix_v3": {
+            "query_count": 0,
+            "mean_relevant_domains": [],
+        },
+    }
 
     for query in queries:
         query_id = query["query_id"]
         object_rows = qrels_object_by_query.get(query_id, [])
         domain_rows = qrels_domain_by_query.get(query_id, [])
-        relevant_domains = {row["domain_id"] for row in domain_rows if row.get("is_relevant_domain", "1") == "1"}
-        relevant_object_domains = {row["domain_id"] for row in object_rows}
+        strong_domains = {row["domain_id"] for row in domain_rows if row.get("is_relevant_domain", "1") == "1"}
+        weak_domains = {row["domain_id"] for row in domain_rows if row.get("relevance_strength", "") == "weak"}
+        relevant_object_domains = {row["domain_id"] for row in object_rows if row.get("relevance") == "2"}
         relevant_zones = {object_zone_by_id[row["object_id"]] for row in object_rows if row["object_id"] in object_zone_by_id}
 
-        if relevant_domains != relevant_object_domains:
+        if strong_domains != relevant_object_domains:
             errors.append(f"{bundle_id}: {query_id} qrels_object/qrels_domain mismatch")
-        if not relevant_domains.issubset(active_domains):
-            errors.append(f"{bundle_id}: {query_id} has inactive relevant domains {sorted(relevant_domains - active_domains)}")
+        if not strong_domains.issubset(active_domains):
+            errors.append(f"{bundle_id}: {query_id} has inactive relevant domains {sorted(strong_domains - active_domains)}")
 
         text = query.get("query_text", "")
         text_domains = set(DOMAIN_RE.findall(text))
         text_zones = set(ZONE_RE.findall(text))
-        if text_domains and text_domains != relevant_domains:
+        if text_domains and text_domains != strong_domains:
             errors.append(f"{bundle_id}: {query_id} explicit domain text disagrees with qrels")
         if text_zones and text_zones != relevant_zones:
             errors.append(f"{bundle_id}: {query_id} explicit zone text disagrees with qrels")
@@ -89,18 +139,85 @@ def _audit_bundle(bundle_id: str,
                 errors.append(f"{bundle_id}: {query_id} zone_constraint points to inactive domain {zone_domain}")
 
         tier = query.get("workload_tier", "")
-        domain_count = len(relevant_domains)
-        if tier == "routing_hard" and not 1 <= domain_count <= 3:
-            errors.append(f"{bundle_id}: {query_id} routing_hard relevant domains={domain_count}")
-        if tier == "object_hard" and not 2 <= domain_count <= 4:
-            errors.append(f"{bundle_id}: {query_id} object_hard relevant domains={domain_count}")
-        if tier in {"routing_hard", "object_hard"}:
-            if text_domains or text_zones:
-                errors.append(f"{bundle_id}: {query_id} {tier} contains explicit domain/zone mention")
-            if zone_constraint:
-                errors.append(f"{bundle_id}: {query_id} {tier} should not carry zone_constraint")
+        domain_count = len(strong_domains)
+        if tier == "routing_hard_v3":
+            summary[tier]["query_count"] += 1
+            summary[tier]["mean_relevant_domains"].append(float(domain_count))
+            summary[tier]["mean_confuser_domains"].append(float(len(weak_domains)))
+            summary[tier]["mean_candidates_per_relevant_domain"].append(
+                float(len([row for row in object_rows if row["domain_id"] in strong_domains]))
+                / max(1.0, float(len(strong_domains)))
+            )
+            if text_domains:
+                summary[tier]["explicit_domain_mentions"] += 1
+            if text_domains or text_zones or int(query.get("explicit_domain_mention", "0")) != 0:
+                errors.append(f"{bundle_id}: {query_id} routing_hard_v3 contains explicit domain/zone mention")
+            if not 2 <= domain_count <= 4:
+                errors.append(f"{bundle_id}: {query_id} routing_hard_v3 relevant domains={domain_count}")
+            if len(weak_domains) < 2:
+                errors.append(f"{bundle_id}: {query_id} routing_hard_v3 confuser domains={len(weak_domains)}")
+            if not strong_domains.issubset(active_domains):
+                summary[tier]["topology_inconsistent_queries"] += 1
+        elif tier == "object_hard_v3":
+            summary[tier]["query_count"] += 1
+            summary[tier]["mean_relevant_domains"].append(float(domain_count))
+            weak_object_count = sum(1 for row in object_rows if row.get("relevance") == "1")
+            summary[tier]["mean_confuser_objects_per_query"].append(float(weak_object_count))
+            if not 1 <= domain_count <= 2:
+                errors.append(f"{bundle_id}: {query_id} object_hard_v3 relevant domains={domain_count}")
+            if weak_object_count < 4:
+                errors.append(f"{bundle_id}: {query_id} object_hard_v3 confuser objects={weak_object_count}")
+            query_vector = query_vectors.get(query_id)
+            if query_vector is not None:
+                strong_scores = [
+                    _cosine(query_vector, object_vectors[row["object_id"]])
+                    for row in object_rows
+                    if row.get("relevance") == "2" and row["object_id"] in object_vectors
+                ]
+                weak_scores = [
+                    _cosine(query_vector, object_vectors[row["object_id"]])
+                    for row in object_rows
+                    if row.get("relevance") == "1" and row["object_id"] in object_vectors
+                ]
+                if strong_scores and weak_scores:
+                    margin = max(strong_scores) - max(weak_scores)
+                    summary[tier]["top1_top2_margin_mean"].append(float(margin))
+                    rescue = 1.0 if margin < thresholds["object_margin_threshold"] else 0.0
+                    summary[tier]["manifest_rescue_potential_mean"].append(rescue)
+            if not strong_domains.issubset(active_domains):
+                summary[tier]["topology_inconsistent_queries"] += 1
+        elif tier == "sanity_appendix_v3":
+            summary[tier]["query_count"] += 1
+            summary[tier]["mean_relevant_domains"].append(float(domain_count))
 
-    return errors
+    reduced = {}
+    for tier, payload in summary.items():
+        reduced[tier] = {}
+        for key, value in payload.items():
+            if isinstance(value, list):
+                reduced[tier][key] = round(float(sum(value) / len(value)), 6) if value else 0.0
+            else:
+                reduced[tier][key] = value
+
+    routing_summary = reduced["routing_hard_v3"]
+    object_summary = reduced["object_hard_v3"]
+    if routing_summary["mean_relevant_domains"] < 2.0:
+        errors.append(f"{bundle_id}: routing_hard_v3 mean_relevant_domains={routing_summary['mean_relevant_domains']}")
+    if routing_summary["mean_confuser_domains"] < 2.0:
+        errors.append(f"{bundle_id}: routing_hard_v3 mean_confuser_domains={routing_summary['mean_confuser_domains']}")
+    if routing_summary["explicit_domain_mentions"] > 0:
+        errors.append(f"{bundle_id}: routing_hard_v3 explicit_domain_mentions={routing_summary['explicit_domain_mentions']}")
+    if routing_summary["topology_inconsistent_queries"] > 0:
+        errors.append(f"{bundle_id}: routing_hard_v3 topology_inconsistent_queries={routing_summary['topology_inconsistent_queries']}")
+    if object_summary["mean_confuser_objects_per_query"] < 4.0:
+        errors.append(
+            f"{bundle_id}: object_hard_v3 mean_confuser_objects_per_query={object_summary['mean_confuser_objects_per_query']}"
+        )
+    if object_summary["top1_top2_margin_mean"] > thresholds["object_margin_threshold"]:
+        errors.append(
+            f"{bundle_id}: object_hard_v3 top1_top2_margin_mean={object_summary['top1_top2_margin_mean']}"
+        )
+    return errors, reduced
 
 
 def main() -> int:
@@ -110,16 +227,121 @@ def main() -> int:
     object_domain_by_id = {row["object_id"]: row["domain_id"] for row in object_rows}
     object_zone_by_id = {row["object_id"]: row["zone_id"] for row in object_rows}
 
+    if manifest["dataset_id"] != "smartcity_v3":
+        errors: list[str] = []
+        for bundle_id, bundle in manifest.get("topology", {}).get("query_bundles", {}).items():
+            topology = load_json_yaml(_resolve(bundle["topology_config"]))
+            active_domains = {row["domain_id"] for row in read_csv(repo_root() / topology["mapping_output_path"]) if row["domain_id"]}
+            queries = read_csv(_resolve(bundle["queries_csv"]))
+            qrels_object = read_csv(_resolve(bundle["qrels_object_csv"]))
+            qrels_domain = read_csv(_resolve(bundle["qrels_domain_csv"]))
+            qrels_object_by_query = _rows_by_query(qrels_object, "query_id")
+            qrels_domain_by_query = _rows_by_query(qrels_domain, "query_id")
+            test_counts = Counter(row["workload_tier"] for row in queries if row["split"] == "test")
+            for tier in ("constraint_dominant", "routing_hard", "object_hard"):
+                if test_counts[tier] < 240:
+                    errors.append(f"{bundle_id}: {tier} has only {test_counts[tier]} test queries")
+            for query in queries:
+                query_id = query["query_id"]
+                object_rows_for_query = qrels_object_by_query.get(query_id, [])
+                domain_rows = qrels_domain_by_query.get(query_id, [])
+                relevant_domains = {row["domain_id"] for row in domain_rows if row.get("is_relevant_domain", "1") == "1"}
+                relevant_object_domains = {row["domain_id"] for row in object_rows_for_query}
+                relevant_zones = {object_zone_by_id[row["object_id"]] for row in object_rows_for_query if row["object_id"] in object_zone_by_id}
+                if relevant_domains != relevant_object_domains:
+                    errors.append(f"{bundle_id}: {query_id} qrels_object/qrels_domain mismatch")
+                if not relevant_domains.issubset(active_domains):
+                    errors.append(f"{bundle_id}: {query_id} has inactive relevant domains {sorted(relevant_domains - active_domains)}")
+                text = query.get("query_text", "")
+                text_domains = set(DOMAIN_RE.findall(text))
+                text_zones = set(ZONE_RE.findall(text))
+                if text_domains and text_domains != relevant_domains:
+                    errors.append(f"{bundle_id}: {query_id} explicit domain text disagrees with qrels")
+                if text_zones and text_zones != relevant_zones:
+                    errors.append(f"{bundle_id}: {query_id} explicit zone text disagrees with qrels")
+        if errors:
+            for error in errors:
+                print(f"ERROR: {error}")
+            return 1
+        print("OK")
+        return 0
+
+    object_vectors = _parse_embedding_rows(
+        output_path(manifest, "object_embedding_index_csv"),
+        output_path(manifest, "object_embeddings_npy"),
+        "object_id",
+    )
+    query_vectors = _parse_embedding_rows(
+        output_path(manifest, "query_embedding_index_csv"),
+        output_path(manifest, "query_embeddings_npy"),
+        "query_id",
+    )
+    thresholds = load_json_yaml(_resolve(manifest["rules"]["query_generation"]))
+    summary_payload: dict[str, dict[str, Any]] = {
+        "routing_hard_v3": {
+            "query_count": 0,
+            "mean_relevant_domains": 0.0,
+            "mean_confuser_domains": 0.0,
+            "mean_candidates_per_relevant_domain": 0.0,
+            "explicit_domain_mentions": 0,
+            "topology_inconsistent_queries": 0,
+        },
+        "object_hard_v3": {
+            "query_count": 0,
+            "mean_relevant_domains": 0.0,
+            "mean_confuser_objects_per_query": 0.0,
+            "manifest_rescue_potential_mean": 0.0,
+            "top1_top2_margin_mean": 0.0,
+            "topology_inconsistent_queries": 0,
+        },
+        "sanity_appendix_v3": {
+            "query_count": 0,
+            "mean_relevant_domains": 0.0,
+        },
+        "bundles": {},
+    }
+
     errors: list[str] = []
+    per_tier_counts = Counter()
     for bundle_id, bundle in manifest.get("topology", {}).get("query_bundles", {}).items():
-        errors.extend(_audit_bundle(bundle_id, bundle, object_domain_by_id, object_zone_by_id))
+        bundle_errors, bundle_summary = _audit_bundle_v3(
+            bundle_id,
+            bundle,
+            object_rows,
+            manifest,
+            object_vectors,
+            query_vectors,
+            object_domain_by_id,
+            object_zone_by_id,
+            thresholds,
+        )
+        errors.extend(bundle_errors)
+        summary_payload["bundles"][bundle_id] = bundle_summary
+        for tier in ("routing_hard_v3", "object_hard_v3", "sanity_appendix_v3"):
+            per_tier_counts[tier] += 1
+            for key, value in bundle_summary[tier].items():
+                if key == "query_count":
+                    summary_payload[tier][key] += value
+                elif isinstance(value, (int, float)):
+                    summary_payload[tier][key] += value
+
+    for tier in ("routing_hard_v3", "object_hard_v3", "sanity_appendix_v3"):
+        bundles_total = max(1, per_tier_counts[tier])
+        for key, value in list(summary_payload[tier].items()):
+            if key == "query_count":
+                continue
+            summary_payload[tier][key] = round(float(value) / bundles_total, 6)
+
+    audit_path = repo_root() / "data" / "processed" / "eval" / "workload_audit_v3.json"
+    audit_path.parent.mkdir(parents=True, exist_ok=True)
+    audit_path.write_text(json.dumps(summary_payload, indent=2) + "\n", encoding="utf-8")
 
     if errors:
         for error in errors:
             print(f"ERROR: {error}")
         return 1
 
-    print("OK")
+    print(str(audit_path.relative_to(repo_root())))
     return 0
 
 

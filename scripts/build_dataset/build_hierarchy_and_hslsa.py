@@ -130,7 +130,15 @@ def main() -> int:
                 "zone_type_bitmap": "|".join(sorted({row["zone_type"] for row in rows})),
                 "service_bitmap": "|".join(sorted({row["service_class"] for row in rows})),
                 "freshness_bitmap": "|".join(sorted({row["freshness_class"] for row in rows})),
-                "semantic_tag_bitmap": "|".join(sorted({row.get("semantic_facet", "") for row in rows if row.get("semantic_facet", "")})),
+                "semantic_tag_bitmap": "|".join(
+                    sorted(
+                        {
+                            row.get("semantic_intent_family", row.get("semantic_facet", ""))
+                            for row in rows
+                            if row.get("semantic_intent_family", row.get("semantic_facet", ""))
+                        }
+                    )
+                ),
                 "centroid_row": centroid_row,
                 "radius": round(radius, 6),
                 "object_count": len(rows),

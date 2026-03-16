@@ -72,6 +72,38 @@ def main() -> int:
         )
         _validate_csv(output_path(manifest, "qrels_object_csv"), ["domain_id"])
         _validate_csv(output_path(manifest, "hslsa_csv"), ["semantic_tag_bitmap"])
+    if manifest["dataset_id"] == "smartcity_v3":
+        _validate_csv(
+            output_path(manifest, "objects_csv"),
+            [
+                "semantic_facet",
+                "semantic_intent_family",
+                "semantic_intent_variant",
+                "confuser_group_id",
+                "difficulty_tag",
+            ],
+        )
+        _validate_csv(
+            output_path(manifest, "queries_csv"),
+            [
+                "query_family",
+                "workload_tier",
+                "intent_facet",
+                "ground_truth_count",
+                "manifest_difficulty",
+                "target_relevant_domains",
+                "target_confuser_domains",
+                "explicit_domain_mention",
+                "explicit_zone_mention",
+                "semantic_intent_family",
+            ],
+        )
+        _validate_csv(output_path(manifest, "qrels_object_csv"), ["domain_id"])
+        _validate_csv(
+            output_path(manifest, "qrels_domain_csv"),
+            ["relevance_strength", "dominant_intent_match"],
+        )
+        _validate_csv(output_path(manifest, "hslsa_csv"), ["semantic_tag_bitmap"])
     _validate_csv(repo_root() / topology["mapping_output_path"], ["node_id", "role", "domain_id", "controller_prefix"])
 
     object_embeddings = np.load(output_path(manifest, "object_embeddings_npy"))
@@ -88,7 +120,10 @@ def main() -> int:
     for bundle_id, bundle in manifest.get("topology", {}).get("query_bundles", {}).items():
         _validate_csv(_resolve(bundle["queries_csv"]), ["query_id", "split", "workload_tier", "intent_facet"])
         _validate_csv(_resolve(bundle["qrels_object_csv"]), ["query_id", "object_id", "domain_id", "relevance"])
-        _validate_csv(_resolve(bundle["qrels_domain_csv"]), ["query_id", "domain_id", "is_relevant_domain"])
+        qrels_domain_fields = ["query_id", "domain_id", "is_relevant_domain"]
+        if manifest["dataset_id"] == "smartcity_v3":
+            qrels_domain_fields.extend(["relevance_strength", "dominant_intent_match"])
+        _validate_csv(_resolve(bundle["qrels_domain_csv"]), qrels_domain_fields)
         _validate_csv(_resolve(bundle["query_embedding_index_csv"]), ["query_id", "query_text_id", "embedding_row"])
 
     audit_result = subprocess.run(
@@ -100,6 +135,11 @@ def main() -> int:
     )
     if audit_result.returncode != 0:
         raise ValueError(audit_result.stdout or audit_result.stderr)
+
+    if manifest["dataset_id"] == "smartcity_v3":
+        audit_path = repo_root() / "data" / "processed" / "eval" / "workload_audit_v3.json"
+        if not audit_path.exists():
+            raise ValueError("workload_audit_v3.json was not generated")
 
     print("OK")
     return 0

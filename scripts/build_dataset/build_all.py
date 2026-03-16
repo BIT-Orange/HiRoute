@@ -89,6 +89,7 @@ def main() -> int:
         "scripts/build_dataset/build_hierarchy_and_hslsa.py",
         ["--dataset-config", str(args.config), "--hierarchy-config", str(manifest["rules"]["hierarchy"])],
     )
+    _run("scripts/build_dataset/validate_dataset.py", ["--config", str(args.config)])
 
     row = {
         "dataset_id": manifest["dataset_id"],

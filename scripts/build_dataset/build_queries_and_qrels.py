@@ -6,6 +6,7 @@ import argparse
 import json
 import logging
 import random
+import re
 import sys
 from collections import Counter, defaultdict
 from pathlib import Path
@@ -15,6 +16,14 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+import numpy as np
+
+from scripts.build_dataset.build_workload_tiers import (
+    humanize_token,
+    join_ids,
+    pick_style,
+    render_query_text,
+)
 from tools.dataset_support import load_dataset_manifest, load_rule_config, output_path, read_jsonl
 from tools.workflow_support import load_json_yaml, read_csv, write_csv
 
@@ -38,6 +47,32 @@ QUERY_FIELDS = [
     "workload_tier",
     "intent_facet",
     "query_text_id",
+]
+
+QUERY_FIELDS_V3 = [
+    "query_id",
+    "split",
+    "ingress_node_id",
+    "start_time_ms",
+    "query_text",
+    "zone_constraint",
+    "zone_type_constraint",
+    "service_constraint",
+    "freshness_constraint",
+    "ambiguity_level",
+    "difficulty",
+    "intended_domain_count",
+    "ground_truth_count",
+    "query_family",
+    "workload_tier",
+    "intent_facet",
+    "query_text_id",
+    "manifest_difficulty",
+    "target_relevant_domains",
+    "target_confuser_domains",
+    "explicit_domain_mention",
+    "explicit_zone_mention",
+    "semantic_intent_family",
 ]
 
 LEGACY_QUERY_FIELDS = [
@@ -67,6 +102,22 @@ TIER_TO_LABEL = {
     "routing_hard": ("medium", "medium"),
     "object_hard": ("high", "hard"),
 }
+
+TIER_TO_LABEL_V3 = {
+    "routing_hard_v3": ("high", "hard"),
+    "object_hard_v3": ("high", "hard"),
+    "sanity_appendix_v3": ("low", "easy"),
+}
+
+QRELS_DOMAIN_FIELDS_V3 = [
+    "query_id",
+    "domain_id",
+    "is_relevant_domain",
+    "relevance_strength",
+    "dominant_intent_match",
+]
+
+OBJECT_ROLE_RE = re.compile(r"-(snm|cnm|ncf)\d+$")
 
 
 def parse_args() -> argparse.Namespace:
@@ -277,6 +328,391 @@ def _query_text(tier: str,
 
 def _bundle_output(bundle: dict[str, Any], key: str) -> Path:
     return Path(bundle[key]) if Path(bundle[key]).is_absolute() else ROOT / bundle[key]
+
+
+def _object_role(object_id: str) -> str:
+    match = OBJECT_ROLE_RE.search(object_id)
+    if match is None:
+        return "target"
+    token = match.group(1)
+    return {
+        "snm": "semantic_near_miss",
+        "cnm": "constraint_near_miss",
+        "ncf": "naming_confuser",
+    }.get(token, "target")
+
+
+def _parse_embedding_rows(index_path: Path, vector_path: Path, id_key: str) -> dict[str, np.ndarray]:
+    rows = read_csv(index_path)
+    vectors = np.load(vector_path)
+    return {row[id_key]: vectors[int(row["embedding_row"])] for row in rows}
+
+
+def _cosine(left: np.ndarray, right: np.ndarray) -> float:
+    denominator = float(np.linalg.norm(left) * np.linalg.norm(right))
+    if denominator == 0.0:
+        return 0.0
+    return float(np.dot(left, right) / denominator)
+
+
+def _choose_count(minimum: int, maximum: int, slot: int) -> int:
+    if maximum <= minimum:
+        return minimum
+    return minimum + (slot % (maximum - minimum + 1))
+
+
+def _stable_pick(rows: list[dict[str, str]], limit: int) -> list[dict[str, str]]:
+    return sorted(rows, key=lambda row: row["object_id"])[:limit]
+
+
+def _relevant_domain_rows(selected_domains: list[str], confuser_domains: list[str]) -> list[dict[str, str]]:
+    rows = []
+    for domain_id in selected_domains:
+        rows.append(
+            {
+                "domain_id": domain_id,
+                "is_relevant_domain": 1,
+                "relevance_strength": "strong",
+                "dominant_intent_match": 1,
+            }
+        )
+    for domain_id in confuser_domains:
+        rows.append(
+            {
+                "domain_id": domain_id,
+                "is_relevant_domain": 0,
+                "relevance_strength": "weak",
+                "dominant_intent_match": 0,
+            }
+        )
+    return rows
+
+
+def _generate_v3_queries(manifest: dict[str, Any], rules: dict[str, Any]) -> int:
+    objects = read_csv(output_path(manifest, "objects_csv"))
+    topology_bundles = manifest.get("topology", {}).get("query_bundles", {})
+    if not topology_bundles:
+        raise ValueError("smartcity_v3 requires topology.query_bundles")
+
+    service_synonyms = rules["service_synonyms"]
+    style_weights = rules["text_styles"]
+    rng = random.Random(rules["seed"])
+
+    global_queries: list[dict[str, Any]] = []
+    global_qrels_object: list[dict[str, Any]] = []
+    global_qrels_domain: list[dict[str, Any]] = []
+    bundle_stats: dict[str, Any] = {}
+
+    for bundle_id, bundle in topology_bundles.items():
+        topology = load_json_yaml(ROOT / bundle["topology_config"])
+        topology_rows = read_csv(ROOT / topology["mapping_output_path"])
+        active_domains = sorted({row["domain_id"] for row in topology_rows if row["domain_id"]})
+        ingress_nodes = [row["node_id"] for row in topology_rows if row["role"] == "ingress"]
+        if not ingress_nodes:
+            raise ValueError(f"{bundle_id} has no ingress nodes in topology mapping")
+
+        active_objects = [row for row in objects if row["domain_id"] in set(active_domains)]
+        if not active_objects:
+            raise ValueError(f"{bundle_id} has no active objects")
+
+        by_routing_key: dict[tuple[str, str, str, str], dict[str, list[dict[str, str]]]] = defaultdict(lambda: defaultdict(list))
+        by_service_zone_freshness: dict[tuple[str, str, str], dict[str, list[dict[str, str]]]] = defaultdict(lambda: defaultdict(list))
+        by_object_key: dict[tuple[str, str, str, str], dict[str, list[dict[str, str]]]] = defaultdict(lambda: defaultdict(list))
+        by_domain_service_zone_fresh: dict[tuple[str, str, str, str], list[dict[str, str]]] = defaultdict(list)
+        by_domain_service_zone: dict[tuple[str, str, str], list[dict[str, str]]] = defaultdict(list)
+        by_confuser_group: dict[tuple[str, str], list[dict[str, str]]] = defaultdict(list)
+
+        for row in active_objects:
+            role = _object_role(row["object_id"])
+            row = dict(row)
+            row["_role"] = role
+            family = row.get("semantic_intent_family", row.get("semantic_facet", row["service_class"]))
+            if row.get("difficulty_tag") == "routing_hard" and role == "target":
+                by_routing_key[(row["service_class"], row["zone_type"], row["freshness_class"], family)][row["domain_id"]].append(row)
+            if row.get("difficulty_tag") == "routing_hard":
+                by_service_zone_freshness[(row["service_class"], row["zone_type"], row["freshness_class"])][row["domain_id"]].append(row)
+            if row.get("difficulty_tag") == "object_hard":
+                by_domain_service_zone_fresh[(row["domain_id"], row["service_class"], row["zone_type"], row["freshness_class"])].append(row)
+                by_domain_service_zone[(row["domain_id"], row["service_class"], row["zone_type"])].append(row)
+                by_confuser_group[(row["domain_id"], row["confuser_group_id"])].append(row)
+                if role == "target":
+                    by_object_key[(row["service_class"], row["zone_type"], row["freshness_class"], family)][row["domain_id"]].append(row)
+
+        routing_candidates = []
+        for key, strong_by_domain in sorted(by_routing_key.items()):
+            service_class, zone_type, freshness_class, family = key
+            confuser_domains = {
+                domain_id
+                for domain_id, rows in by_service_zone_freshness[(service_class, zone_type, freshness_class)].items()
+                if domain_id not in strong_by_domain and any(
+                    row.get("semantic_intent_family", row.get("semantic_facet", "")) != family for row in rows
+                )
+            }
+            if len(strong_by_domain) >= 2 and len(confuser_domains) >= 2:
+                routing_candidates.append((key, strong_by_domain, sorted(confuser_domains)))
+
+        object_candidates = []
+        for key, strong_by_domain in sorted(by_object_key.items()):
+            eligible_domains = {}
+            for domain_id, targets in strong_by_domain.items():
+                candidate_pool = [
+                    row
+                    for row in by_domain_service_zone_fresh[(domain_id, key[0], key[1], key[2])]
+                    if row.get("difficulty_tag") == "object_hard"
+                ]
+                semantic_confusers = [row for row in candidate_pool if row["_role"] == "semantic_near_miss"]
+                constraint_like = [
+                    row for row in candidate_pool if row["_role"] in {"constraint_near_miss", "naming_confuser"}
+                ]
+                if len(candidate_pool) >= 6 and len(semantic_confusers) >= 3 and len(constraint_like) >= 2:
+                    groups: dict[str, dict[str, list[dict[str, str]]]] = {}
+                    for target in targets:
+                        group_rows = by_confuser_group[(domain_id, target["confuser_group_id"])]
+                        target_group = [row for row in group_rows if row["_role"] == "target"]
+                        semantic_group = [row for row in group_rows if row["_role"] == "semantic_near_miss"]
+                        constraint_group = [row for row in group_rows if row["_role"] == "constraint_near_miss"]
+                        naming_group = [row for row in group_rows if row["_role"] == "naming_confuser"]
+                        if target_group and semantic_group and (constraint_group or naming_group):
+                            groups[target["confuser_group_id"]] = {
+                                "targets": sorted(target_group, key=lambda row: row["object_id"]),
+                                "semantic_confusers": sorted(semantic_group, key=lambda row: row["object_id"]),
+                                "constraint_confusers": sorted(constraint_group, key=lambda row: row["object_id"]),
+                                "naming_confusers": sorted(naming_group, key=lambda row: row["object_id"]),
+                            }
+                    if not groups:
+                        continue
+                    eligible_domains[domain_id] = {
+                        "targets": sorted(targets, key=lambda row: row["object_id"]),
+                        "candidate_pool": candidate_pool,
+                        "semantic_confusers": semantic_confusers,
+                        "constraint_like": constraint_like,
+                        "groups": groups,
+                    }
+            if len(eligible_domains) >= 1:
+                object_candidates.append((key, eligible_domains))
+
+        sanity_candidates = []
+        for key, strong_by_domain in sorted(by_routing_key.items()):
+            if 1 <= len(strong_by_domain) <= 2:
+                sanity_candidates.append((key, strong_by_domain))
+
+        if not routing_candidates or not object_candidates or not sanity_candidates:
+            raise ValueError(f"{bundle_id} does not have enough v3 candidates for all workload tiers")
+
+        bundle_queries: list[dict[str, Any]] = []
+        bundle_qrels_object: list[dict[str, Any]] = []
+        bundle_qrels_domain: list[dict[str, Any]] = []
+        start_time_ms = 0
+
+        def next_query_id(tier: str) -> str:
+            return f"q-{bundle_id}-{tier}-{len(bundle_queries) + 1:04d}"
+
+        for tier, tier_rules in rules["workload_tiers"].items():
+            total_queries = int(tier_rules["dev"]) + int(tier_rules["test"])
+            for tier_index in range(total_queries):
+                split = "dev" if tier_index < int(tier_rules["dev"]) else "test"
+                style = pick_style(style_weights, tier_index)
+                ambiguity_level, base_difficulty = TIER_TO_LABEL_V3[tier]
+
+                if tier == "routing_hard_v3":
+                    key, strong_by_domain, confuser_domains = routing_candidates[tier_index % len(routing_candidates)]
+                    service_class, zone_type, freshness_class, family = key
+                    strong_count = _choose_count(
+                        int(tier_rules["relevant_domains_range"][0]),
+                        int(tier_rules["relevant_domains_range"][1]),
+                        tier_index,
+                    )
+                    weak_count = _choose_count(
+                        int(tier_rules["confuser_domains_range"][0]),
+                        int(tier_rules["confuser_domains_range"][1]),
+                        tier_index,
+                    )
+                    selected_domains = sorted(strong_by_domain)[:strong_count]
+                    selected_confusers = confuser_domains[:weak_count]
+                    relevant_objects = []
+                    weak_objects = []
+                    for domain_id in selected_domains:
+                        relevant_objects.extend(_stable_pick(strong_by_domain[domain_id], 1))
+                        domain_pool = by_service_zone_freshness[(service_class, zone_type, freshness_class)][domain_id]
+                        weak_objects.extend(
+                            _stable_pick(
+                                [
+                                    row
+                                    for row in domain_pool
+                                    if row.get("semantic_intent_family", row.get("semantic_facet", "")) != family
+                                ],
+                                1,
+                            )
+                        )
+                    for domain_id in selected_confusers:
+                        weak_objects.extend(
+                            _stable_pick(by_service_zone_freshness[(service_class, zone_type, freshness_class)][domain_id], 1)
+                        )
+                    manifest_difficulty = "hard" if len(selected_confusers) >= 4 or len(selected_domains) >= 3 else "medium"
+                elif tier == "object_hard_v3":
+                    key, eligible_domains = object_candidates[tier_index % len(object_candidates)]
+                    service_class, zone_type, freshness_class, family = key
+                    relevant_count = _choose_count(
+                        int(tier_rules["relevant_domains_range"][0]),
+                        int(tier_rules["relevant_domains_range"][1]),
+                        tier_index,
+                    )
+                    selected_domains = sorted(eligible_domains)[:relevant_count]
+                    selected_confusers: list[str] = []
+                    relevant_objects = []
+                    weak_objects = []
+                    for domain_slot, domain_id in enumerate(selected_domains):
+                        payload = eligible_domains[domain_id]
+                        group_ids = sorted(payload["groups"])
+                        group_id = group_ids[(tier_index + domain_slot) % len(group_ids)]
+                        group_payload = payload["groups"][group_id]
+                        relevant_objects.extend(_stable_pick(group_payload["targets"], 1))
+                        weak_objects.extend(_stable_pick(group_payload["semantic_confusers"], 3))
+                        weak_objects.extend(_stable_pick(group_payload["constraint_confusers"], 1))
+                        weak_objects.extend(_stable_pick(group_payload["naming_confusers"], 1))
+                        extra_candidates = [
+                            row
+                            for row in payload["candidate_pool"]
+                            if row["_role"] == "target" and row["confuser_group_id"] != group_id
+                        ]
+                        same_family_extras = [
+                            row
+                            for row in extra_candidates
+                            if row.get("semantic_intent_family", row.get("semantic_facet", "")) == family
+                        ]
+                        weak_objects.extend(_stable_pick(same_family_extras or extra_candidates, 2))
+                    mix = tier_rules["manifest_difficulty_mix"]
+                    manifest_difficulty = pick_style(mix, tier_index)
+                else:
+                    key, strong_by_domain = sanity_candidates[tier_index % len(sanity_candidates)]
+                    service_class, zone_type, freshness_class, family = key
+                    relevant_count = _choose_count(
+                        int(tier_rules["relevant_domains_range"][0]),
+                        int(tier_rules["relevant_domains_range"][1]),
+                        tier_index,
+                    )
+                    selected_domains = sorted(strong_by_domain)[:relevant_count]
+                    selected_confusers = []
+                    relevant_objects = []
+                    weak_objects = []
+                    for domain_id in selected_domains:
+                        relevant_objects.extend(_stable_pick(strong_by_domain[domain_id], 1))
+                    manifest_difficulty = "easy"
+
+                if not relevant_objects:
+                    continue
+
+                query_id = next_query_id(tier)
+                query_text_id = f"qt-{query_id}"
+                service_phrase = rng.choice(service_synonyms[service_class])
+                intent_phrase = humanize_token(family)
+                query_text = render_query_text(
+                    style,
+                    service_phrase,
+                    intent_phrase,
+                    humanize_token(zone_type),
+                    humanize_token(freshness_class),
+                    tier,
+                )
+
+                query_row = {
+                    "query_id": query_id,
+                    "split": split,
+                    "ingress_node_id": ingress_nodes[(len(bundle_queries)) % len(ingress_nodes)],
+                    "start_time_ms": start_time_ms,
+                    "query_text": query_text,
+                    "zone_constraint": "",
+                    "zone_type_constraint": zone_type,
+                    "service_constraint": service_class,
+                    "freshness_constraint": freshness_class if tier_rules["require_freshness_constraint"] else "",
+                    "ambiguity_level": ambiguity_level,
+                    "difficulty": manifest_difficulty if tier == "object_hard_v3" else base_difficulty,
+                    "intended_domain_count": len(selected_domains),
+                    "ground_truth_count": len(relevant_objects),
+                    "query_family": style,
+                    "workload_tier": tier,
+                    "intent_facet": family,
+                    "query_text_id": query_text_id,
+                    "manifest_difficulty": manifest_difficulty,
+                    "target_relevant_domains": join_ids(selected_domains),
+                    "target_confuser_domains": join_ids(selected_confusers),
+                    "explicit_domain_mention": 0,
+                    "explicit_zone_mention": 0,
+                    "semantic_intent_family": family,
+                }
+                bundle_queries.append(query_row)
+                global_queries.append(query_row)
+
+                for record in relevant_objects:
+                    qrels_object_row = {
+                        "query_id": query_id,
+                        "object_id": record["object_id"],
+                        "domain_id": record["domain_id"],
+                        "relevance": 2,
+                    }
+                    bundle_qrels_object.append(qrels_object_row)
+                    global_qrels_object.append(qrels_object_row)
+                for record in weak_objects:
+                    qrels_object_row = {
+                        "query_id": query_id,
+                        "object_id": record["object_id"],
+                        "domain_id": record["domain_id"],
+                        "relevance": 1,
+                    }
+                    bundle_qrels_object.append(qrels_object_row)
+                    global_qrels_object.append(qrels_object_row)
+
+                domain_rows = _relevant_domain_rows(selected_domains, selected_confusers)
+                for domain_row in domain_rows:
+                    payload = {"query_id": query_id, **domain_row}
+                    bundle_qrels_domain.append(payload)
+                    global_qrels_domain.append(payload)
+                start_time_ms += 100
+
+        write_csv(_bundle_output(bundle, "queries_csv"), QUERY_FIELDS_V3, bundle_queries)
+        write_csv(
+            _bundle_output(bundle, "qrels_object_csv"),
+            ["query_id", "object_id", "domain_id", "relevance"],
+            bundle_qrels_object,
+        )
+        write_csv(_bundle_output(bundle, "qrels_domain_csv"), QRELS_DOMAIN_FIELDS_V3, bundle_qrels_domain)
+        bundle_stats[bundle_id] = {
+            "queries_total": len(bundle_queries),
+            "test_counts": Counter(row["workload_tier"] for row in bundle_queries if row["split"] == "test"),
+            "dev_counts": Counter(row["workload_tier"] for row in bundle_queries if row["split"] == "dev"),
+            "mean_relevant_objects": round(
+                sum(1 for row in bundle_qrels_object if row["relevance"] == 2) / max(1, len(bundle_queries)),
+                3,
+            ),
+            "mean_relevant_domains": round(
+                sum(1 for row in bundle_qrels_domain if row["is_relevant_domain"] == 1) / max(1, len(bundle_queries)),
+                3,
+            ),
+        }
+
+    write_csv(output_path(manifest, "queries_csv"), QUERY_FIELDS_V3, global_queries)
+    write_csv(
+        output_path(manifest, "qrels_object_csv"),
+        ["query_id", "object_id", "domain_id", "relevance"],
+        global_qrels_object,
+    )
+    write_csv(output_path(manifest, "qrels_domain_csv"), QRELS_DOMAIN_FIELDS_V3, global_qrels_domain)
+    stats = {
+        "queries_total": len(global_queries),
+        "bundle_stats": {
+            bundle_id: {
+                "queries_total": payload["queries_total"],
+                "test_counts": dict(payload["test_counts"]),
+                "dev_counts": dict(payload["dev_counts"]),
+                "mean_relevant_objects": payload["mean_relevant_objects"],
+                "mean_relevant_domains": payload["mean_relevant_domains"],
+            }
+            for bundle_id, payload in bundle_stats.items()
+        },
+    }
+    _write_stats(output_path(manifest, "qrels_domain_csv").parent / "query_stats.json", stats)
+    LOGGER.info("generated %s v3 queries", len(global_queries))
+    return 0
 
 
 def _generate_v2_queries(manifest: dict[str, Any], rules: dict[str, Any]) -> int:
@@ -491,6 +927,8 @@ def main() -> int:
     manifest = load_dataset_manifest(args.config)
     rules = load_rule_config(manifest, "query_generation")
     topology_mapping_path = args.topology_mapping or output_path(manifest, "topology_mapping_csv")
+    if manifest["dataset_id"] == "smartcity_v3":
+        return _generate_v3_queries(manifest, rules)
     if manifest["dataset_id"] == "smartcity_v2" or manifest.get("topology", {}).get("query_bundles"):
         return _generate_v2_queries(manifest, rules)
     return _run_legacy(manifest, topology_mapping_path, rules)
