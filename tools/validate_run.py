@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import argparse
+import csv
+import re
 from pathlib import Path
 import sys
 from typing import Any
@@ -48,6 +50,22 @@ def _resolve_topology(experiment: dict[str, Any], topology_id: str | None, error
     if topology_mapping:
         inputs["topology_mapping_csv"] = topology_mapping
 
+    bundle_mappings = [
+        ("query_csvs", "queries_csv"),
+        ("qrels_object_csvs", "qrels_object_csv"),
+        ("qrels_domain_csvs", "qrels_domain_csv"),
+        ("query_embedding_index_csvs", "query_embedding_index_csv"),
+    ]
+    for bundle_key, scalar_key in bundle_mappings:
+        values = inputs.get(bundle_key, {})
+        if not values:
+            continue
+        selected_value = values.get(selected_topology)
+        if not selected_value:
+            errors.append(f"missing inputs.{bundle_key}.{selected_topology}")
+            continue
+        inputs[scalar_key] = selected_value
+
 
 def _resolve_variant(experiment: dict[str, Any], variant: str | None, errors: list[str]) -> None:
     runner = experiment.setdefault("runner", {})
@@ -64,6 +82,72 @@ def _resolve_variant(experiment: dict[str, Any], variant: str | None, errors: li
         experiment["_runner_variant"] = selected_variant
 
 
+def _resolve_budget(experiment: dict[str, Any], budget: int | None, errors: list[str]) -> None:
+    configured = [int(value) for value in experiment.get("budgets", [])]
+    selected = budget
+    if selected is None:
+        selected = int(experiment.get("default_budget") or 0)
+    if not selected:
+        runner_params = experiment.get("runner", {}).get("params", {})
+        selected = int(runner_params.get("exportBudget") or 0)
+    if configured and selected and selected not in configured:
+        errors.append(f"budget '{selected}' is not listed in experiment budgets")
+    experiment["_selected_budget"] = int(selected or 0)
+
+
+def _query_explicit_domains(query_row: dict[str, str]) -> set[str]:
+    domains = set()
+    zone_constraint = query_row.get("zone_constraint", "")
+    if zone_constraint and "-zone-" in zone_constraint:
+        domains.add(zone_constraint.split("-zone-")[0])
+    domains.update(re.findall(r"\b(domain-\d+)\b", query_row.get("query_text", "")))
+    return domains
+
+
+def _validate_query_slice(experiment: dict[str, Any], errors: list[str]) -> None:
+    inputs = experiment.get("inputs", {})
+    active_domains = {
+        row["domain_id"]
+        for row in csv.DictReader(_resolve(inputs["topology_mapping_csv"]).open("r", newline="", encoding="utf-8"))
+        if row.get("domain_id")
+    }
+    query_rows = list(csv.DictReader(_resolve(inputs["queries_csv"]).open("r", newline="", encoding="utf-8")))
+    qrels_domain_rows = list(csv.DictReader(_resolve(inputs["qrels_domain_csv"]).open("r", newline="", encoding="utf-8")))
+
+    relevant_domains_by_query: dict[str, set[str]] = {}
+    for row in qrels_domain_rows:
+        if row.get("is_relevant_domain", "1") != "1":
+            continue
+        relevant_domains_by_query.setdefault(row["query_id"], set()).add(row["domain_id"])
+
+    query_filters = experiment.get("query_filters", {}) or {}
+    allowed_splits = {str(value) for value in query_filters.get("splits", [])}
+    allowed_tiers = {str(value) for value in query_filters.get("workload_tiers", [])}
+    allowed_ambiguity = {str(value) for value in query_filters.get("ambiguity_levels", [])}
+    min_intended_domain_count = int(query_filters.get("min_intended_domain_count", 0) or 0)
+
+    surviving = 0
+    for row in query_rows:
+        if allowed_splits and row.get("split", "") not in allowed_splits:
+            continue
+        if allowed_tiers and row.get("workload_tier", "") not in allowed_tiers:
+            continue
+        if allowed_ambiguity and row.get("ambiguity_level", "") not in allowed_ambiguity:
+            continue
+        if min_intended_domain_count and int(row.get("intended_domain_count") or 0) < min_intended_domain_count:
+            continue
+        relevant_domains = relevant_domains_by_query.get(row["query_id"], set())
+        if not relevant_domains or not relevant_domains.issubset(active_domains):
+            continue
+        if not _query_explicit_domains(row).issubset(active_domains):
+            continue
+        surviving += 1
+
+    experiment["_validation_query_count"] = surviving
+    if surviving == 0:
+        errors.append(f"no eligible queries remain after split/tier/topology filtering for {experiment['experiment_id']}")
+
+
 def validate_context(
     experiment_path: Path,
     scheme: str,
@@ -71,6 +155,7 @@ def validate_context(
     mode: str,
     topology_id: str | None = None,
     variant: str | None = None,
+    budget: int | None = None,
 ) -> tuple[dict[str, Any], list[str]]:
     experiment = load_json_yaml(experiment_path)
     errors: list[str] = []
@@ -82,6 +167,7 @@ def validate_context(
 
     _resolve_topology(experiment, topology_id, errors)
     _resolve_variant(experiment, variant, errors)
+    _resolve_budget(experiment, budget, errors)
 
     configs = experiment.get("configs", {})
     inputs = experiment.get("inputs", {})
@@ -129,6 +215,9 @@ def validate_context(
     if mode == "official" and git_dirty(GENERATED_TRACKED_PREFIXES):
         errors.append("official runs require a clean git worktree")
 
+    if not errors:
+        _validate_query_slice(experiment, errors)
+
     return experiment, errors
 
 
@@ -140,6 +229,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--mode", choices=["dry", "official"], default="official")
     parser.add_argument("--topology-id")
     parser.add_argument("--variant")
+    parser.add_argument("--budget", type=int)
     return parser.parse_args()
 
 
@@ -152,6 +242,7 @@ def main() -> int:
         args.mode,
         args.topology_id,
         args.variant,
+        args.budget,
     )
     if errors:
         for error in errors:

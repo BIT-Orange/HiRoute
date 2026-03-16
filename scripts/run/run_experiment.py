@@ -6,6 +6,7 @@ import argparse
 import csv
 import json
 import random
+import re
 import shutil
 import subprocess
 import sys
@@ -43,6 +44,7 @@ RUNS_FIELDS = [
     "scheme",
     "dataset_id",
     "topology_id",
+    "budget",
     "seed",
     "git_commit",
     "start_time",
@@ -56,6 +58,7 @@ FAILED_FIELDS = [
     "run_id",
     "experiment_id",
     "scheme",
+    "budget",
     "seed",
     "git_commit",
     "error_stage",
@@ -208,6 +211,45 @@ def _load_dataset_context(experiment: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _query_explicit_domains(query_row: dict[str, str]) -> set[str]:
+    domains = set()
+    zone_constraint = query_row.get("zone_constraint", "")
+    if zone_constraint and "-zone-" in zone_constraint:
+        domains.add(zone_constraint.split("-zone-")[0])
+    domains.update(re.findall(r"\b(domain-\d+)\b", query_row.get("query_text", "")))
+    return domains
+
+
+def _filter_summary_budget(summary_rows: list[dict[str, str]], budget: int) -> list[dict[str, str]]:
+    if budget <= 0:
+        return summary_rows
+
+    per_domain: dict[str, list[dict[str, str]]] = defaultdict(list)
+    for row in summary_rows:
+        per_domain[row["domain_id"]].append(row)
+
+    filtered: list[dict[str, str]] = []
+    for _, rows in sorted(per_domain.items()):
+        by_level: dict[int, list[dict[str, str]]] = defaultdict(list)
+        for row in rows:
+            by_level[int(row["level"])].append(row)
+
+        selected: list[dict[str, str]] = []
+        selected.extend(sorted(by_level.get(0, []), key=lambda row: row["cell_id"]))
+        remaining = max(0, budget - len(selected))
+        for level in (1, 2):
+            if remaining <= 0:
+                break
+            ranked = sorted(
+                by_level.get(level, []),
+                key=lambda row: (-int(row.get("object_count") or 0), row["cell_id"]),
+            )
+            selected.extend(ranked[:remaining])
+            remaining = max(0, budget - len(selected))
+        filtered.extend(selected[:budget])
+    return filtered
+
+
 def _scheme_profile(experiment: dict[str, Any], scheme: str) -> dict[str, float]:
     baseline_config = load_json_yaml(_resolve(experiment["configs"]["baselines"][scheme]))
     defaults = {
@@ -236,7 +278,7 @@ def _generate_mock_outputs(
     topology_id = experiment["topology_id"]
     dataset_id = experiment["dataset_id"]
     domain_total = len({row["domain_id"] for row in dataset_context["objects"]})
-    max_budget = max(experiment.get("budgets", [16]))
+    max_budget = int(experiment.get("_selected_budget") or 0) or max(experiment.get("budgets", [16]))
 
     query_rows = []
     probe_rows = []
@@ -556,6 +598,7 @@ def _stable_query_slot(query_id: str, modulo: int) -> int:
 def _prepare_runtime_inputs(experiment: dict[str, Any], run_dir: Path) -> dict[str, Path]:
     inputs = experiment["inputs"]
     query_filters = experiment.get("query_filters", {}) or {}
+    selected_budget = int(experiment.get("_selected_budget") or 0)
     topology_rows = read_csv(_resolve(inputs["topology_mapping_csv"]))
     active_domains = sorted({row["domain_id"] for row in topology_rows if row["domain_id"]})
     active_domain_set = set(active_domains)
@@ -580,6 +623,7 @@ def _prepare_runtime_inputs(experiment: dict[str, Any], run_dir: Path) -> dict[s
 
     summary_rows = read_csv(_resolve(inputs["hslsa_csv"]))
     summary_rows = [row for row in summary_rows if row["domain_id"] in active_domain_set]
+    summary_rows = _filter_summary_budget(summary_rows, selected_budget)
     if summary_rows:
         _write_runtime_copy("hslsa_csv", summary_rows)
 
@@ -605,6 +649,14 @@ def _prepare_runtime_inputs(experiment: dict[str, Any], run_dir: Path) -> dict[s
     }
     query_rows = read_csv(_resolve(inputs["queries_csv"]))
     filtered_queries = [row for row in query_rows if row["query_id"] in eligible_queries]
+    allowed_splits = {str(value) for value in query_filters.get("splits", [])}
+    if allowed_splits:
+        filtered_queries = [row for row in filtered_queries if row.get("split", "") in allowed_splits]
+    allowed_workload_tiers = {str(value) for value in query_filters.get("workload_tiers", [])}
+    if allowed_workload_tiers:
+        filtered_queries = [
+            row for row in filtered_queries if row.get("workload_tier", "") in allowed_workload_tiers
+        ]
     allowed_ambiguity_levels = {str(level) for level in query_filters.get("ambiguity_levels", [])}
     if allowed_ambiguity_levels:
         filtered_queries = [
@@ -617,6 +669,9 @@ def _prepare_runtime_inputs(experiment: dict[str, Any], run_dir: Path) -> dict[s
             for row in filtered_queries
             if int(row.get("intended_domain_count") or 0) >= min_intended_domain_count
         ]
+    filtered_queries = [
+        row for row in filtered_queries if _query_explicit_domains(row).issubset(active_domain_set)
+    ]
     if query_rows and not filtered_queries:
         raise RuntimeError(
             f"no eligible queries remain after slicing {experiment['experiment_id']} "
@@ -683,6 +738,7 @@ def _ndnsim_command(
     ns3_root = _resolve(runner.get("ns3_root", "ns-3"))
     topology_config = load_json_yaml(_resolve(experiment["configs"]["topology"]))
     params = runner.get("params", {})
+    selected_budget = int(experiment.get("_selected_budget") or 0)
 
     runtime_paths = _prepare_runtime_inputs(experiment, run_dir)
     command = [
@@ -713,6 +769,8 @@ def _ndnsim_command(
     ]:
         if flag in params:
             command.append(f"--{flag}={params[flag]}")
+    if selected_budget > 0:
+        command.append(f"--exportBudget={selected_budget}")
     return ns3_root, command
 
 
@@ -745,6 +803,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--timestamp")
     parser.add_argument("--topology-id")
     parser.add_argument("--variant")
+    parser.add_argument("--budget", type=int)
     return parser.parse_args()
 
 
@@ -758,6 +817,7 @@ def main() -> int:
         args.mode,
         args.topology_id,
         args.variant,
+        args.budget,
     )
     experiment["_experiment_path"] = str(experiment_path)
 
@@ -768,6 +828,7 @@ def main() -> int:
         args.timestamp,
         experiment["topology_id"],
         experiment.get("_runner_variant"),
+        int(experiment.get("_selected_budget") or 0) or None,
     )
     run_root = repo_root() / "runs" / ("pending" if args.mode == "dry" else "completed")
     run_dir = run_root / run_id
@@ -783,6 +844,7 @@ def main() -> int:
                     "run_id": run_id,
                     "experiment_id": experiment.get("experiment_id", "unknown"),
                     "scheme": args.scheme,
+                    "budget": int(experiment.get("_selected_budget") or 0),
                     "seed": args.seed,
                     "git_commit": git_commit,
                     "error_stage": "pre_run_validation",
@@ -846,6 +908,7 @@ def main() -> int:
         "scheme": args.scheme,
         "dataset_id": experiment["dataset_id"],
         "topology_id": experiment["topology_id"],
+        "budget": int(experiment.get("_selected_budget") or 0),
         "scenario": experiment["scenario"],
         "seed": args.seed,
         "code": {
@@ -900,6 +963,7 @@ def main() -> int:
                 "scheme": args.scheme,
                 "dataset_id": experiment["dataset_id"],
                 "topology_id": experiment["topology_id"],
+                "budget": int(experiment.get("_selected_budget") or 0),
                 "seed": args.seed,
                 "git_commit": git_commit,
                 "start_time": isoformat_z(start_time),
@@ -923,6 +987,7 @@ def main() -> int:
                 "run_id": run_id,
                 "experiment_id": experiment["experiment_id"],
                 "scheme": args.scheme,
+                "budget": int(experiment.get("_selected_budget") or 0),
                 "seed": args.seed,
                 "git_commit": git_commit,
                 "error_stage": "runner",
