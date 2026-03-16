@@ -1,0 +1,15 @@
+smartcity_v3 freeze note
+date: 2026-03-17
+git_commit: c9abe363a1b12359ccfe312663cb7a239682a27a
+
+workload_audit_v3.json
+routing_hard_v3.mean_relevant_domains = 2.078571
+routing_hard_v3.mean_confuser_domains = 2.123215
+object_hard_v3.mean_confuser_objects_per_query = 6.035715
+object_hard_v3.top1_top2_margin_mean = 0.010804
+object_hard_v3.manifest_rescue_potential_mean = 0.903571
+
+notes
+- exp_object_main_v3 default_manifest_size is pinned to 1 for the first official rerun.
+- exp_ablation_v3 default_manifest_size is pinned to 1 for the first official rerun.
+- v3 official reruns use direct python entrypoints instead of Makefile defaults.

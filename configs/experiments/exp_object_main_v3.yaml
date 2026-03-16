@@ -18,7 +18,7 @@
     3,
     5
   ],
-  "default_manifest_size": 3,
+  "default_manifest_size": 1,
   "statistics": {
     "ci_method": "bootstrap_query",
     "bootstrap_replicates": 1000
@@ -67,7 +67,7 @@
     "ns3_root": "ns-3",
     "params": {
       "stopSeconds": 32,
-      "manifestSize": 3,
+      "manifestSize": 1,
       "probeBudget": 5,
       "queryLimitPerIngress": 0
     }
