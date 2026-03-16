@@ -80,6 +80,9 @@ def main() -> int:
     expected_budgets = {int(value) for value in experiment.get("budgets", [])}
     if not expected_budgets:
         expected_budgets = {int(experiment.get("default_budget") or 0)}
+    frontier_schemes = {str(value) for value in experiment.get("frontier_schemes", [])}
+    reference_schemes = {str(value) for value in experiment.get("reference_schemes", [])}
+    default_budget = int(experiment.get("default_budget") or 0)
     allowed_scenarios = expected_scenarios(experiment)
 
     run_rows = []
@@ -94,7 +97,13 @@ def main() -> int:
             continue
         if expected_schemes and row["scheme"] not in expected_schemes:
             continue
-        if expected_budgets and int(row.get("budget") or 0) not in expected_budgets:
+        row_budget = int(row.get("budget") or 0)
+        if frontier_schemes or reference_schemes:
+            if row["scheme"] in reference_schemes and row_budget != default_budget:
+                continue
+            if row["scheme"] in frontier_schemes and row_budget not in expected_budgets:
+                continue
+        elif expected_budgets and row_budget not in expected_budgets:
             continue
         manifest_path = repo_root() / row["run_dir"] / "manifest.yaml"
         if allowed_scenarios and manifest_path.exists():
@@ -181,7 +190,12 @@ def main() -> int:
         target_budgets = expected_budgets or {int(row.get("budget") or 0) for row in run_rows}
         for topology_id in target_topologies:
             for scheme in experiment["schemes"]:
-                for budget in sorted(target_budgets):
+                required_budgets = (
+                    {default_budget}
+                    if scheme in reference_schemes and default_budget
+                    else sorted(target_budgets)
+                )
+                for budget in sorted(required_budgets):
                     if query_counts.get((scheme, topology_id, budget), 0) < min_test_queries:
                         missing.append(f"{scheme}@{topology_id}@budget{budget}")
         if missing:
@@ -200,7 +214,11 @@ def main() -> int:
                 f"{scheme}@{topology_id}@budget{budget}"
                 for topology_id in expected_topologies
                 for scheme in experiment["schemes"]
-                for budget in sorted(expected_budgets)
+                for budget in (
+                    [default_budget]
+                    if scheme in reference_schemes and default_budget
+                    else sorted(expected_budgets)
+                )
                 if scheme_counts.get((scheme, topology_id, budget), 0) < min_runs
             ]
         else:
@@ -208,7 +226,11 @@ def main() -> int:
             missing = [
                 f"{scheme}@budget{budget}"
                 for scheme in experiment["schemes"]
-                for budget in sorted(expected_budgets)
+                for budget in (
+                    [default_budget]
+                    if scheme in reference_schemes and default_budget
+                    else sorted(expected_budgets)
+                )
                 if scheme_counts.get((scheme, budget), 0) < min_runs
             ]
         if missing:

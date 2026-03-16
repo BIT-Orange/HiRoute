@@ -10,6 +10,15 @@
     "oracle",
     "inf_tag_forwarding"
   ],
+  "frontier_schemes": [
+    "flat_iroute",
+    "hiroute",
+    "inf_tag_forwarding"
+  ],
+  "reference_schemes": [
+    "flood",
+    "oracle"
+  ],
   "seeds": [
     1
   ],
