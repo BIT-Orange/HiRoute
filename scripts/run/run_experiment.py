@@ -750,6 +750,11 @@ def _ndnsim_command(
     selected_manifest_size = int(experiment.get("_selected_manifest_size") or 0)
 
     runtime_paths = _prepare_runtime_inputs(experiment, run_dir)
+    merged_params = dict(params)
+    if selected_budget > 0:
+        merged_params["exportBudget"] = selected_budget
+    if selected_manifest_size > 0:
+        merged_params["manifestSize"] = selected_manifest_size
     command = [
         str(binary),
         f"--topology={_resolve(topology_config['annotated_topology_path'])}",
@@ -776,12 +781,8 @@ def _ndnsim_command(
         "objectScales",
         "domainSweepCounts",
     ]:
-        if flag in params:
-            command.append(f"--{flag}={params[flag]}")
-    if selected_budget > 0:
-        command.append(f"--exportBudget={selected_budget}")
-    if selected_manifest_size > 0:
-        command.append(f"--manifestSize={selected_manifest_size}")
+        if flag in merged_params:
+            command.append(f"--{flag}={merged_params[flag]}")
     return ns3_root, command
 
 
