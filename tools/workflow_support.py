@@ -12,6 +12,11 @@ from pathlib import Path
 from typing import Any, Iterable
 
 try:
+    import fcntl
+except ImportError:  # pragma: no cover - non-POSIX fallback
+    fcntl = None
+
+try:
     import yaml
 except ImportError:  # pragma: no cover - available in the project venv
     yaml = None
@@ -93,8 +98,12 @@ def ensure_csv(path: Path, fieldnames: list[str]) -> None:
 def append_csv(path: Path, fieldnames: list[str], row: dict[str, Any]) -> None:
     ensure_csv(path, fieldnames)
     with path.open("a", newline="", encoding="utf-8") as handle:
+        if fcntl is not None:
+            fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
         writer = csv.DictWriter(handle, fieldnames=fieldnames)
         writer.writerow(row)
+        if fcntl is not None:
+            fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
 
 
 def read_csv(path: Path) -> list[dict[str, str]]:
