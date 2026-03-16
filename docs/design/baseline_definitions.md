@@ -17,6 +17,13 @@ provides a high-recall, high-overhead comparison point.
 Semantic discovery without hierarchical refinement. It scores flat candidates directly and serves
 as the primary non-hierarchical baseline.
 
+## INF-Style Tag Forwarding
+
+Approximates a semantic-tag forwarding design using service, zone-type, freshness, and
+intent-facet tags to rank domain controllers. It does not use hierarchical refinement and it
+shares the same controller-local resolver as the other distributed baselines so that the comparison
+isolates cross-domain discovery policy rather than domain-local ranking.
+
 ## Oracle
 
 Uses idealized global object knowledge to answer each query through a centralized semantic

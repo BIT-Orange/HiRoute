@@ -1,0 +1,13 @@
+{
+  "scheme_id": "inf_tag_forwarding",
+  "description": "INF-style semantic tag forwarding without hierarchical refinement or reliability-aware replanning.",
+  "mock_profile": {
+    "success_bias": 0.69,
+    "manifest_bias": 0.74,
+    "ndcg_bias": 0.66,
+    "probe_bias": 3.1,
+    "discovery_byte_bias": 410.0,
+    "fetch_byte_bias": 142.0,
+    "latency_bias": 76.0
+  }
+}
