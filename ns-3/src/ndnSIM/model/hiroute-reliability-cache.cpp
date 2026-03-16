@@ -95,7 +95,8 @@ HiRouteReliabilityCache::MakePredicateKey(const HiRoutePredicateHeader& predicat
   output << predicate.zoneConstraint << '|'
          << predicate.zoneTypeConstraint << '|'
          << predicate.serviceConstraint << '|'
-         << predicate.freshnessConstraint;
+         << predicate.freshnessConstraint << '|'
+         << predicate.intentFacet;
   return output.str();
 }
 

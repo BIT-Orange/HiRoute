@@ -191,7 +191,35 @@ HiRouteControllerApp::matchesPredicate(const HiRouteObjectRecord& object,
          (predicate.zoneTypeConstraint.empty() || object.zoneType == predicate.zoneTypeConstraint) &&
          (predicate.serviceConstraint.empty() || object.serviceClass == predicate.serviceConstraint) &&
          (predicate.freshnessConstraint.empty() ||
-          object.freshnessClass == predicate.freshnessConstraint);
+         object.freshnessClass == predicate.freshnessConstraint);
+}
+
+double
+HiRouteControllerApp::semanticFacetScore(const HiRouteObjectRecord& object,
+                                         const HiRouteDiscoveryRequest& request) const
+{
+  if (request.intentFacet.empty()) {
+    return 0.0;
+  }
+  if (object.semanticFacet == request.intentFacet) {
+    return 1.0;
+  }
+  if (object.semanticFacet.empty()) {
+    return 0.15;
+  }
+  return 0.0;
+}
+
+double
+HiRouteControllerApp::localRankScore(
+  const std::string& objectId,
+  const std::map<std::string, uint32_t>& bestRankByObjectId) const
+{
+  auto rankIt = bestRankByObjectId.find(objectId);
+  if (rankIt == bestRankByObjectId.end()) {
+    return 0.0;
+  }
+  return 1.0 / (1.0 + static_cast<double>(rankIt->second));
 }
 
 std::vector<HiRouteManifestEntry>
@@ -260,19 +288,24 @@ HiRouteControllerApp::buildManifest(const HiRouteDiscoveryRequest& request) cons
       continue;
     }
 
-    double score = 1.0;
-    auto rankIt = bestRankByObjectId.find(objectId);
-    if (rankIt != bestRankByObjectId.end()) {
-      score += 1.0 / (1.0 + static_cast<double>(rankIt->second));
+    double score = 0.75;
+    score += localRankScore(objectId, bestRankByObjectId);
+    score += 0.9 * semanticFacetScore(object, request);
+    if (!request.predicate.serviceConstraint.empty() &&
+        object.serviceClass == request.predicate.serviceConstraint) {
+      score += 0.45;
     }
-    if (object.serviceClass == request.predicate.serviceConstraint) {
-      score += 0.5;
+    if (!request.predicate.freshnessConstraint.empty() &&
+        object.freshnessClass == request.predicate.freshnessConstraint) {
+      score += 0.2;
     }
-    if (object.freshnessClass == request.predicate.freshnessConstraint) {
-      score += 0.25;
+    if (!request.predicate.zoneTypeConstraint.empty() &&
+        object.zoneType == request.predicate.zoneTypeConstraint) {
+      score += 0.2;
     }
-    if (object.zoneType == request.predicate.zoneTypeConstraint) {
-      score += 0.25;
+    if (!request.predicate.zoneConstraint.empty() &&
+        object.zoneId == request.predicate.zoneConstraint) {
+      score += 0.3;
     }
     ranked.push_back({object, score});
   }

@@ -152,6 +152,9 @@ HiRouteTlv::EncodeDiscoveryRequest(const HiRouteDiscoveryRequest& request)
   if (!request.frontierHintCellId.empty()) {
     block.push_back(::ndn::makeStringBlock(tlv::FrontierHintCellId, request.frontierHintCellId));
   }
+  if (!request.intentFacet.empty()) {
+    block.push_back(::ndn::makeStringBlock(tlv::IntentFacet, request.intentFacet));
+  }
   if (!request.residualVector.empty()) {
     block.push_back(encodeResidualVector(request.residualVector));
   }
@@ -191,6 +194,10 @@ HiRouteTlv::DecodeDiscoveryRequest(const Block& block)
         break;
       case tlv::FrontierHintCellId:
         request.frontierHintCellId = ::ndn::readString(element);
+        break;
+      case tlv::IntentFacet:
+        request.intentFacet = ::ndn::readString(element);
+        request.predicate.intentFacet = request.intentFacet;
         break;
       case tlv::ResidualVector:
         request.residualVector = decodeResidualVector(element);

@@ -32,7 +32,8 @@ enum : uint32_t {
   DomainId = 815,
   CellId = 816,
   ObjectId = 817,
-  PredicateHeader = 818
+  PredicateHeader = 818,
+  IntentFacet = 819
 };
 } // namespace tlv
 
@@ -41,6 +42,7 @@ struct HiRoutePredicateHeader {
   std::string zoneTypeConstraint;
   std::string serviceConstraint;
   std::string freshnessConstraint;
+  std::string intentFacet;
 };
 
 struct HiRouteDiscoveryRequest {
@@ -50,6 +52,7 @@ struct HiRouteDiscoveryRequest {
   uint32_t refinementBudget = 0;
   uint32_t requestedManifestSize = 0;
   std::string frontierHintCellId;
+  std::string intentFacet;
   std::vector<float> residualVector;
 };
 

@@ -22,6 +22,7 @@ public:
   std::set<std::string> zoneTypeBitmap;
   std::set<std::string> serviceBitmap;
   std::set<std::string> freshnessBitmap;
+  std::set<std::string> semanticTagBitmap;
   uint32_t centroidRow = 0;
   double radius = 0.0;
   uint32_t objectCount = 0;

@@ -22,6 +22,9 @@ public:
   std::string freshnessConstraint;
   std::string ambiguityLevel;
   std::string semanticIntentText;
+  std::string queryFamily;
+  std::string workloadTier;
+  std::string intentFacet;
   uint32_t embeddingIndex = 0;
   uint32_t groundTruthCount = 0;
   uint32_t intendedDomainCount = 0;

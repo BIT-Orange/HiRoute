@@ -19,6 +19,7 @@ public:
   std::string zoneType;
   std::string serviceClass;
   std::string freshnessClass;
+  std::string semanticFacet;
   std::string timeBucket;
   std::string vendorTemplateId;
   std::string canonicalName;

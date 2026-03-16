@@ -58,6 +58,13 @@ private:
   bool
   matchesPredicate(const HiRouteObjectRecord& object, const HiRoutePredicateHeader& predicate) const;
 
+  double
+  semanticFacetScore(const HiRouteObjectRecord& object, const HiRouteDiscoveryRequest& request) const;
+
+  double
+  localRankScore(const std::string& objectId,
+                 const std::map<std::string, uint32_t>& bestRankByObjectId) const;
+
   std::vector<HiRouteManifestEntry>
   buildManifest(const HiRouteDiscoveryRequest& request) const;
 

@@ -91,7 +91,7 @@ HiRouteIngressApp::GetTypeId()
                     MakeStringAccessor(&HiRouteIngressApp::m_ingressNodeFilter),
                     MakeStringChecker())
       .AddAttribute("StrategyMode",
-                    "exact, flood, flat, hiroute, oracle, predicates_only, flat_semantic_only, predicates_plus_flat, or full_hiroute",
+                    "exact, flood, flat, hiroute, oracle, inf_tag_forwarding, predicates_only, flat_semantic_only, predicates_plus_flat, or full_hiroute",
                     StringValue("hiroute"),
                     MakeStringAccessor(&HiRouteIngressApp::m_strategyMode), MakeStringChecker())
       .AddAttribute("OraclePrefix", "Discovery prefix used by the oracle baseline",
@@ -327,8 +327,10 @@ HiRouteIngressApp::buildProbePlan(const HiRouteQueryRecord& query,
   request.predicate.zoneTypeConstraint = query.zoneTypeConstraint;
   request.predicate.serviceConstraint = query.serviceConstraint;
   request.predicate.freshnessConstraint = query.freshnessConstraint;
+  request.predicate.intentFacet = query.intentFacet;
   request.refinementBudget = m_maxProbeBudget;
   request.requestedManifestSize = m_requestedManifestSize;
+  request.intentFacet = query.intentFacet;
 
   auto filterMatches = [&] (const std::vector<const HiRouteSummaryEntry*>& entries) {
     std::vector<const HiRouteSummaryEntry*> matched;
@@ -382,18 +384,31 @@ HiRouteIngressApp::buildProbePlan(const HiRouteQueryRecord& query,
   plan.predicateFilteredDomainCount = predicateMatches.size();
   plan.level0CellCount = predicateMatches.size();
 
-  auto flatTargets = [&] (const std::vector<const HiRouteSummaryEntry*>& entries, bool scoreSemantics) {
+  auto rankedLevel0Targets = [&] (std::vector<const HiRouteSummaryEntry*> entries,
+                                  bool usePredicate,
+                                  double extraTagWeight) {
+    HiRouteDiscoveryRequest rankingRequest = request;
+    if (!usePredicate) {
+      rankingRequest.predicate = HiRoutePredicateHeader{};
+    }
+    auto ranked =
+      m_discoveryEngine.RankCandidates(entries, rankingRequest, m_reliabilityCache, entries.size());
+
     std::map<std::string, ProbeTarget> bestByController;
-    for (const auto* entry : entries) {
-      if (entry == nullptr || entry->level != 0) {
+    for (const auto& candidate : ranked) {
+      if (candidate.summary == nullptr || candidate.summary->level != 0) {
         continue;
       }
-      const double semanticScore = entry->radius <= 0.0 ? 1.0 : 1.0 / (1.0 + entry->radius);
-      ProbeTarget target{entry->domainId, entry->controllerPrefix, entry->cellId,
-                         scoreSemantics ? semanticScore : 1.0};
-      auto existing = bestByController.find(entry->controllerPrefix);
+      double score = candidate.totalScore;
+      if (!query.intentFacet.empty() &&
+          candidate.summary->semanticTagBitmap.count(query.intentFacet) > 0) {
+        score += extraTagWeight;
+      }
+      ProbeTarget target{candidate.summary->domainId, candidate.summary->controllerPrefix,
+                         candidate.summary->cellId, score};
+      auto existing = bestByController.find(target.controllerPrefix);
       if (existing == bestByController.end() || target.score > existing->second.score) {
-        bestByController[entry->controllerPrefix] = target;
+        bestByController[target.controllerPrefix] = target;
       }
     }
 
@@ -414,35 +429,63 @@ HiRouteIngressApp::buildProbePlan(const HiRouteQueryRecord& query,
     return targets;
   };
 
+  auto predicateOnlyTargets = [&] (const std::vector<const HiRouteSummaryEntry*>& entries) {
+    std::vector<ProbeTarget> targets;
+    for (const auto* entry : entries) {
+      if (entry == nullptr || entry->level != 0) {
+        continue;
+      }
+      targets.push_back({entry->domainId, entry->controllerPrefix, entry->cellId, 1.0});
+    }
+    std::sort(targets.begin(), targets.end(), [] (const ProbeTarget& left, const ProbeTarget& right) {
+      if (left.domainId == right.domainId) {
+        return left.controllerPrefix < right.controllerPrefix;
+      }
+      return left.domainId < right.domainId;
+    });
+    if (targets.size() > m_maxProbeBudget) {
+      targets.resize(m_maxProbeBudget);
+    }
+    return targets;
+  };
+
   if (m_strategyMode == "oracle") {
     maybeAppendProbe(plan.probes, {"oracle", m_oraclePrefix, "", 1.0});
     plan.level1CellCount = plan.level0CellCount;
     plan.refinedCellCount = 1;
   }
   else if (m_strategyMode == "flood") {
+    std::vector<ProbeTarget> targets;
     for (const auto* entry : predicateMatches) {
       if (entry == nullptr || entry->level != 0) {
         continue;
       }
-      maybeAppendProbe(plan.probes, {entry->domainId, entry->controllerPrefix, "", 0.0});
+      targets.push_back({entry->domainId, entry->controllerPrefix, "", 0.0});
+    }
+    std::sort(targets.begin(), targets.end(), [] (const ProbeTarget& left, const ProbeTarget& right) {
+      if (left.domainId == right.domainId) {
+        return left.controllerPrefix < right.controllerPrefix;
+      }
+      return left.domainId < right.domainId;
+    });
+    if (targets.size() > m_maxProbeBudget) {
+      targets.resize(m_maxProbeBudget);
+    }
+    for (const auto& target : targets) {
+      maybeAppendProbe(plan.probes, target);
     }
     plan.level1CellCount = plan.level0CellCount;
     plan.refinedCellCount = plan.probes.size();
   }
   else if (m_strategyMode == "flat") {
-    std::set<std::string> seen;
-    for (const auto* entry : predicateMatches) {
-      if (entry->level != 0 || seen.count(entry->controllerPrefix) != 0) {
-        continue;
-      }
-      seen.insert(entry->controllerPrefix);
-      maybeAppendProbe(plan.probes, {entry->domainId, entry->controllerPrefix, entry->cellId, 1.0});
+    for (const auto& target : rankedLevel0Targets(predicateMatches, true, 0.0)) {
+      maybeAppendProbe(plan.probes, target);
     }
     plan.level1CellCount = plan.level0CellCount;
     plan.refinedCellCount = plan.probes.size();
   }
   else if (m_strategyMode == "predicates_only") {
-    plan.probes = flatTargets(predicateMatches, false);
+    plan.probes = predicateOnlyTargets(predicateMatches);
     plan.level1CellCount = plan.level0CellCount;
     plan.refinedCellCount = plan.probes.size();
   }
@@ -455,12 +498,13 @@ HiRouteIngressApp::buildProbePlan(const HiRouteQueryRecord& query,
     plan.predicateCandidateCount = allEntries.size();
     plan.predicateFilteredDomainCount = allEntries.size();
     plan.level0CellCount = allEntries.size();
-    plan.probes = flatTargets(allEntries, true);
+    plan.probes = rankedLevel0Targets(allEntries, false, 0.25);
     plan.level1CellCount = plan.level0CellCount;
     plan.refinedCellCount = plan.probes.size();
   }
-  else if (m_strategyMode == "predicates_plus_flat") {
-    plan.probes = flatTargets(predicateMatches, true);
+  else if (m_strategyMode == "predicates_plus_flat" || m_strategyMode == "inf_tag_forwarding") {
+    const double extraTagWeight = m_strategyMode == "inf_tag_forwarding" ? 0.45 : 0.2;
+    plan.probes = rankedLevel0Targets(predicateMatches, true, extraTagWeight);
     plan.level1CellCount = plan.level0CellCount;
     plan.refinedCellCount = plan.probes.size();
   }
@@ -560,9 +604,11 @@ HiRouteIngressApp::sendDiscoveryProbe()
   request.predicate.zoneTypeConstraint = m_activeQuery.query.zoneTypeConstraint;
   request.predicate.serviceConstraint = m_activeQuery.query.serviceConstraint;
   request.predicate.freshnessConstraint = m_activeQuery.query.freshnessConstraint;
+  request.predicate.intentFacet = m_activeQuery.query.intentFacet;
   request.refinementBudget = m_maxProbeBudget;
   request.requestedManifestSize = m_requestedManifestSize;
   request.frontierHintCellId = target.cellId;
+  request.intentFacet = m_activeQuery.query.intentFacet;
 
   const auto parameters = HiRouteTlv::EncodeDiscoveryRequest(request);
   auto interest = std::make_shared<Interest>(
@@ -610,7 +656,8 @@ HiRouteIngressApp::advanceToNextProbe(const std::string& terminalFailureType)
       HiRoutePredicateHeader{m_activeQuery.query.zoneConstraint,
                              m_activeQuery.query.zoneTypeConstraint,
                              m_activeQuery.query.serviceConstraint,
-                             m_activeQuery.query.freshnessConstraint},
+                             m_activeQuery.query.freshnessConstraint,
+                             m_activeQuery.query.intentFacet},
       MilliSeconds(900));
   }
 
@@ -763,7 +810,8 @@ HiRouteIngressApp::finishActiveQuery(bool success, const std::string& fetchedObj
                                     HiRoutePredicateHeader{m_activeQuery.query.zoneConstraint,
                                                            m_activeQuery.query.zoneTypeConstraint,
                                                            m_activeQuery.query.serviceConstraint,
-                                                           m_activeQuery.query.freshnessConstraint},
+                                                           m_activeQuery.query.freshnessConstraint,
+                                                           m_activeQuery.query.intentFacet},
                                     MilliSeconds(900));
   }
 

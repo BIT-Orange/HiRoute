@@ -48,7 +48,7 @@ public:
 private:
   double
   computeSemanticScore(const HiRouteSummaryEntry& entry,
-                       const std::map<std::string, double>& semanticHints) const;
+                       const HiRouteDiscoveryRequest& request) const;
 
   double
   computePredicateScore(const HiRouteSummaryEntry& entry,

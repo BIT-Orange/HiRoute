@@ -320,7 +320,9 @@ RunHiRouteScenario(int argc, char* argv[], HiRouteScenarioMode mode)
                config.controllerLocalIndexCsv);
   cmd.AddValue("runDir", "Output run directory", config.runDir);
   cmd.AddValue("topologyId", "Topology identifier", config.topologyId);
-  cmd.AddValue("scheme", "exact, flood, flat_iroute, oracle, hiroute", config.scheme);
+  cmd.AddValue("scheme",
+               "exact, flood, flat_iroute, oracle, hiroute, inf_tag_forwarding",
+               config.scheme);
   cmd.AddValue("stopSeconds", "Simulation stop time", config.stopSeconds);
   cmd.AddValue("failureTime", "Failure injection time", config.failureTime);
   cmd.AddValue("recoveryTime", "Link recovery time", config.recoveryTime);
@@ -456,6 +458,10 @@ RunHiRouteScenario(int argc, char* argv[], HiRouteScenarioMode mode)
     else if (config.scheme == "flat_iroute" || config.scheme == "flat") {
       ingressType = "ns3::ndn::FlatSemanticIngressApp";
       strategyMode = "flat";
+    }
+    else if (config.scheme == "inf_tag_forwarding") {
+      ingressType = "ns3::ndn::InfTagForwardingApp";
+      strategyMode = "inf_tag_forwarding";
     }
     else if (config.scheme == "predicates_only" || config.scheme == "flat_semantic_only" ||
              config.scheme == "predicates_plus_flat" || config.scheme == "full_hiroute" ||

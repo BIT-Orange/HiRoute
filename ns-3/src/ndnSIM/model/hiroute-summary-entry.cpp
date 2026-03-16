@@ -88,6 +88,7 @@ HiRouteSummaryEntry::FromCsvRow(const std::map<std::string, std::string>& row)
   entry.zoneTypeBitmap = parseBitmap(getString(row, "zone_type_bitmap"));
   entry.serviceBitmap = parseBitmap(getString(row, "service_bitmap"));
   entry.freshnessBitmap = parseBitmap(getString(row, "freshness_bitmap"));
+  entry.semanticTagBitmap = parseBitmap(getString(row, "semantic_tag_bitmap"));
   entry.centroidRow = getUint32(row, "centroid_row");
   entry.radius = getDouble(row, "radius");
   entry.objectCount = getUint32(row, "object_count");

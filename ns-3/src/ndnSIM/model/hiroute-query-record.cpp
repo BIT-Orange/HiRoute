@@ -45,6 +45,9 @@ HiRouteQueryRecord::FromCsvRow(const std::map<std::string, std::string>& row)
   record.freshnessConstraint = getString(row, "freshness_constraint");
   record.ambiguityLevel = getString(row, "ambiguity_level");
   record.semanticIntentText = getString(row, "query_text");
+  record.queryFamily = getString(row, "query_family");
+  record.workloadTier = getString(row, "workload_tier");
+  record.intentFacet = getString(row, "intent_facet");
   record.embeddingIndex = getUint32(row, "embedding_index");
   record.groundTruthCount = getUint32(row, "ground_truth_count");
   record.intendedDomainCount = getUint32(row, "intended_domain_count");

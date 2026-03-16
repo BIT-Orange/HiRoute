@@ -21,12 +21,6 @@ HiRouteDiscoveryEngine::RankCandidates(const std::vector<const HiRouteSummaryEnt
                                        size_t limit) const
 {
   const auto requestedLimit = limit == 0 ? static_cast<size_t>(request.refinementBudget) : limit;
-  const auto predicateKey = HiRouteReliabilityCache::MakePredicateKey(request.predicate);
-  std::map<std::string, double> semanticHints;
-  if (!request.frontierHintCellId.empty()) {
-    semanticHints[request.frontierHintCellId] = 1.0;
-  }
-
   std::vector<Candidate> candidates;
   candidates.reserve(pool.size());
   for (const auto* entry : pool) {
@@ -44,7 +38,7 @@ HiRouteDiscoveryEngine::RankCandidates(const std::vector<const HiRouteSummaryEnt
 
     Candidate candidate;
     candidate.summary = entry;
-    candidate.semanticScore = computeSemanticScore(*entry, semanticHints);
+    candidate.semanticScore = computeSemanticScore(*entry, request);
     candidate.predicateScore = computePredicateScore(*entry, request.predicate);
     candidate.reliabilityScore = reliabilityCache.GetReliability(entry->domainId, entry->cellId);
     candidate.costScore = computeCostScore(*entry);
@@ -97,17 +91,39 @@ HiRouteDiscoveryEngine::SelectCandidates(const HiRouteSummaryStore& summaryStore
 
 double
 HiRouteDiscoveryEngine::computeSemanticScore(const HiRouteSummaryEntry& entry,
-                                             const std::map<std::string, double>& semanticHints) const
+                                             const HiRouteDiscoveryRequest& request) const
 {
-  auto it = semanticHints.find(entry.cellId);
-  if (it != semanticHints.end()) {
-    return it->second;
+  double score = 0.0;
+
+  if (!request.frontierHintCellId.empty()) {
+    if (entry.cellId == request.frontierHintCellId) {
+      score += 0.45;
+    }
+    else if (entry.parentId == request.frontierHintCellId) {
+      score += 0.35;
+    }
+    else if (request.frontierHintCellId.rfind(entry.cellId + "-", 0) == 0) {
+      score += 0.2;
+    }
+  }
+
+  if (!request.intentFacet.empty()) {
+    if (entry.semanticTagBitmap.count(request.intentFacet) > 0) {
+      score += 0.45;
+    }
+    else if (entry.semanticTagBitmap.empty()) {
+      score += 0.12;
+    }
   }
 
   if (entry.radius <= 0.0) {
-    return 1.0;
+    score += 0.2;
   }
-  return 1.0 / (1.0 + entry.radius);
+  else {
+    score += 0.2 * (1.0 / (1.0 + entry.radius));
+  }
+
+  return std::min(1.0, score);
 }
 
 double

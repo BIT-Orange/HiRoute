@@ -42,6 +42,7 @@ HiRouteObjectRecord::FromCsvRow(const std::map<std::string, std::string>& row)
   record.zoneType = getString(row, "zone_type");
   record.serviceClass = getString(row, "service_class");
   record.freshnessClass = getString(row, "freshness_class");
+  record.semanticFacet = getString(row, "semantic_facet");
   record.timeBucket = getString(row, "time_bucket");
   record.vendorTemplateId = getString(row, "vendor_template_id");
   record.canonicalName = getString(row, "canonical_name");
