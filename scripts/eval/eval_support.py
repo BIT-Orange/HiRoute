@@ -30,6 +30,14 @@ def is_v3_experiment(experiment: dict[str, Any]) -> bool:
     return str(experiment.get("dataset_id", "")).endswith("_v3") or str(experiment.get("experiment_id", "")).endswith("_v3")
 
 
+def _declared_output_path(experiment: dict[str, Any], filename: str) -> Path | None:
+    for output in experiment.get("outputs", []):
+        candidate = _resolve(str(output))
+        if candidate.name == filename:
+            return candidate
+    return None
+
+
 def sweep_field(experiment: dict[str, Any]) -> str:
     return "manifest_size" if experiment.get("manifest_sizes") else "budget"
 
@@ -47,6 +55,9 @@ def expected_sweep_values(experiment: dict[str, Any]) -> list[int]:
 
 
 def aggregate_output_path(experiment: dict[str, Any], filename: str) -> Path:
+    declared = _declared_output_path(experiment, filename)
+    if declared is not None:
+        return declared
     base = repo_root() / "results" / "aggregate"
     if is_v3_experiment(experiment):
         base = base / "v3"
@@ -54,6 +65,9 @@ def aggregate_output_path(experiment: dict[str, Any], filename: str) -> Path:
 
 
 def table_output_path(experiment: dict[str, Any], filename: str) -> Path:
+    declared = _declared_output_path(experiment, filename)
+    if declared is not None:
+        return declared
     base = repo_root() / "results" / "tables"
     if is_v3_experiment(experiment):
         base = base / "v3"
@@ -61,6 +75,9 @@ def table_output_path(experiment: dict[str, Any], filename: str) -> Path:
 
 
 def figure_output_path(experiment: dict[str, Any], filename: str) -> Path:
+    declared = _declared_output_path(experiment, filename)
+    if declared is not None:
+        return declared
     base = repo_root() / "results" / "figures"
     if is_v3_experiment(experiment):
         base = base / "v3"

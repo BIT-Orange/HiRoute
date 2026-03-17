@@ -803,6 +803,7 @@ def _ndnsim_command(
         "queryLimitPerIngress",
         "exportBudget",
         "objectScales",
+        "objectsPerDomainSweep",
         "domainSweepCounts",
     ]:
         if flag in merged_params:

@@ -34,6 +34,7 @@ build_core_bundle() {
 
   for rel_path in \
     "configs" \
+    "docs" \
     "scripts" \
     "tools" \
     "paper" \
@@ -60,6 +61,8 @@ build_core_bundle() {
     "data/processed/ndnsim/topology_mapping_rf_1239_sprint.report.json" \
     "data/processed/ndnsim/topology_mapping_rf_3967_exodus.csv" \
     "data/processed/ndnsim/topology_mapping_rf_3967_exodus.report.json" \
+    "data/processed/ndnsim/topology_mapping_rf_3967_exodus_compact.csv" \
+    "data/processed/ndnsim/topology_mapping_rf_3967_exodus_compact.report.json" \
     "data/processed/ndnsim/object_embeddings.npy" \
     "data/processed/ndnsim/query_embeddings.npy" \
     "data/processed/ndnsim/summary_embeddings.npy" \
@@ -67,6 +70,8 @@ build_core_bundle() {
     "data/interim/topologies/rf_1239_sprint.dot" \
     "data/interim/topologies/rf_3967_exodus.annotated.txt" \
     "data/interim/topologies/rf_3967_exodus.dot" \
+    "data/interim/topologies/rf_3967_exodus_compact.annotated.txt" \
+    "data/interim/topologies/rf_3967_exodus_compact.dot" \
     "data/raw/rocketfuel/1239/1239.latencies.intra" \
     "data/raw/rocketfuel/1239/1239.weights.intra" \
     "data/raw/rocketfuel/3967/3967.latencies.intra" \

@@ -60,6 +60,7 @@ def main() -> int:
     args = parse_args()
     manifest = load_dataset_manifest(args.config)
     topology_configs = []
+    supplemental_topology_configs = []
     if manifest.get("topology", {}).get("query_bundles"):
         seen = set()
         for bundle in manifest["topology"]["query_bundles"].values():
@@ -68,6 +69,12 @@ def main() -> int:
                 continue
             seen.add(topology_config_path)
             topology_configs.append((topology_config_path, load_json_yaml(ROOT / topology_config_path)))
+        for topology_config_path in manifest.get("topology", {}).get("supplemental_configs", []):
+            topology_config_path = str(topology_config_path)
+            if topology_config_path in seen:
+                continue
+            seen.add(topology_config_path)
+            supplemental_topology_configs.append((topology_config_path, load_json_yaml(ROOT / topology_config_path)))
     else:
         default_topology_config = str(args.topology_config or Path(manifest["topology"]["default_config"]))
         topology_configs.append((default_topology_config, load_json_yaml(ROOT / default_topology_config)))
@@ -75,6 +82,8 @@ def main() -> int:
     _run("scripts/preprocess/extract_sdm_subjects.py", [])
     _run("scripts/preprocess/build_service_ontology.py", [])
     for topology_config_arg, _ in topology_configs:
+        _run("scripts/build_dataset/build_topology_mapping.py", ["--topology-config", topology_config_arg])
+    for topology_config_arg, _ in supplemental_topology_configs:
         _run("scripts/build_dataset/build_topology_mapping.py", ["--topology-config", topology_config_arg])
     _run("scripts/build_dataset/build_objects.py", ["--config", str(args.config)])
     query_args = ["--config", str(args.config)]

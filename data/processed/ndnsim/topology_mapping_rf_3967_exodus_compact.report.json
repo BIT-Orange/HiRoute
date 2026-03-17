@@ -1,0 +1,29 @@
+{
+  "source_topology_id": "rf_3967_exodus",
+  "topology_id": "rf_3967_exodus_compact",
+  "source_nodes_total": 79,
+  "compact_nodes_total": 46,
+  "source_links_total": 147,
+  "compact_links_total": 84,
+  "domains_preserved": [
+    "domain-01",
+    "domain-02",
+    "domain-03",
+    "domain-04",
+    "domain-05",
+    "domain-06",
+    "domain-07",
+    "domain-08"
+  ],
+  "controllers_retained": 8,
+  "ingresses_retained": 8,
+  "producers_retained": 15,
+  "relays_retained": 15,
+  "chains_compressed": 5,
+  "role_counts": {
+    "controller": 8,
+    "ingress": 8,
+    "producer": 15,
+    "relay": 15
+  }
+}

@@ -85,6 +85,11 @@ private:
   std::string m_qrelsObjectCsvPath;
   uint32_t m_manifestSize = 4;
   bool m_oracleMode = false;
+  bool m_serveDiscovery = true;
+  bool m_serveObjects = true;
+  bool m_advertiseObjects = true;
+  uint32_t m_objectShardModulo = 0;
+  uint32_t m_objectShardIndex = 0;
   Time m_staleAfter = Seconds(0);
   double m_staleDropProbability = 0.0;
   Ptr<UniformRandomVariable> m_rand;

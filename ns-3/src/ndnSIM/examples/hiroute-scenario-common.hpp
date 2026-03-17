@@ -13,6 +13,7 @@
 #include <filesystem>
 #include <fstream>
 #include <cmath>
+#include <cstdint>
 #include <map>
 #include <sstream>
 #include <set>
@@ -49,6 +50,7 @@ struct HiRouteScenarioConfig {
   uint32_t queryLimitPerIngress = 5;
   uint32_t exportBudget = 16;
   std::string objectScales = "0.25,0.5,0.75,1.0";
+  std::string objectsPerDomainSweep = "";
   std::string domainSweepCounts = "";
 };
 
@@ -295,6 +297,20 @@ defaultDomainSweepCounts(uint32_t totalDomains)
 }
 
 inline uint32_t
+stableSlotFromToken(const std::string& token, uint32_t modulo)
+{
+  if (modulo == 0) {
+    return 0;
+  }
+  uint32_t hash = 2166136261u;
+  for (unsigned char ch : token) {
+    hash ^= static_cast<uint32_t>(ch);
+    hash *= 16777619u;
+  }
+  return hash % modulo;
+}
+
+inline uint32_t
 estimateSummaryBytes(const std::map<std::string, std::string>& row)
 {
   return static_cast<uint32_t>(
@@ -335,6 +351,8 @@ RunHiRouteScenario(int argc, char* argv[], HiRouteScenarioMode mode)
   cmd.AddValue("exportBudget", "Per-domain export budget used in scaling summaries",
                config.exportBudget);
   cmd.AddValue("objectScales", "Comma-separated object scaling factors", config.objectScales);
+  cmd.AddValue("objectsPerDomainSweep", "Comma-separated explicit objects-per-domain targets",
+               config.objectsPerDomainSweep);
   cmd.AddValue("domainSweepCounts", "Comma-separated active domain counts",
                config.domainSweepCounts);
   cmd.Parse(argc, argv);
@@ -358,6 +376,7 @@ RunHiRouteScenario(int argc, char* argv[], HiRouteScenarioMode mode)
 
   std::map<std::string, Ptr<Node>> controllerByDomain;
   std::map<std::string, std::string> controllerNodeIdByDomain;
+  std::map<std::string, std::vector<Ptr<Node>>> producerNodesByDomain;
   std::string firstControllerDomain;
   Ptr<Node> firstControllerNode;
 
@@ -367,13 +386,11 @@ RunHiRouteScenario(int argc, char* argv[], HiRouteScenarioMode mode)
                   {"timestamp_s", "event_type", "node_a", "node_b", "domain_id", "details"});
 
   std::vector<Ptr<Node>> ingressNodes;
-  uint32_t controllerCount = 0;
   for (const auto& row : topologyRows) {
     if (GetFieldOrEmpty(row, "role") == "controller") {
       auto node = Names::Find<Node>(GetFieldOrEmpty(row, "node_id"));
       controllerByDomain[GetFieldOrEmpty(row, "domain_id")] = node;
       controllerNodeIdByDomain[GetFieldOrEmpty(row, "domain_id")] = GetFieldOrEmpty(row, "node_id");
-      ++controllerCount;
       if (firstControllerNode == nullptr) {
         firstControllerNode = node;
         firstControllerDomain = GetFieldOrEmpty(row, "domain_id");
@@ -386,6 +403,9 @@ RunHiRouteScenario(int argc, char* argv[], HiRouteScenarioMode mode)
       controllerHelper.SetAttribute("ControllerLocalIndexCsvPath",
                                     StringValue(config.controllerLocalIndexCsv));
       controllerHelper.SetAttribute("ManifestSize", UintegerValue(config.manifestSize));
+      controllerHelper.SetAttribute("ServeDiscovery", BooleanValue(true));
+      controllerHelper.SetAttribute("ServeObjects", BooleanValue(false));
+      controllerHelper.SetAttribute("AdvertiseObjects", BooleanValue(false));
       if (mode == HiRouteScenarioMode::Staleness &&
           GetFieldOrEmpty(row, "domain_id") ==
             (targetFailureDomain.empty() ? firstControllerDomain : targetFailureDomain)) {
@@ -412,6 +432,10 @@ RunHiRouteScenario(int argc, char* argv[], HiRouteScenarioMode mode)
 
       routingHelper.AddOrigin(summaryControllerPrefix(GetFieldOrEmpty(row, "domain_id")), node);
     }
+    else if (GetFieldOrEmpty(row, "role") == "producer") {
+      producerNodesByDomain[GetFieldOrEmpty(row, "domain_id")].push_back(
+        Names::Find<Node>(GetFieldOrEmpty(row, "node_id")));
+    }
     else if (GetFieldOrEmpty(row, "role") == "ingress") {
       ingressNodes.push_back(Names::Find<Node>(GetFieldOrEmpty(row, "node_id")));
     }
@@ -433,15 +457,47 @@ RunHiRouteScenario(int argc, char* argv[], HiRouteScenarioMode mode)
   oracleApps.Stop(Seconds(config.stopSeconds));
   routingHelper.AddOrigin(config.oraclePrefix, firstControllerNode);
 
+  for (auto& item : producerNodesByDomain) {
+    auto& producerNodes = item.second;
+    std::sort(producerNodes.begin(), producerNodes.end(),
+              [] (const Ptr<Node>& left, const Ptr<Node>& right) {
+                return Names::FindName(left) < Names::FindName(right);
+              });
+    for (size_t index = 0; index < producerNodes.size(); ++index) {
+      AppHelper producerHelper("ns3::ndn::HiRouteControllerApp");
+      producerHelper.SetAttribute("Prefix", StringValue(summaryControllerPrefix(item.first)));
+      producerHelper.SetAttribute("DomainId", StringValue(item.first));
+      producerHelper.SetAttribute("ObjectsCsvPath", StringValue(config.objectsCsv));
+      producerHelper.SetAttribute("ControllerLocalIndexCsvPath",
+                                  StringValue(config.controllerLocalIndexCsv));
+      producerHelper.SetAttribute("ManifestSize", UintegerValue(config.manifestSize));
+      producerHelper.SetAttribute("ServeDiscovery", BooleanValue(false));
+      producerHelper.SetAttribute("ServeObjects", BooleanValue(true));
+      producerHelper.SetAttribute("AdvertiseObjects", BooleanValue(true));
+      producerHelper.SetAttribute("ObjectShardModulo", UintegerValue(static_cast<uint32_t>(producerNodes.size())));
+      producerHelper.SetAttribute("ObjectShardIndex", UintegerValue(static_cast<uint32_t>(index)));
+      auto apps = producerHelper.Install(producerNodes[index]);
+      apps.Start(Seconds(0.0));
+      apps.Stop(Seconds(config.stopSeconds));
+    }
+  }
+
   for (const auto& row : objectRows) {
-    const auto domainIt = controllerByDomain.find(GetFieldOrEmpty(row, "domain_id"));
+    const auto domainId = GetFieldOrEmpty(row, "domain_id");
+    const auto domainIt = controllerByDomain.find(domainId);
     if (domainIt == controllerByDomain.end()) {
       continue;
     }
-    routingHelper.AddOrigin(GetFieldOrEmpty(row, "canonical_name"), domainIt->second);
+    Ptr<Node> originNode = domainIt->second;
+    auto producerIt = producerNodesByDomain.find(domainId);
+    if (producerIt != producerNodesByDomain.end() && !producerIt->second.empty()) {
+      const auto slot = stableSlotFromToken(
+        GetFieldOrEmpty(row, "object_id"), static_cast<uint32_t>(producerIt->second.size()));
+      originNode = producerIt->second[slot];
+    }
+    routingHelper.AddOrigin(GetFieldOrEmpty(row, "canonical_name"), originNode);
   }
 
-  uint32_t ingressCount = 0;
   for (const auto& row : topologyRows) {
     if (GetFieldOrEmpty(row, "role") != "ingress") {
       continue;
@@ -487,7 +543,6 @@ RunHiRouteScenario(int argc, char* argv[], HiRouteScenarioMode mode)
     auto apps = ingressHelper.Install(Names::Find<Node>(GetFieldOrEmpty(row, "node_id")));
     apps.Start(Seconds(0.0));
     apps.Stop(Seconds(config.stopSeconds));
-    ++ingressCount;
   }
 
   std::map<std::string, uint32_t> objectsByDomain;
@@ -536,8 +591,9 @@ RunHiRouteScenario(int argc, char* argv[], HiRouteScenarioMode mode)
   };
 
   if (mode == HiRouteScenarioMode::StateScaling) {
+    auto objectsPerDomainSweep = parseUintList(config.objectsPerDomainSweep);
     auto objectScales = parseDoubleList(config.objectScales);
-    if (objectScales.empty()) {
+    if (objectScales.empty() && objectsPerDomainSweep.empty()) {
       objectScales = {0.25, 0.5, 0.75, 1.0};
     }
     auto domainSweepCounts = parseUintList(config.domainSweepCounts);
@@ -545,21 +601,38 @@ RunHiRouteScenario(int argc, char* argv[], HiRouteScenarioMode mode)
       domainSweepCounts = defaultDomainSweepCounts(static_cast<uint32_t>(orderedDomains.size()));
     }
 
-    for (double scale : objectScales) {
-      const auto scaledMeanObjects = orderedDomains.empty() ? 0u : static_cast<uint32_t>(std::llround(
-        (static_cast<double>(objectRows.size()) / orderedDomains.size()) * scale));
-      for (const auto& domainId : orderedDomains) {
-        const auto availableSummaries = summariesByDomain[domainId];
-        const auto availableBytes = summaryBytesByDomain[domainId];
-        const auto exportedSummaries = std::min(availableSummaries, config.exportBudget);
-        const auto exportedBytes = availableSummaries == 0 ? 0 :
-          static_cast<uint32_t>(std::llround(
-            (static_cast<double>(availableBytes) / availableSummaries) * exportedSummaries));
-        const auto scaledObjects = std::max(1u, static_cast<uint32_t>(
-          std::llround(objectsByDomain[domainId] * scale)));
-        appendStateRow(domainId, exportedSummaries, exportedBytes, exportedSummaries,
-                       scaledObjects, static_cast<uint32_t>(orderedDomains.size()),
-                       "objects_per_domain", std::max(1u, scaledMeanObjects));
+    if (!objectsPerDomainSweep.empty()) {
+      for (uint32_t objectsPerDomain : objectsPerDomainSweep) {
+        for (const auto& domainId : orderedDomains) {
+          const auto availableSummaries = summariesByDomain[domainId];
+          const auto availableBytes = summaryBytesByDomain[domainId];
+          const auto exportedSummaries = std::min(availableSummaries, config.exportBudget);
+          const auto exportedBytes = availableSummaries == 0 ? 0 :
+            static_cast<uint32_t>(std::llround(
+              (static_cast<double>(availableBytes) / availableSummaries) * exportedSummaries));
+          appendStateRow(domainId, exportedSummaries, exportedBytes, exportedSummaries,
+                         objectsPerDomain, static_cast<uint32_t>(orderedDomains.size()),
+                         "objects_per_domain", objectsPerDomain);
+        }
+      }
+    }
+    else {
+      for (double scale : objectScales) {
+        const auto scaledMeanObjects = orderedDomains.empty() ? 0u : static_cast<uint32_t>(std::llround(
+          (static_cast<double>(objectRows.size()) / orderedDomains.size()) * scale));
+        for (const auto& domainId : orderedDomains) {
+          const auto availableSummaries = summariesByDomain[domainId];
+          const auto availableBytes = summaryBytesByDomain[domainId];
+          const auto exportedSummaries = std::min(availableSummaries, config.exportBudget);
+          const auto exportedBytes = availableSummaries == 0 ? 0 :
+            static_cast<uint32_t>(std::llround(
+              (static_cast<double>(availableBytes) / availableSummaries) * exportedSummaries));
+          const auto scaledObjects = std::max(1u, static_cast<uint32_t>(
+            std::llround(objectsByDomain[domainId] * scale)));
+          appendStateRow(domainId, exportedSummaries, exportedBytes, exportedSummaries,
+                         scaledObjects, static_cast<uint32_t>(orderedDomains.size()),
+                         "objects_per_domain", std::max(1u, scaledMeanObjects));
+        }
       }
     }
 

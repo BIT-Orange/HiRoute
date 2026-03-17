@@ -52,7 +52,9 @@ def main() -> int:
     reference_schemes = {str(value) for value in experiment.get("reference_schemes", [])}
     default_budget = int(experiment.get("default_budget") or 0)
     default_manifest_size = int(experiment.get("default_manifest_size") or 0)
-    is_v3 = str(experiment.get("dataset_id", "")).endswith("_v3") or str(experiment.get("experiment_id", "")).endswith("_v3")
+    experiment_id = str(experiment.get("experiment_id", ""))
+    is_v3 = str(experiment.get("dataset_id", "")).endswith("_v3") or experiment_id.endswith("_v3") or experiment_id.endswith("_v3_compact")
+    is_compact = experiment_id.endswith("_v3_compact")
 
     promoted_rows = []
     for row in read_csv_rows(promoted_path):
@@ -199,6 +201,12 @@ def main() -> int:
         if is_v3 and "/v3/" not in aggregate_path_text:
             print("ERROR: smartcity_v3 main figures must use v3 aggregate paths")
             return 1
+        if is_compact and "/v3/compact/" not in aggregate_path_text:
+            print("ERROR: compact v3 figures must use v3/compact aggregate paths")
+            return 1
+        if is_compact and ("/v3/local/" in aggregate_path_text or "/v3/local_lite/" in aggregate_path_text):
+            print("ERROR: compact v3 figures must not read local/local_lite aggregates")
+            return 1
         if not is_v3 and "/v3/" in aggregate_path_text:
             print("ERROR: non-v3 experiments must not read v3 aggregates")
             return 1
@@ -271,7 +279,7 @@ def main() -> int:
                         print("ERROR: flat_iroute and flood remain degenerate on all routing headline metrics")
                         return 1
 
-        if experiment["experiment_id"] in {"exp_main_v1", "exp_routing_main_v3"} and args.aggregate.name == "candidate_shrinkage.csv":
+        if experiment["experiment_id"] in {"exp_main_v1", "exp_routing_main_v3", "exp_routing_main_v3_compact"} and args.aggregate.name == "candidate_shrinkage.csv":
             required_stages = {
                 "all_domains",
                 "predicate_filtered_domains",
@@ -286,7 +294,7 @@ def main() -> int:
                 print("ERROR: candidate shrinkage aggregate misses required stages: " +
                       ", ".join(missing_stages))
                 return 1
-        if experiment["experiment_id"] in {"exp_scaling_v1", "exp_scaling_v3"} and args.aggregate.name == "state_scaling_summary.csv":
+        if experiment["experiment_id"] in {"exp_scaling_v1", "exp_scaling_v3", "exp_scaling_v3_compact"} and args.aggregate.name == "state_scaling_summary.csv":
             axes = {row.get("scaling_axis", "") for row in aggregate_rows}
             if axes != {"objects_per_domain", "domain_count"}:
                 print("ERROR: state scaling aggregate must contain both object and domain sweeps")
@@ -294,6 +302,39 @@ def main() -> int:
             aggregate_topologies = {row.get("topology_id", "") for row in aggregate_rows}
             if expected_topologies and aggregate_topologies != expected_topologies:
                 print("ERROR: state scaling aggregate does not cover every comparison topology")
+                return 1
+        if experiment["experiment_id"] in {"exp_robustness_v3_compact"} and args.aggregate.name == "robustness_timeseries.csv":
+            required_fields = {
+                "experiment_id",
+                "scenario_variant",
+                "scheme",
+                "topology_id",
+                "time_bin_s",
+                "query_count",
+                "success_at_1_rate",
+                "mean_remote_probes",
+                "mean_discovery_bytes",
+            }
+            if not aggregate_rows:
+                print("ERROR: robustness timeseries aggregate is empty")
+                return 1
+            missing_fields = required_fields - set(aggregate_rows[0].keys())
+            if missing_fields:
+                print("ERROR: robustness timeseries aggregate misses fields: " + ", ".join(sorted(missing_fields)))
+                return 1
+        if is_compact and experiment["experiment_id"] in {
+            "exp_routing_main_v3_compact",
+            "exp_object_main_v3_compact",
+            "exp_ablation_v3_compact",
+        }:
+            query_filters = experiment.get("query_filters", {}) or {}
+            for field in ["max_ingress_nodes", "max_queries_per_ingress", "max_total_queries"]:
+                if int(query_filters.get(field, 0) or 0) != 0:
+                    print(f"ERROR: compact experiment must not slice queries via {field}")
+                    return 1
+            params = experiment.get("runner", {}).get("params", {})
+            if int(params.get("queryLimitPerIngress", 0) or 0) != 0:
+                print("ERROR: compact routing/object/ablation must use queryLimitPerIngress=0")
                 return 1
 
     print("OK")

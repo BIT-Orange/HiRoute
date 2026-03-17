@@ -1,0 +1,19 @@
+{
+  "topology_id": "rf_3967_exodus_compact",
+  "mode": "compact_from_source_mapping",
+  "source_topology_config": "configs/topologies/rocketfuel_3967_exodus.yaml",
+  "source_mapping_csv": "data/processed/ndnsim/topology_mapping_rf_3967_exodus.csv",
+  "annotated_topology_path": "data/interim/topologies/rf_3967_exodus_compact.annotated.txt",
+  "graphviz_path": "data/interim/topologies/rf_3967_exodus_compact.dot",
+  "mapping_output_path": "data/processed/ndnsim/topology_mapping_rf_3967_exodus_compact.csv",
+  "report_output_path": "data/processed/ndnsim/topology_mapping_rf_3967_exodus_compact.report.json",
+  "compact_policy": {
+    "keep_all_active_domains": true,
+    "keep_controllers_per_domain": 1,
+    "keep_ingresses_per_domain": 1,
+    "keep_producers_per_domain": 2,
+    "backbone_mode": "shortest_path_union",
+    "shortest_path_weight": "metric_then_delay",
+    "compress_degree2_relays": true
+  }
+}

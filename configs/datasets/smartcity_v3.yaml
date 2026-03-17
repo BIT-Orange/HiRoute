@@ -11,6 +11,8 @@ rules:
 topology:
   topology_id: rf_3967_exodus
   default_config: configs/topologies/rocketfuel_3967_exodus.yaml
+  supplemental_configs:
+    - configs/topologies/rocketfuel_3967_exodus_compact.yaml
   query_bundles:
     rf_3967_exodus:
       topology_config: configs/topologies/rocketfuel_3967_exodus.yaml

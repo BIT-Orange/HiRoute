@@ -12,6 +12,7 @@
 
 #include <algorithm>
 #include <cstdlib>
+#include <cstdint>
 #include <limits>
 #include <map>
 #include <set>
@@ -21,6 +22,24 @@ NS_LOG_COMPONENT_DEFINE("ndn.HiRouteControllerApp");
 namespace ns3 {
 namespace ndn {
 namespace hiroute {
+
+namespace {
+
+uint32_t
+StableSlotForToken(const std::string& token, uint32_t modulo)
+{
+  if (modulo == 0) {
+    return 0;
+  }
+  uint32_t hash = 2166136261u;
+  for (unsigned char ch : token) {
+    hash ^= static_cast<uint32_t>(ch);
+    hash *= 16777619u;
+  }
+  return hash % modulo;
+}
+
+} // namespace
 
 NS_OBJECT_ENSURE_REGISTERED(HiRouteControllerApp);
 
@@ -53,6 +72,26 @@ HiRouteControllerApp::GetTypeId()
                     UintegerValue(4),
                     MakeUintegerAccessor(&HiRouteControllerApp::m_manifestSize),
                     MakeUintegerChecker<uint32_t>())
+      .AddAttribute("ServeDiscovery", "Whether this app answers discovery Interests",
+                    BooleanValue(true),
+                    MakeBooleanAccessor(&HiRouteControllerApp::m_serveDiscovery),
+                    MakeBooleanChecker())
+      .AddAttribute("ServeObjects", "Whether this app answers canonical object Interests",
+                    BooleanValue(true),
+                    MakeBooleanAccessor(&HiRouteControllerApp::m_serveObjects),
+                    MakeBooleanChecker())
+      .AddAttribute("AdvertiseObjects", "Whether this app advertises object name origins",
+                    BooleanValue(true),
+                    MakeBooleanAccessor(&HiRouteControllerApp::m_advertiseObjects),
+                    MakeBooleanChecker())
+      .AddAttribute("ObjectShardModulo", "Shard modulo used to co-locate objects on producer hosts",
+                    UintegerValue(0),
+                    MakeUintegerAccessor(&HiRouteControllerApp::m_objectShardModulo),
+                    MakeUintegerChecker<uint32_t>())
+      .AddAttribute("ObjectShardIndex", "Shard index used to co-locate objects on producer hosts",
+                    UintegerValue(0),
+                    MakeUintegerAccessor(&HiRouteControllerApp::m_objectShardIndex),
+                    MakeUintegerChecker<uint32_t>())
       .AddAttribute("StaleAfter", "Time after which this controller starts serving stale manifests",
                     StringValue("0s"),
                     MakeTimeAccessor(&HiRouteControllerApp::m_staleAfter), MakeTimeChecker())
@@ -76,9 +115,13 @@ HiRouteControllerApp::StartApplication()
 {
   App::StartApplication();
   loadInputs();
-  FibHelper::AddRoute(GetNode(), m_prefix, m_face, 0);
-  for (const auto& item : m_objectsByName) {
-    FibHelper::AddRoute(GetNode(), item.first, m_face, 0);
+  if (m_serveDiscovery) {
+    FibHelper::AddRoute(GetNode(), m_prefix, m_face, 0);
+  }
+  if (m_advertiseObjects) {
+    for (const auto& item : m_objectsByName) {
+      FibHelper::AddRoute(GetNode(), item.first, m_face, 0);
+    }
   }
 }
 
@@ -110,12 +153,13 @@ HiRouteControllerApp::OnInterest(shared_ptr<const Interest> interest)
 
   const auto interestName = interest->getName().toUri();
   auto objectIt = m_objectsByName.find(interestName);
-  if (objectIt != m_objectsByName.end()) {
+  if (m_serveObjects && objectIt != m_objectsByName.end()) {
     sendObjectData(interest, objectIt->second);
     return;
   }
 
-  if (!Name(m_prefix).isPrefixOf(interest->getName()) || !interest->hasApplicationParameters()) {
+  if (!m_serveDiscovery || !Name(m_prefix).isPrefixOf(interest->getName()) ||
+      !interest->hasApplicationParameters()) {
     return;
   }
 
@@ -139,6 +183,10 @@ HiRouteControllerApp::loadInputs()
   for (const auto& row : HiRouteDatasetReader::ReadCsvRows(m_objectsCsvPath)) {
     const auto object = HiRouteObjectRecord::FromCsvRow(row);
     if (!oracleController && object.domainId != m_domainId) {
+      continue;
+    }
+    if (m_objectShardModulo > 0 &&
+        StableSlotForToken(object.objectId, m_objectShardModulo) != m_objectShardIndex) {
       continue;
     }
     m_objectsById[object.objectId] = object;

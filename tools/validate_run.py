@@ -237,19 +237,50 @@ def _validate_v3_contract(experiment: dict[str, Any], mode: str, errors: list[st
         "exp_routing_main_v3",
         "exp_object_main_v3",
         "exp_ablation_v3",
+        "exp_routing_main_v3_compact",
+        "exp_object_main_v3_compact",
+        "exp_ablation_v3_compact",
     }:
         if set(query_filters.get("splits", [])) != {"test"}:
             errors.append("official v3 main/object/ablation experiments must use split=test only")
 
-    if experiment["experiment_id"] == "exp_routing_main_v3":
+    if experiment["experiment_id"] in {"exp_routing_main_v3", "exp_routing_main_v3_compact"}:
         if workload_tiers != {"routing_hard_v3"}:
-            errors.append("exp_routing_main_v3 must use routing_hard_v3 only")
-    if experiment["experiment_id"] in {"exp_object_main_v3", "exp_ablation_v3"}:
+            errors.append(f"{experiment['experiment_id']} must use routing_hard_v3 only")
+    if experiment["experiment_id"] in {
+        "exp_object_main_v3",
+        "exp_ablation_v3",
+        "exp_object_main_v3_compact",
+        "exp_ablation_v3_compact",
+    }:
         if workload_tiers != {"object_hard_v3"}:
             errors.append(f"{experiment['experiment_id']} must use object_hard_v3 only")
     if experiment["experiment_id"] == "exp_sanity_appendix_v3":
         if workload_tiers != {"sanity_appendix_v3"}:
             errors.append("exp_sanity_appendix_v3 must use sanity_appendix_v3 only")
+
+    if experiment["experiment_id"].endswith("_v3_compact"):
+        topology_path = experiment.get("configs", {}).get("topology", "")
+        mapping_path = experiment.get("inputs", {}).get("topology_mapping_csv", "")
+        if "compact" not in str(topology_path):
+            errors.append("compact v3 experiments must use a compact topology config")
+        if "compact" not in str(mapping_path):
+            errors.append("compact v3 experiments must use a compact topology mapping")
+        aggregate_outputs = [str(path) for path in experiment.get("outputs", [])]
+        if not aggregate_outputs or any("/v3/compact/" not in path for path in aggregate_outputs):
+            errors.append("compact v3 experiments must write outputs under results/*/v3/compact/")
+
+    if experiment["experiment_id"] in {
+        "exp_routing_main_v3_compact",
+        "exp_object_main_v3_compact",
+        "exp_ablation_v3_compact",
+    }:
+        for field in ["max_ingress_nodes", "max_queries_per_ingress", "max_total_queries"]:
+            if int(query_filters.get(field, 0) or 0) != 0:
+                errors.append(f"{experiment['experiment_id']} must not use query_filters.{field}")
+        params = runner.get("params", {}) if isinstance(runner, dict) else {}
+        if int(params.get("queryLimitPerIngress", 0) or 0) != 0:
+            errors.append(f"{experiment['experiment_id']} must set runner.params.queryLimitPerIngress=0")
 
 
 def validate_context(

@@ -333,9 +333,6 @@ def plot_state_scaling() -> None:
         _placeholder("fig_state_scaling.pdf", "Figure 8", "Awaiting scaling runs")
         return
 
-    if "hiroute" in set(frame["scheme"]):
-        frame = frame[frame["scheme"] == "hiroute"].copy()
-
     fig, axes = plt.subplots(1, 2, figsize=(10.4, 4.2), sharey=True)
     panel_specs = [
         ("objects_per_domain", "Objects per Domain", axes[0]),
@@ -347,15 +344,15 @@ def plot_state_scaling() -> None:
         if axis_rows.empty:
             axis.axis("off")
             continue
-        for topology_id, group in axis_rows.groupby("topology_id", sort=False):
+        for scheme, group in axis_rows.groupby("scheme", sort=False):
             ordered = group.sort_values("scaling_value")
             axis.plot(
                 ordered["scaling_value"],
                 ordered["mean_total_exported_summaries"],
                 marker="o",
                 linewidth=2,
-                color=_scheme_color("hiroute") if topology_id == "rf_3967_exodus" else "#1d7a74",
-                label=topology_id,
+                color=_scheme_color(scheme),
+                label=_scheme_label(scheme),
             )
         axis.set_xlabel(xlabel)
         axis.grid(alpha=0.25)
@@ -368,29 +365,32 @@ def plot_state_scaling() -> None:
 
 
 def plot_robustness() -> None:
-    frame = _read_csv(_aggregate_path("robustness_summary.csv"))
+    frame = _read_csv(_aggregate_path("robustness_timeseries.csv"))
     if frame.empty:
         _placeholder("fig_robustness.pdf", "Figure 9", "Awaiting staleness and failure runs")
         return
 
-    frame["scenario_label"] = frame.apply(
-        lambda row: row["scenario_variant"] if isinstance(row["scenario_variant"], str) and row["scenario_variant"] else row["scenario"],
-        axis=1,
-    )
-    pivot = frame.pivot(index="scenario_label", columns="scheme", values="mean_success_at_1").fillna(0.0)
-    fig, ax = plt.subplots(figsize=(7.4, 4.4))
-    width = 0.15
-    x_positions = range(len(pivot.index))
-    for idx, scheme in enumerate(pivot.columns):
-        offsets = [x + (idx - (len(pivot.columns) - 1) / 2) * width for x in x_positions]
-        ax.bar(offsets, pivot[scheme], width=width, color=_scheme_color(scheme), label=scheme)
-    ax.set_xticks(list(x_positions))
-    ax.set_xticklabels(list(pivot.index))
-    ax.set_ylim(0, 1.0)
-    ax.set_ylabel("ServiceSuccess@1")
-    ax.set_title("Figure 9: Robustness Under Staleness and Failures")
-    ax.legend(fontsize=8)
-    ax.grid(axis="y", alpha=0.25)
+    variants = list(dict.fromkeys(frame["scenario_variant"].tolist()))
+    fig, axes = plt.subplots(1, len(variants), figsize=(5.2 * len(variants), 4.2), sharey=True)
+    if len(variants) == 1:
+        axes = [axes]
+    for axis, variant in zip(axes, variants):
+        subset = frame[frame["scenario_variant"] == variant].copy()
+        for scheme in [scheme for scheme in MAIN_SCHEME_ORDER if scheme in set(subset["scheme"])]:
+            group = subset[subset["scheme"] == scheme].sort_values("time_bin_s")
+            axis.plot(
+                group["time_bin_s"],
+                group["success_at_1_rate"],
+                marker="o",
+                linewidth=2,
+                color=_scheme_color(scheme),
+                label=_scheme_label(scheme),
+            )
+        axis.set_title(variant.replace("_", " "))
+        axis.set_xlabel("Time (s)")
+        axis.grid(alpha=0.25)
+    axes[0].set_ylabel("ServiceSuccess@1")
+    axes[0].legend(fontsize=8, loc="lower right")
     _save(fig, "fig_robustness.pdf")
 
 
