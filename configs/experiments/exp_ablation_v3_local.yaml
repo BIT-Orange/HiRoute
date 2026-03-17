@@ -1,0 +1,73 @@
+{
+  "experiment_id": "exp_ablation_v3_local",
+  "dataset_id": "smartcity_v3",
+  "topology_id": "rf_3967_exodus",
+  "scenario": "hiroute-main",
+  "schemes": [
+    "predicates_only",
+    "flat_semantic_only",
+    "predicates_plus_flat",
+    "full_hiroute"
+  ],
+  "seeds": [
+    1
+  ],
+  "manifest_sizes": [
+    1,
+    2
+  ],
+  "default_manifest_size": 1,
+  "statistics": {
+    "ci_method": "bootstrap_query",
+    "bootstrap_replicates": 1000
+  },
+  "outputs": [
+    "results/aggregate/v3/local/ablation_summary.csv",
+    "results/figures/v3/local/fig_ablation.pdf"
+  ],
+  "promotion_rule": {
+    "min_runs_per_scheme": 1,
+    "min_test_queries_per_scheme_budget_tier": 40,
+    "max_missing_logs": 0,
+    "require_clean_git": true
+  },
+  "configs": {
+    "dataset": "configs/datasets/smartcity_v3.yaml",
+    "hierarchy": "configs/hierarchy/hiroute_hkm_v1.yaml",
+    "topology": "configs/topologies/rocketfuel_3967_exodus.yaml",
+    "baselines": {
+      "predicates_only": "configs/baselines/predicates_only.yaml",
+      "flat_semantic_only": "configs/baselines/flat_semantic_only.yaml",
+      "predicates_plus_flat": "configs/baselines/predicates_plus_flat.yaml",
+      "full_hiroute": "configs/baselines/full_hiroute.yaml"
+    }
+  },
+  "inputs": {
+    "objects_csv": "data/processed/smartcity_v3/objects_master.csv",
+    "queries_csv": "data/processed/smartcity_v3/rf_3967_exodus/queries_master.csv",
+    "query_embedding_index_csv": "data/processed/smartcity_v3/rf_3967_exodus/query_embedding_index.csv",
+    "qrels_object_csv": "data/processed/smartcity_v3/rf_3967_exodus/qrels_object.csv",
+    "qrels_domain_csv": "data/processed/smartcity_v3/rf_3967_exodus/qrels_domain.csv",
+    "hslsa_csv": "data/processed/smartcity_v3/hslsa_export.csv",
+    "controller_local_index_csv": "data/processed/smartcity_v3/controller_local_index.csv",
+    "topology_mapping_csv": "data/processed/ndnsim/topology_mapping_rf_3967_exodus.csv"
+  },
+  "query_filters": {
+    "splits": [
+      "test"
+    ],
+    "workload_tiers": [
+      "object_hard_v3"
+    ]
+  },
+  "runner": {
+    "type": "ndnsim",
+    "ns3_root": "ns-3",
+    "params": {
+      "stopSeconds": 18,
+      "manifestSize": 1,
+      "probeBudget": 5,
+      "queryLimitPerIngress": 10
+    }
+  }
+}

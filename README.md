@@ -22,8 +22,9 @@ experiment execution, result aggregation, and paper writing.
 See `docs/workflows/experiment_workflow.md` and `docs/workflows/git_workflow.md` for the
 operational rules.
 
-## Remote Execution
+## Local Validation
 
-For long-running `smartcity_v3` ndnSIM matrices that exceed local laptop memory, use the Colab
-workflow in [`docs/workflows/colab_workflow.md`](/Users/jiyuan/Desktop/HiRoute/docs/workflows/colab_workflow.md)
-and the notebook [`colab/HiRoute_v3_remote_runner.ipynb`](/Users/jiyuan/Desktop/HiRoute/colab/HiRoute_v3_remote_runner.ipynb).
+For resource-constrained local reruns, use the reduced `v3_local` experiment configs documented in
+[`docs/workflows/local_v3_workflow.md`](/Users/jiyuan/Desktop/HiRoute/docs/workflows/local_v3_workflow.md).
+These runs are for local validation only; the full paper-facing matrices still require the official
+`exp_*_v3.yaml` configs.

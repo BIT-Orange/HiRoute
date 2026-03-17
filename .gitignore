@@ -104,3 +104,5 @@ dist/
 !/results/figures/*.pdf
 !/results/figures/v3/
 !/results/figures/v3/*.pdf
+!/results/figures/v3/**
+!/results/figures/v3/**/*.pdf
