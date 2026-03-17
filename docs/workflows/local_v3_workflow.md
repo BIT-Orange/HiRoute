@@ -14,6 +14,7 @@ check, not as paper-grade evidence.
 
 ## Local Configs
 
+- [`exp_routing_main_v3_local_lite.yaml`](/Users/jiyuan/Desktop/HiRoute/configs/experiments/exp_routing_main_v3_local_lite.yaml)
 - [`exp_routing_main_v3_local.yaml`](/Users/jiyuan/Desktop/HiRoute/configs/experiments/exp_routing_main_v3_local.yaml)
 - [`exp_object_main_v3_local.yaml`](/Users/jiyuan/Desktop/HiRoute/configs/experiments/exp_object_main_v3_local.yaml)
 - [`exp_ablation_v3_local.yaml`](/Users/jiyuan/Desktop/HiRoute/configs/experiments/exp_ablation_v3_local.yaml)
@@ -23,15 +24,17 @@ check, not as paper-grade evidence.
 ## Recommended Order
 
 1. Validate the reduced configs.
-2. Run routing, object, and ablation first.
-3. Inspect the local aggregates.
-4. Only then decide whether scaling and robustness are worth running locally.
+2. Start with `exp_routing_main_v3_local_lite` if laptop stability is still unclear.
+3. Then run object and ablation.
+4. Run the fuller `exp_routing_main_v3_local` only if the lite pass is stable.
+5. Only then decide whether scaling and robustness are worth running locally.
 
 ## Commands
 
 Validate:
 
 ```bash
+python3 tools/validate_run.py --experiment configs/experiments/exp_routing_main_v3_local_lite.yaml --scheme hiroute --seed 1 --budget 16 --mode dry
 python3 tools/validate_run.py --experiment configs/experiments/exp_routing_main_v3_local.yaml --scheme hiroute --seed 1 --budget 16 --mode dry
 python3 tools/validate_run.py --experiment configs/experiments/exp_object_main_v3_local.yaml --scheme hiroute --seed 1 --manifest-size 1 --mode dry
 python3 tools/validate_run.py --experiment configs/experiments/exp_ablation_v3_local.yaml --scheme full_hiroute --seed 1 --manifest-size 1 --mode dry
@@ -40,6 +43,7 @@ python3 tools/validate_run.py --experiment configs/experiments/exp_ablation_v3_l
 Run the local validation matrix:
 
 ```bash
+python3 scripts/run/run_experiment_matrix.py --experiment configs/experiments/exp_routing_main_v3_local_lite.yaml --max-workers 1 --postprocess --validate
 python3 scripts/run/run_experiment_matrix.py --experiment configs/experiments/exp_routing_main_v3_local.yaml --max-workers 1 --postprocess --validate
 python3 scripts/run/run_experiment_matrix.py --experiment configs/experiments/exp_object_main_v3_local.yaml --max-workers 1 --postprocess --validate
 python3 scripts/run/run_experiment_matrix.py --experiment configs/experiments/exp_ablation_v3_local.yaml --max-workers 1 --postprocess --validate
@@ -60,3 +64,15 @@ Local validation outputs live under:
 - `results/figures/v3/local/`
 
 Keep them separate from the official `v3` outputs.
+
+## What `local_lite` Changes
+
+`exp_routing_main_v3_local_lite` is intended to answer one question only:
+does `hiroute` separate from `flat_iroute` on the medium topology without overwhelming the machine?
+
+It therefore reduces:
+
+- schemes to `flat_iroute`, `hiroute`, and `central_directory`
+- budgets to `8,16`
+- `queryLimitPerIngress` to `4`
+- `stopSeconds` to `12`

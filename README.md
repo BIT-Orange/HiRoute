@@ -28,3 +28,5 @@ For resource-constrained local reruns, use the reduced `v3_local` experiment con
 [`docs/workflows/local_v3_workflow.md`](/Users/jiyuan/Desktop/HiRoute/docs/workflows/local_v3_workflow.md).
 These runs are for local validation only; the full paper-facing matrices still require the official
 `exp_*_v3.yaml` configs.
+For an even smaller routing-only sanity pass, start with
+[`exp_routing_main_v3_local_lite.yaml`](/Users/jiyuan/Desktop/HiRoute/configs/experiments/exp_routing_main_v3_local_lite.yaml).
