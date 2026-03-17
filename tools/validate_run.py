@@ -119,11 +119,10 @@ def _query_explicit_domains(query_row: dict[str, str]) -> set[str]:
 
 def _validate_query_slice(experiment: dict[str, Any], errors: list[str]) -> None:
     inputs = experiment.get("inputs", {})
-    active_domains = {
-        row["domain_id"]
-        for row in csv.DictReader(_resolve(inputs["topology_mapping_csv"]).open("r", newline="", encoding="utf-8"))
-        if row.get("domain_id")
-    }
+    topology_rows = list(
+        csv.DictReader(_resolve(inputs["topology_mapping_csv"]).open("r", newline="", encoding="utf-8"))
+    )
+    active_domains = {row["domain_id"] for row in topology_rows if row.get("domain_id")}
     query_rows = list(csv.DictReader(_resolve(inputs["queries_csv"]).open("r", newline="", encoding="utf-8")))
     qrels_domain_rows = list(csv.DictReader(_resolve(inputs["qrels_domain_csv"]).open("r", newline="", encoding="utf-8")))
 
@@ -138,8 +137,16 @@ def _validate_query_slice(experiment: dict[str, Any], errors: list[str]) -> None
     allowed_tiers = {str(value) for value in query_filters.get("workload_tiers", [])}
     allowed_ambiguity = {str(value) for value in query_filters.get("ambiguity_levels", [])}
     min_intended_domain_count = int(query_filters.get("min_intended_domain_count", 0) or 0)
+    max_ingress_nodes = int(query_filters.get("max_ingress_nodes", 0) or 0)
+    max_queries_per_ingress = int(query_filters.get("max_queries_per_ingress", 0) or 0)
+    max_total_queries = int(query_filters.get("max_total_queries", 0) or 0)
 
-    surviving = 0
+    allowed_ingress_nodes = None
+    if max_ingress_nodes > 0:
+        ingress_nodes = sorted(row["node_id"] for row in topology_rows if row.get("role") == "ingress")
+        allowed_ingress_nodes = set(ingress_nodes[:max_ingress_nodes])
+
+    surviving_rows: list[dict[str, str]] = []
     for row in query_rows:
         if allowed_splits and row.get("split", "") not in allowed_splits:
             continue
@@ -154,7 +161,26 @@ def _validate_query_slice(experiment: dict[str, Any], errors: list[str]) -> None
             continue
         if not _query_explicit_domains(row).issubset(active_domains):
             continue
-        surviving += 1
+        if allowed_ingress_nodes and row.get("ingress_node_id", "") not in allowed_ingress_nodes:
+            continue
+        surviving_rows.append(row)
+
+    if max_queries_per_ingress > 0 and surviving_rows:
+        per_ingress_counts: dict[str, int] = {}
+        trimmed_rows = []
+        for row in surviving_rows:
+            ingress_node = row.get("ingress_node_id", "")
+            current = per_ingress_counts.get(ingress_node, 0)
+            if current >= max_queries_per_ingress:
+                continue
+            per_ingress_counts[ingress_node] = current + 1
+            trimmed_rows.append(row)
+        surviving_rows = trimmed_rows
+
+    if max_total_queries > 0 and surviving_rows:
+        surviving_rows = surviving_rows[:max_total_queries]
+
+    surviving = len(surviving_rows)
 
     experiment["_validation_query_count"] = surviving
     if surviving == 0:

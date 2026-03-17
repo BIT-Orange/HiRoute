@@ -74,5 +74,6 @@ It therefore reduces:
 
 - schemes to `flat_iroute`, `hiroute`, and `central_directory`
 - budgets to `8,16`
+- runtime slicing to `4` ingress nodes and `16` total queries
 - `queryLimitPerIngress` to `4`
-- `stopSeconds` to `12`
+- `stopSeconds` to `10`

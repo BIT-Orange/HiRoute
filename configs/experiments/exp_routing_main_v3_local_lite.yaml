@@ -67,13 +67,16 @@
     ],
     "workload_tiers": [
       "routing_hard_v3"
-    ]
+    ],
+    "max_ingress_nodes": 4,
+    "max_queries_per_ingress": 4,
+    "max_total_queries": 16
   },
   "runner": {
     "type": "ndnsim",
     "ns3_root": "ns-3",
     "params": {
-      "stopSeconds": 12,
+      "stopSeconds": 10,
       "manifestSize": 5,
       "probeBudget": 4,
       "queryLimitPerIngress": 4

@@ -245,7 +245,7 @@ The object description used for embedding generation should be derived from the 
 
 \subsection{Topology and Placement}
 
-The topology should come from converted Rocketfuel or similarly structured ISP-like graphs because the architecture concerns discovery over administrative domains rather than a single local mesh. Domains can be mapped to router clusters or edge subtrees. Controllers should be placed at domain gateways or at designated edge nodes. Consumers should be distributed across access nodes so that path diversity and remote probing behavior are both observable. The exact topology identifiers may be adapted to the graphs available in the implementation repository, but the final paper should report at least one medium-scale and one larger-scale topology.
+The topology should come from converted Rocketfuel or similarly structured ISP-like graphs because the architecture concerns discovery over administrative domains rather than a single local mesh. Domains can be mapped to router clusters or edge subtrees. Controllers should be placed at domain gateways or at designated edge nodes. Consumers should be distributed across access nodes so that path diversity and remote probing behavior are both observable. The exact topology identifiers may be adapted to the graphs available in the implementation repository, but the final paper should report at least one medium-scale and one larger-scale topology. During repository-level development, however, it is reasonable to use a medium-topology validation matrix with capped ingress count and capped query slice as a pre-promotion gate, as long as those reduced runs are kept separate from the official promoted figures.
 
 \subsection{Baselines}
 

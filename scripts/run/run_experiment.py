@@ -712,6 +712,30 @@ def _prepare_runtime_inputs(experiment: dict[str, Any], run_dir: Path) -> dict[s
                 remapped["ingress_node_id"] = ingress_nodes[_stable_query_slot(remapped["query_id"], len(ingress_nodes))]
             remapped_queries.append(remapped)
         filtered_queries = remapped_queries
+
+    max_ingress_nodes = int(query_filters.get("max_ingress_nodes", 0) or 0)
+    if max_ingress_nodes > 0 and filtered_queries:
+        allowed_ingress_nodes = set(sorted(ingress_nodes)[:max_ingress_nodes])
+        filtered_queries = [
+            row for row in filtered_queries if row.get("ingress_node_id", "") in allowed_ingress_nodes
+        ]
+
+    max_queries_per_ingress = int(query_filters.get("max_queries_per_ingress", 0) or 0)
+    if max_queries_per_ingress > 0 and filtered_queries:
+        per_ingress_counts: dict[str, int] = defaultdict(int)
+        trimmed_queries = []
+        for row in filtered_queries:
+            ingress_node = row.get("ingress_node_id", "")
+            if per_ingress_counts[ingress_node] >= max_queries_per_ingress:
+                continue
+            per_ingress_counts[ingress_node] += 1
+            trimmed_queries.append(row)
+        filtered_queries = trimmed_queries
+
+    max_total_queries = int(query_filters.get("max_total_queries", 0) or 0)
+    if max_total_queries > 0 and filtered_queries:
+        filtered_queries = filtered_queries[:max_total_queries]
+
     if filtered_queries:
         _write_runtime_copy("queries_csv", filtered_queries)
 
