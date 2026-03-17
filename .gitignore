@@ -106,3 +106,6 @@ dist/
 !/results/figures/v3/*.pdf
 !/results/figures/v3/**
 !/results/figures/v3/**/*.pdf
+
+# Local review bundles for external auditing
+/review_bundles/
