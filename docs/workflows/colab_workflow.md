@@ -29,7 +29,7 @@ Raw downloads and local run directories remain outside git.
 The notebook performs four steps:
 
 1. Clone the selected branch from GitHub using a personal access token.
-2. Install Python dependencies and build `ns-3`/`ndnSIM`.
+2. Create a Colab-local virtualenv, install Python dependencies, and build `ns-3`/`ndnSIM`.
 3. Run selected experiment matrices with [`scripts/run/run_experiment_matrix.py`](/Users/jiyuan/Desktop/HiRoute/scripts/run/run_experiment_matrix.py).
 4. Commit and push registries, aggregates, tables, and figures back to git.
 
@@ -49,6 +49,8 @@ This matches the promotion and figure-validation rules and avoids wasting large-
 - `max_workers=1` for first-pass official runs
 - only increase to `2` after verifying memory stability
 - use a runtime with high system RAM; GPU VRAM does not help ndnSIM
+- do not rely on `python3 -m venv` in Colab; the hosted `/usr/local` Python often does not match Ubuntu's `python3-venv` packages cleanly
+- use `python3 -m virtualenv .venv` instead, after `python3 -m pip install virtualenv`
 
 ## Result Return Path
 
