@@ -22,11 +22,20 @@ experiment execution, result aggregation, and paper writing.
 See `docs/workflows/experiment_workflow.md` and `docs/workflows/git_workflow.md` for the
 operational rules.
 
-## Local Validation
+## Current machine path
 
-For resource-constrained local reruns, use the reduced `v3_local` experiment configs documented in
-[`docs/workflows/local_v3_workflow.md`](/Users/jiyuan/Desktop/HiRoute/docs/workflows/local_v3_workflow.md).
-These runs are for local validation only; the full paper-facing matrices still require the official
-`exp_*_v3.yaml` configs.
-For an even smaller routing-only sanity pass, start with
-[`exp_routing_main_v3_local_lite.yaml`](/Users/jiyuan/Desktop/HiRoute/configs/experiments/exp_routing_main_v3_local_lite.yaml).
+The current paper-facing path on this machine is the compact-medium `v3` route documented in
+[`docs/workflows/compact_v3_workflow.md`](/Users/jiyuan/Desktop/HiRoute/docs/workflows/compact_v3_workflow.md).
+It preserves the full `smartcity_v3` query bundles and the full routing/object baseline sets while
+replacing the original Rocketfuel 3967 topology with a domain-preserving compact derivative.
+
+## Debug and smoke paths
+
+[`docs/workflows/local_v3_workflow.md`](/Users/jiyuan/Desktop/HiRoute/docs/workflows/local_v3_workflow.md)
+documents the reduced `v3_local` and `v3_local_lite` configs. Those runs are debug/smoke-only and
+must not be treated as paper-facing evidence.
+
+## Full official path
+
+The original `exp_*_v3.yaml` configs remain in the repository for future higher-memory reruns on
+the uncompressed `rf_3967_exodus` and `rf_1239_sprint` topologies.

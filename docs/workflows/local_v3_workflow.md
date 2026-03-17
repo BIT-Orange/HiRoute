@@ -1,5 +1,9 @@
 # Local v3 Workflow
 
+This workflow is debug-only. It is not the paper-facing current-machine path anymore. Use
+[`compact_v3_workflow.md`](/Users/jiyuan/Desktop/HiRoute/docs/workflows/compact_v3_workflow.md)
+for the compact-medium evaluation route.
+
 This workflow is for running a reduced `smartcity_v3` validation matrix on a laptop-class machine.
 It is intentionally smaller than the official `v3` matrix and should be treated as a local signal
 check, not as paper-grade evidence.
