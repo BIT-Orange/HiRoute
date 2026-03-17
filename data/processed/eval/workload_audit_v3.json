@@ -1,0 +1,68 @@
+{
+  "routing_hard_v3": {
+    "query_count": 560,
+    "mean_relevant_domains": 2.078571,
+    "mean_confuser_domains": 2.123215,
+    "mean_candidates_per_relevant_domain": 2.0,
+    "explicit_domain_mentions": 0.0,
+    "topology_inconsistent_queries": 0.0
+  },
+  "object_hard_v3": {
+    "query_count": 560,
+    "mean_relevant_domains": 1.207143,
+    "mean_confuser_objects_per_query": 6.035715,
+    "manifest_rescue_potential_mean": 0.903571,
+    "top1_top2_margin_mean": 0.010804,
+    "topology_inconsistent_queries": 0.0
+  },
+  "sanity_appendix_v3": {
+    "query_count": 560,
+    "mean_relevant_domains": 1.083929
+  },
+  "bundles": {
+    "rf_3967_exodus": {
+      "routing_hard_v3": {
+        "query_count": 280,
+        "mean_relevant_domains": 2.0,
+        "mean_confuser_domains": 2.0,
+        "mean_candidates_per_relevant_domain": 2.0,
+        "explicit_domain_mentions": 0,
+        "topology_inconsistent_queries": 0
+      },
+      "object_hard_v3": {
+        "query_count": 280,
+        "mean_relevant_domains": 1.221429,
+        "mean_confuser_objects_per_query": 6.107143,
+        "manifest_rescue_potential_mean": 0.889286,
+        "top1_top2_margin_mean": 0.012125,
+        "topology_inconsistent_queries": 0
+      },
+      "sanity_appendix_v3": {
+        "query_count": 280,
+        "mean_relevant_domains": 1.064286
+      }
+    },
+    "rf_1239_sprint": {
+      "routing_hard_v3": {
+        "query_count": 280,
+        "mean_relevant_domains": 2.157143,
+        "mean_confuser_domains": 2.246429,
+        "mean_candidates_per_relevant_domain": 2.0,
+        "explicit_domain_mentions": 0,
+        "topology_inconsistent_queries": 0
+      },
+      "object_hard_v3": {
+        "query_count": 280,
+        "mean_relevant_domains": 1.192857,
+        "mean_confuser_objects_per_query": 5.964286,
+        "manifest_rescue_potential_mean": 0.917857,
+        "top1_top2_margin_mean": 0.009482,
+        "topology_inconsistent_queries": 0
+      },
+      "sanity_appendix_v3": {
+        "query_count": 280,
+        "mean_relevant_domains": 1.103571
+      }
+    }
+  }
+}

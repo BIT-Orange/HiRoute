@@ -21,3 +21,9 @@ experiment execution, result aggregation, and paper writing.
 
 See `docs/workflows/experiment_workflow.md` and `docs/workflows/git_workflow.md` for the
 operational rules.
+
+## Remote Execution
+
+For long-running `smartcity_v3` ndnSIM matrices that exceed local laptop memory, use the Colab
+workflow in [`docs/workflows/colab_workflow.md`](/Users/jiyuan/Desktop/HiRoute/docs/workflows/colab_workflow.md)
+and the notebook [`colab/HiRoute_v3_remote_runner.ipynb`](/Users/jiyuan/Desktop/HiRoute/colab/HiRoute_v3_remote_runner.ipynb).

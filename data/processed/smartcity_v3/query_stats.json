@@ -1,0 +1,35 @@
+{
+  "queries_total": 1680,
+  "bundle_stats": {
+    "rf_3967_exodus": {
+      "queries_total": 840,
+      "test_counts": {
+        "routing_hard_v3": 240,
+        "object_hard_v3": 240,
+        "sanity_appendix_v3": 240
+      },
+      "dev_counts": {
+        "routing_hard_v3": 40,
+        "object_hard_v3": 40,
+        "sanity_appendix_v3": 40
+      },
+      "mean_relevant_objects": 1.429,
+      "mean_relevant_domains": 1.429
+    },
+    "rf_1239_sprint": {
+      "queries_total": 840,
+      "test_counts": {
+        "routing_hard_v3": 240,
+        "object_hard_v3": 240,
+        "sanity_appendix_v3": 240
+      },
+      "dev_counts": {
+        "routing_hard_v3": 40,
+        "object_hard_v3": 40,
+        "sanity_appendix_v3": 40
+      },
+      "mean_relevant_objects": 1.485,
+      "mean_relevant_domains": 1.485
+    }
+  }
+}

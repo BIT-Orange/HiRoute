@@ -64,7 +64,16 @@ dist/
 /data/raw/smartdatamodels/*
 !/data/raw/smartdatamodels/raw_manifest.json
 !/data/interim/.gitkeep
+!/data/interim/topologies/
+!/data/interim/topologies/*.annotated.txt
 !/data/processed/.gitkeep
+!/data/processed/eval/
+!/data/processed/eval/workload_audit_v3.json
+!/data/processed/ndnsim/
+!/data/processed/ndnsim/topology_mapping_rf_3967_exodus.csv
+!/data/processed/ndnsim/topology_mapping_rf_1239_sprint.csv
+!/data/processed/smartcity_v3/
+!/data/processed/smartcity_v3/**
 !/data/registry/
 !/data/registry/*.csv
 
@@ -93,3 +102,5 @@ dist/
 !/results/tables/*.csv
 !/results/figures/
 !/results/figures/*.pdf
+!/results/figures/v3/
+!/results/figures/v3/*.pdf

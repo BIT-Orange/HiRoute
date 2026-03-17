@@ -1,0 +1,246 @@
+# any empty lines and lines starting with '#' symbol is ignored
+
+# The file should contain exactly two sections: router and link, each starting with the corresponding keyword
+
+# router section defines topology nodes and their relative positions (e.g., to use in visualizer)
+router
+
+# each line in this section represents one router and should have the following data
+# node  comment     yPos    xPos
+San+Jose,+CA471	NA	-0	88.8819
+Santa+Clara,+CA444	NA	-7.06169	88.601
+Santa+Clara,+CA389	NA	-14.0787	87.7598
+San+Jose,+CA472	NA	-21.0068	86.3639
+Oak+Brook,+IL301	NA	-27.802	84.4219
+Santa+Clara,+CA430	NA	-34.4214	81.9461
+Santa+Clara,+CA431	NA	-40.8232	78.9523
+Weehawken,+NJ543	NA	-46.967	75.4593
+New+York,+NY293	NA	-52.8137	71.4892
+Atlanta,+GA127	NA	-58.3266	67.0672
+New+York,+NY294	NA	-63.4707	62.2211
+Weehawken,+NJ544	NA	-68.2136	56.9816
+Weehawken,+NJ552	NA	-72.5251	51.3819
+Oak+Brook,+IL300	NA	-76.3782	45.4574
+Jersey+City,+NJ244	NA	-79.7483	39.2454
+Oak+Brook,+IL307	NA	-82.6143	32.7853
+Oak+Brook,+IL315	NA	-84.9579	26.118
+Herndon,+VA193	NA	-86.7644	19.2855
+Herndon,+VA496	NA	-88.0224	12.3311
+Atlanta,+GA126	NA	-88.7239	5.29871
+Jersey+City,+NJ245	NA	-88.8644	-1.76717
+London274	NA	-88.4431	-8.82187
+London275	NA	-87.4626	-15.8208
+London276	NA	-85.9291	-22.7197
+Herndon,+VA495	NA	-83.8524	-29.475
+Oak+Brook,+IL308	NA	-81.2455	-36.0439
+Toronto,+Canada537	NA	-78.125	-42.3849
+Waltham,+MA555	NA	-74.5106	-48.458
+Oak+Brook,+IL309	NA	-70.425	-54.2247
+Toronto,+Canada538	NA	-65.8943	-59.6485
+Palo+Alto,+CA317	NA	-60.9469	-64.6953
+Santa+Clara,+CA388	NA	-55.6142	-69.333
+Palo+Alto,+CA104	NA	-49.9298	-73.5324
+Santa+Clara,+CA336	NA	-43.9298	-77.2669
+Palo+Alto,+CA318	NA	-37.6521	-80.5129
+Santa+Clara,+CA363	NA	-31.1363	-83.2498
+Santa+Clara,+CA364	NA	-24.4237	-85.4604
+Amsterdam119	NA	-17.5566	-87.1307
+Frankfurt185	NA	-10.5786	-88.2502
+Tukwila,+WA508	NA	-3.53364	-88.8117
+Tukwila,+WA509	NA	3.53364	-88.8117
+Santa+Clara,+CA429	NA	10.5786	-88.2502
+Chicago,+IL155	NA	17.5566	-87.1307
+Oak+Brook,+IL310	NA	24.4237	-85.4604
+San+Jose,+CA460	NA	31.1363	-83.2498
+Santa+Clara,+CA365	NA	37.6521	-80.5129
+Santa+Clara,+CA403	NA	43.9298	-77.2669
+Santa+Clara,+CA443	NA	49.9298	-73.5324
+Chicago,+IL156	NA	55.6142	-69.333
+Fort+Worth,+TX189	NA	60.9469	-64.6953
+Irvine,+CA228	NA	65.8943	-59.6485
+Austin,+TX137	NA	70.425	-54.2247
+Fort+Worth,+TX190	NA	74.5106	-48.458
+Fort+Worth,+TX191	NA	78.125	-42.3849
+Herndon,+VA208	NA	81.2455	-36.0439
+Jersey+City,+NJ261	NA	83.8524	-29.475
+Frankfurt184	NA	85.9291	-22.7197
+Waltham,+MA568	NA	87.4626	-15.8208
+London277	NA	88.4431	-8.82187
+Waltham,+MA569	NA	88.8644	-1.76717
+Irvine,+CA212	NA	88.7239	5.29871
+El+Segundo,+CA163	NA	88.0224	12.3311
+Tokyo525	NA	86.7644	19.2855
+Santa+Clara,+CA404	NA	84.9579	26.118
+Tokyo526	NA	82.6143	32.7853
+Irvine,+CA213	NA	79.7483	39.2454
+El+Segundo,+CA164	NA	76.3782	45.4574
+Waltham,+MA556	NA	72.5251	51.3819
+Herndon,+VA206	NA	68.2136	56.9816
+San+Jose,+CA459	NA	63.4707	62.2211
+Atlanta,+GA133	NA	58.3266	67.0672
+Miami,+FL285	NA	52.8137	71.4892
+Miami,+FL286	NA	46.967	75.4593
+Irvine,+CA229	NA	40.8232	78.9523
+Austin,+TX136	NA	34.4214	81.9461
+Irvine,+CA237	NA	27.802	84.4219
+Irvine,+CA230	NA	21.0068	86.3639
+Irvine,+CA231	NA	14.0787	87.7598
+Santa+Clara,+CA405	NA	7.06169	88.601
+# link section defines point-to-point links between nodes and characteristics of these links
+
+link
+
+# Each line should be in the following format (only first two are required, the rest can be omitted)
+# srcNode   dstNode     bandwidth   metric  delay   queue
+# bandwidth: link bandwidth
+# metric: routing metric
+# delay:  link delay
+# queue:  MaxPackets for transmission queue on the link (both directions)
+# error:  comma-separated list, specifying class for ErrorModel and necessary attributes
+San+Jose,+CA471	Santa+Clara,+CA444	10Mbps	45	2ms	100	
+San+Jose,+CA471	Santa+Clara,+CA389	10Mbps	40	2ms	100	
+San+Jose,+CA471	San+Jose,+CA472	10Mbps	35	1ms	100	
+San+Jose,+CA471	Oak+Brook,+IL301	10Mbps	145	16ms	100	
+San+Jose,+CA472	Santa+Clara,+CA430	10Mbps	20	2ms	100	
+San+Jose,+CA472	Santa+Clara,+CA389	10Mbps	35	2ms	100	
+San+Jose,+CA472	Santa+Clara,+CA431	10Mbps	25	2ms	100	
+Weehawken,+NJ543	New+York,+NY293	10Mbps	80	2ms	100	
+Weehawken,+NJ543	Atlanta,+GA127	10Mbps	185	7ms	100	
+Weehawken,+NJ543	New+York,+NY294	10Mbps	25	2ms	100	
+Weehawken,+NJ543	Weehawken,+NJ544	10Mbps	20	1ms	100	
+Weehawken,+NJ543	Weehawken,+NJ552	10Mbps	20	1ms	100	
+Weehawken,+NJ543	Oak+Brook,+IL300	10Mbps	120	7ms	100	
+Weehawken,+NJ543	Jersey+City,+NJ244	10Mbps	20	2ms	100	
+Oak+Brook,+IL307	Oak+Brook,+IL315	10Mbps	20	1ms	100	
+Oak+Brook,+IL307	Oak+Brook,+IL300	10Mbps	20	1ms	100	
+Oak+Brook,+IL307	Oak+Brook,+IL301	10Mbps	20	1ms	100	
+Herndon,+VA193	Herndon,+VA496	10Mbps	30	1ms	100	
+Herndon,+VA193	Atlanta,+GA126	10Mbps	45	6ms	100	
+Herndon,+VA193	Atlanta,+GA127	10Mbps	75	6ms	100	
+Weehawken,+NJ544	Jersey+City,+NJ245	10Mbps	20	2ms	100	
+Weehawken,+NJ544	London274	10Mbps	40	29ms	100	
+Weehawken,+NJ544	London275	10Mbps	45	29ms	100	
+Weehawken,+NJ544	London276	10Mbps	40	29ms	100	
+Weehawken,+NJ544	Weehawken,+NJ552	10Mbps	20	1ms	100	
+Weehawken,+NJ544	New+York,+NY293	10Mbps	50	2ms	100	
+Weehawken,+NJ544	Herndon,+VA495	10Mbps	40	3ms	100	
+Oak+Brook,+IL308	Oak+Brook,+IL315	10Mbps	20	1ms	100	
+Oak+Brook,+IL308	Oak+Brook,+IL300	10Mbps	20	1ms	100	
+Oak+Brook,+IL308	Oak+Brook,+IL301	10Mbps	20	1ms	100	
+Toronto,+Canada537	Waltham,+MA555	10Mbps	10	2ms	100	
+Oak+Brook,+IL309	Oak+Brook,+IL300	10Mbps	20	1ms	100	
+Oak+Brook,+IL309	Oak+Brook,+IL301	10Mbps	25	1ms	100	
+Toronto,+Canada538	Oak+Brook,+IL300	10Mbps	10	8ms	100	
+Palo+Alto,+CA317	Santa+Clara,+CA388	10Mbps	30	2ms	100	
+Palo+Alto,+CA317	Palo+Alto,+CA104	10Mbps	25	1ms	100	
+Palo+Alto,+CA317	Santa+Clara,+CA336	10Mbps	25	2ms	100	
+Palo+Alto,+CA317	Palo+Alto,+CA318	10Mbps	20	1ms	100	
+Palo+Alto,+CA318	Santa+Clara,+CA363	10Mbps	20	2ms	100	
+Palo+Alto,+CA318	Santa+Clara,+CA364	10Mbps	20	2ms	100	
+Amsterdam119	London274	10Mbps	20	3ms	100	
+Amsterdam119	London275	10Mbps	55	3ms	100	
+Amsterdam119	Frankfurt185	10Mbps	10	3ms	100	
+Tukwila,+WA508	Tukwila,+WA509	10Mbps	20	1ms	100	
+Tukwila,+WA508	Santa+Clara,+CA429	10Mbps	70	7ms	100	
+Tukwila,+WA508	Chicago,+IL155	10Mbps	90	15ms	100	
+Oak+Brook,+IL310	Oak+Brook,+IL300	10Mbps	20	1ms	100	
+Oak+Brook,+IL310	Oak+Brook,+IL301	10Mbps	35	1ms	100	
+Tukwila,+WA509	Chicago,+IL155	10Mbps	60	15ms	100	
+Santa+Clara,+CA388	Santa+Clara,+CA430	10Mbps	20	1ms	100	
+Santa+Clara,+CA388	Santa+Clara,+CA389	10Mbps	25	1ms	100	
+Santa+Clara,+CA388	San+Jose,+CA460	10Mbps	30	2ms	100	
+Palo+Alto,+CA104	Santa+Clara,+CA444	10Mbps	25	2ms	100	
+Palo+Alto,+CA104	Santa+Clara,+CA365	10Mbps	20	2ms	100	
+Palo+Alto,+CA104	Santa+Clara,+CA403	10Mbps	20	2ms	100	
+Santa+Clara,+CA389	Santa+Clara,+CA443	10Mbps	40	1ms	100	
+Santa+Clara,+CA389	Santa+Clara,+CA403	10Mbps	30	1ms	100	
+Oak+Brook,+IL315	Oak+Brook,+IL300	10Mbps	20	1ms	100	
+Oak+Brook,+IL315	Oak+Brook,+IL301	10Mbps	25	1ms	100	
+Weehawken,+NJ552	Oak+Brook,+IL300	10Mbps	130	7ms	100	
+Chicago,+IL155	Oak+Brook,+IL301	10Mbps	20	2ms	100	
+Chicago,+IL155	Chicago,+IL156	10Mbps	25	1ms	100	
+Chicago,+IL156	Oak+Brook,+IL300	10Mbps	20	2ms	100	
+Chicago,+IL156	Fort+Worth,+TX189	10Mbps	70	8ms	100	
+Fort+Worth,+TX189	Irvine,+CA228	10Mbps	170	11ms	100	
+Fort+Worth,+TX189	Austin,+TX137	10Mbps	40	3ms	100	
+Fort+Worth,+TX189	Fort+Worth,+TX190	10Mbps	20	1ms	100	
+Fort+Worth,+TX189	Santa+Clara,+CA403	10Mbps	160	13ms	100	
+Fort+Worth,+TX189	Fort+Worth,+TX191	10Mbps	35	1ms	100	
+Herndon,+VA495	Herndon,+VA496	10Mbps	20	1ms	100	
+Herndon,+VA495	Herndon,+VA208	10Mbps	50	1ms	100	
+Jersey+City,+NJ244	Jersey+City,+NJ261	10Mbps	40	1ms	100	
+Jersey+City,+NJ244	Frankfurt184	10Mbps	10	32ms	100	
+Jersey+City,+NJ244	Jersey+City,+NJ245	10Mbps	20	1ms	100	
+Jersey+City,+NJ244	Waltham,+MA568	10Mbps	50	3ms	100	
+Jersey+City,+NJ244	London277	10Mbps	10	29ms	100	
+Jersey+City,+NJ244	Waltham,+MA569	10Mbps	20	3ms	100	
+Herndon,+VA496	Santa+Clara,+CA429	10Mbps	225	21ms	100	
+Irvine,+CA212	El+Segundo,+CA163	10Mbps	10	2ms	100	
+Tokyo525	Santa+Clara,+CA404	10Mbps	25	43ms	100	
+Tokyo525	Tokyo526	10Mbps	20	1ms	100	
+Irvine,+CA213	Santa+Clara,+CA404	10Mbps	100	4ms	100	
+Irvine,+CA213	Irvine,+CA228	10Mbps	40	1ms	100	
+Irvine,+CA213	El+Segundo,+CA164	10Mbps	20	2ms	100	
+Jersey+City,+NJ245	Jersey+City,+NJ261	10Mbps	30	1ms	100	
+Jersey+City,+NJ245	London274	10Mbps	20	29ms	100	
+Jersey+City,+NJ245	New+York,+NY294	10Mbps	25	2ms	100	
+Jersey+City,+NJ245	London275	10Mbps	25	29ms	100	
+Jersey+City,+NJ245	London276	10Mbps	20	29ms	100	
+Tokyo526	Santa+Clara,+CA336	10Mbps	25	43ms	100	
+Tokyo526	San+Jose,+CA460	10Mbps	20	44ms	100	
+Waltham,+MA555	Waltham,+MA556	10Mbps	20	1ms	100	
+Waltham,+MA555	Waltham,+MA568	10Mbps	20	1ms	100	
+Waltham,+MA555	Oak+Brook,+IL300	10Mbps	130	8ms	100	
+Waltham,+MA556	Oak+Brook,+IL300	10Mbps	100	8ms	100	
+Waltham,+MA556	Waltham,+MA569	10Mbps	70	1ms	100	
+Herndon,+VA206	New+York,+NY293	10Mbps	20	3ms	100	
+Herndon,+VA206	Herndon,+VA208	10Mbps	20	1ms	100	
+Santa+Clara,+CA429	Santa+Clara,+CA430	10Mbps	20	1ms	100	
+Santa+Clara,+CA429	Santa+Clara,+CA431	10Mbps	55	1ms	100	
+Santa+Clara,+CA429	San+Jose,+CA459	10Mbps	20	2ms	100	
+Santa+Clara,+CA429	Santa+Clara,+CA403	10Mbps	45	1ms	100	
+Herndon,+VA208	New+York,+NY293	10Mbps	40	3ms	100	
+Atlanta,+GA126	Atlanta,+GA127	10Mbps	30	1ms	100	
+Atlanta,+GA126	Atlanta,+GA133	10Mbps	40	1ms	100	
+Miami,+FL285	New+York,+NY293	10Mbps	50	10ms	100	
+Miami,+FL285	Miami,+FL286	10Mbps	80	1ms	100	
+Atlanta,+GA127	Miami,+FL286	10Mbps	25	6ms	100	
+Atlanta,+GA127	Fort+Worth,+TX190	10Mbps	35	8ms	100	
+Atlanta,+GA127	Atlanta,+GA133	10Mbps	20	1ms	100	
+Fort+Worth,+TX190	Irvine,+CA228	10Mbps	140	11ms	100	
+Fort+Worth,+TX190	Irvine,+CA229	10Mbps	160	11ms	100	
+Fort+Worth,+TX190	Austin,+TX136	10Mbps	10	3ms	100	
+Fort+Worth,+TX190	Fort+Worth,+TX191	10Mbps	25	1ms	100	
+San+Jose,+CA459	San+Jose,+CA460	10Mbps	60	1ms	100	
+New+York,+NY293	New+York,+NY294	10Mbps	55	1ms	100	
+Santa+Clara,+CA430	Santa+Clara,+CA404	10Mbps	45	1ms	100	
+Santa+Clara,+CA430	Santa+Clara,+CA364	10Mbps	55	1ms	100	
+Santa+Clara,+CA430	Santa+Clara,+CA336	10Mbps	25	1ms	100	
+Santa+Clara,+CA430	Santa+Clara,+CA443	10Mbps	35	1ms	100	
+Santa+Clara,+CA431	Santa+Clara,+CA363	10Mbps	20	1ms	100	
+Santa+Clara,+CA431	Santa+Clara,+CA364	10Mbps	20	1ms	100	
+Santa+Clara,+CA431	Santa+Clara,+CA365	10Mbps	40	1ms	100	
+Santa+Clara,+CA431	Santa+Clara,+CA443	10Mbps	40	1ms	100	
+Irvine,+CA228	Irvine,+CA229	10Mbps	20	1ms	100	
+Irvine,+CA228	Irvine,+CA237	10Mbps	20	1ms	100	
+Irvine,+CA228	Irvine,+CA230	10Mbps	30	1ms	100	
+Irvine,+CA228	Irvine,+CA231	10Mbps	20	1ms	100	
+Irvine,+CA229	El+Segundo,+CA164	10Mbps	30	2ms	100	
+Waltham,+MA568	Waltham,+MA569	10Mbps	20	1ms	100	
+San+Jose,+CA460	Santa+Clara,+CA443	10Mbps	25	2ms	100	
+El+Segundo,+CA163	Santa+Clara,+CA404	10Mbps	50	4ms	100	
+El+Segundo,+CA163	Santa+Clara,+CA405	10Mbps	30	4ms	100	
+El+Segundo,+CA163	El+Segundo,+CA164	10Mbps	20	1ms	100	
+El+Segundo,+CA163	Austin,+TX137	10Mbps	160	11ms	100	
+El+Segundo,+CA164	Irvine,+CA230	10Mbps	20	2ms	100	
+El+Segundo,+CA164	Irvine,+CA231	10Mbps	30	2ms	100	
+El+Segundo,+CA164	Santa+Clara,+CA403	10Mbps	90	4ms	100	
+El+Segundo,+CA164	Santa+Clara,+CA443	10Mbps	60	4ms	100	
+Santa+Clara,+CA403	Santa+Clara,+CA444	10Mbps	25	1ms	100	
+Santa+Clara,+CA403	Santa+Clara,+CA404	10Mbps	20	1ms	100	
+Santa+Clara,+CA403	Santa+Clara,+CA405	10Mbps	50	1ms	100	
+Santa+Clara,+CA404	Santa+Clara,+CA444	10Mbps	45	1ms	100	
+Santa+Clara,+CA404	Santa+Clara,+CA443	10Mbps	30	1ms	100	
+Irvine,+CA231	Irvine,+CA237	10Mbps	30	1ms	100	
+Santa+Clara,+CA443	Santa+Clara,+CA444	10Mbps	25	1ms	100	
+Oak+Brook,+IL300	Oak+Brook,+IL301	10Mbps	25	1ms	100	

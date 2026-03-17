@@ -1,0 +1,1307 @@
+# any empty lines and lines starting with '#' symbol is ignored
+
+# The file should contain exactly two sections: router and link, each starting with the corresponding keyword
+
+# router section defines topology nodes and their relative positions (e.g., to use in visualizer)
+router
+
+# each line in this section represents one router and should have the following data
+# node  comment     yPos    xPos
+San+Jose,+CA4062	NA	-0	177.482
+Anaheim,+CA4101	NA	-3.53994	177.447
+San+Jose,+CA4119	NA	-7.07847	177.341
+Tacoma,+WA3251	NA	-10.6142	177.165
+Relay,+MD4110	NA	-14.1457	176.918
+Anaheim,+CA4099	NA	-17.6715	176.6
+San+Jose,+CA4112	NA	-21.1904	176.213
+San+Jose,+CA6742	NA	-24.7008	175.755
+San+Jose,+CA4095	NA	-28.2014	175.228
+San+Jose,+CA6405	NA	-31.6907	174.63
+San+Jose,+CA4132	NA	-35.1675	173.963
+Chicago,+IL4037	NA	-38.6302	173.227
+Anaheim,+CA6490	NA	-42.0776	172.422
+Manasquan,+NJ4086	NA	-45.5082	171.549
+New+York,+NY4088	NA	-48.9208	170.607
+Copenhagen4038	NA	-52.3139	169.597
+Manasquan,+NJ4047	NA	-55.6861	168.52
+Anaheim,+CA6564	NA	-59.0362	167.376
+Anaheim,+CA4031	NA	-62.3628	166.165
+Anaheim,+CA4073	NA	-65.6647	164.888
+Anaheim,+CA6721	NA	-68.9403	163.546
+Anaheim,+CA4100	NA	-72.1886	162.138
+Dallas,+TX6566	NA	-75.4081	160.666
+Dallas,+TX2635	NA	-78.5977	159.13
+Dallas,+TX4015	NA	-81.7559	157.531
+Dallas,+TX4080	NA	-84.8817	155.869
+New+York,+NY4028	NA	-87.9736	154.145
+Dallas,+TX4115	NA	-91.0306	152.36
+Washington,+DC6456	NA	-94.0513	150.514
+Washington,+DC6736	NA	-97.0347	148.608
+Washington,+DC6543	NA	-99.9794	146.643
+Washington,+DC6415	NA	-102.884	144.62
+Relay,+MD4093	NA	-105.748	142.539
+Washington,+DC6393	NA	-108.57	140.401
+Relay,+MD4054	NA	-111.349	138.208
+Tacoma,+WA6720	NA	-114.083	135.959
+Dallas,+TX6494	NA	-116.773	133.657
+Roachdale,+IN6712	NA	-119.415	131.301
+Roachdale,+IN4111	NA	-122.01	128.893
+Roachdale,+IN4056	NA	-124.557	126.434
+London4083	NA	-127.054	123.925
+London4044	NA	-129.5	121.366
+Brussels,+Belgium4033	NA	-131.895	118.759
+Dublin,+Ireland4078	NA	-134.238	116.105
+New+York,+NY4022	NA	-136.527	113.404
+London4084	NA	-138.761	110.658
+New+York,+NY4024	NA	-140.941	107.869
+Research+Triangle+Park,+NC4057	NA	-143.064	105.036
+Milan,+Italy4046	NA	-145.131	102.162
+Milan,+Italy4085	NA	-147.14	99.2469
+Paris4090	NA	-149.09	96.2924
+Pearl+Harbor,+HI4092	NA	-150.981	93.2996
+Pearl+Harbor,+HI6400	NA	-152.812	90.2697
+Pearl+Harbor,+HI4053	NA	-154.582	87.2039
+Stockton,+CA4096	NA	-156.29	84.1033
+Pearl+Harbor,+HI6550	NA	-157.937	80.9694
+Research+Triangle+Park,+NC4058	NA	-159.52	77.8032
+Atlanta,+GA4074	NA	-161.04	74.606
+Tacoma,+WA4114	NA	-162.496	71.3792
+Tacoma,+WA6408	NA	-163.888	68.1239
+Cheyenne,+WY4076	NA	-165.214	64.8416
+Tacoma,+WA6555	NA	-166.474	61.5335
+Tokyo4070	NA	-167.668	58.2008
+Hamburg,+Germany4041	NA	-168.796	54.8451
+Amsterdam4072	NA	-169.856	51.4675
+Hamburg,+Germany4081	NA	-170.849	48.0694
+Munich,+Germany4087	NA	-171.774	44.6522
+Atlanta,+GA6565	NA	-172.63	41.2173
+Atlanta,+GA3957	NA	-173.418	37.7659
+Atlanta,+GA4032	NA	-174.137	34.2995
+Relay,+MD6551	NA	-174.786	30.8195
+Denver,+Colorado5511	NA	-175.366	27.3272
+Cheyenne,+WY4034	NA	-175.876	23.824
+Pennsauken,+NJ6624	NA	-176.316	20.3114
+Pennsauken,+NJ4109	NA	-176.686	16.7907
+Pennsauken,+NJ4052	NA	-176.986	13.2633
+Pennsauken,+NJ4091	NA	-177.215	9.7306
+Lees+Summit,+MO5512	NA	-177.374	6.19405
+Kansas+City,+MO4105	NA	-177.463	2.65503
+Kansas+City,+MO4106	NA	-177.48	-0.88504
+Cheyenne,+WY6746	NA	-177.427	-4.42476
+Kansas+City,+MO6544	NA	-177.304	-7.96272
+Rancho+Cordova,+CA5507	NA	-177.11	-11.4975
+Rancho+Cordova,+CA5514	NA	-176.845	-15.0277
+Stockton,+CA4113	NA	-176.51	-18.552
+Stockton,+CA4065	NA	-176.105	-22.0688
+Relay,+MD6487	NA	-175.63	-25.5769
+Pennsauken,+NJ6486	NA	-175.085	-29.0748
+Dallas,+TX6641	NA	-174.47	-32.5611
+Chicago,+IL6593	NA	-173.786	-36.0345
+Anaheim,+CA6464	NA	-173.033	-39.4935
+Anaheim,+CA6570	NA	-172.21	-42.9369
+Anaheim,+CA6627	NA	-171.32	-46.3631
+Anaheim,+CA6539	NA	-170.361	-49.7709
+Anaheim,+CA6556	NA	-169.334	-53.1589
+Anaheim,+CA6744	NA	-168.24	-56.5258
+Anaheim,+CA6591	NA	-167.08	-59.8701
+Dallas,+TX4133	NA	-165.852	-63.1907
+Anaheim,+CA6584	NA	-164.559	-66.4861
+Dallas,+TX6587	NA	-163.2	-69.755
+Anaheim,+CA6684	NA	-161.776	-72.9962
+Anaheim,+CA6502	NA	-160.288	-76.2084
+Anaheim,+CA6520	NA	-158.736	-79.3902
+Anaheim,+CA6512	NA	-157.121	-82.5405
+Anaheim,+CA6702	NA	-155.444	-85.6579
+Anaheim,+CA6453	NA	-153.704	-88.7412
+Anaheim,+CA6438	NA	-151.904	-91.7892
+Kansas+City,+MO6707	NA	-150.043	-94.8007
+Kansas+City,+MO4082	NA	-148.122	-97.7745
+Kansas+City,+MO4043	NA	-146.142	-100.709
+Dallas,+TX6645	NA	-144.105	-103.604
+Los+Angeles,+CA5502	NA	-142.01	-106.458
+Anaheim,+CA6578	NA	-139.858	-109.269
+Dallas,+TX6573	NA	-137.651	-112.037
+Dallas,+TX6558	NA	-135.389	-114.76
+Relay,+MD5801	NA	-133.073	-117.438
+Washington,+DC6443	NA	-130.704	-120.068
+Washington,+DC9643	NA	-128.283	-122.651
+Washington,+DC6469	NA	-125.812	-125.186
+Washington,+DC4139	NA	-123.29	-127.67
+Washington,+DC4140	NA	-120.719	-130.104
+Washington,+DC6748	NA	-118.1	-132.486
+Washington,+DC4142	NA	-115.434	-134.815
+Chicago,+IL6492	NA	-112.722	-137.09
+Chicago,+IL1391	NA	-109.965	-139.311
+Chicago,+IL4122	NA	-107.165	-141.477
+Chicago,+IL4036	NA	-104.322	-143.586
+Chicago,+IL1484	NA	-101.437	-145.638
+Chicago,+IL4104	NA	-98.5119	-147.633
+Chicago,+IL6639	NA	-95.5478	-149.568
+Pennsauken,+NJ4117	NA	-92.5456	-151.444
+Roachdale,+IN6729	NA	-89.5066	-153.26
+Roachdale,+IN6676	NA	-86.4319	-155.015
+Roachdale,+IN6552	NA	-83.3229	-156.708
+Roachdale,+IN6697	NA	-80.1808	-158.338
+Roachdale,+IN6402	NA	-77.0067	-159.906
+Roachdale,+IN6636	NA	-73.802	-161.41
+Atlanta,+GA4102	NA	-70.568	-162.85
+Orlando,+FL4049	NA	-67.3058	-164.225
+Atlanta,+GA6735	NA	-64.0169	-165.535
+Atlanta,+GA6745	NA	-60.7026	-166.779
+Atlanta,+GA2344	NA	-57.364	-167.956
+Atlanta,+GA6685	NA	-54.0027	-169.067
+Atlanta,+GA2338	NA	-50.6198	-170.111
+Atlanta,+GA6540	NA	-47.2169	-171.086
+Orlando,+FL4050	NA	-43.7951	-171.994
+Atlanta,+GA2347	NA	-40.3559	-172.833
+Relay,+MD4131	NA	-36.9007	-173.604
+Atlanta,+GA6439	NA	-33.4307	-174.305
+Atlanta,+GA6465	NA	-29.9475	-174.938
+Atlanta,+GA6481	NA	-26.4524	-175.5
+Atlanta,+GA6628	NA	-22.9467	-175.993
+New+York,+NY4048	NA	-19.4319	-176.415
+Orlando,+FL4108	NA	-15.9094	-176.768
+Tacoma,+WA6701	NA	-12.3805	-177.05
+Seattle,+WA4059	NA	-8.84677	-177.262
+Sydney,+Australia4067	NA	-5.30947	-177.403
+Seattle,+WA4060	NA	-1.77006	-177.474
+Chicago,+IL6724	NA	1.77006	-177.474
+Chicago,+IL6643	NA	5.30947	-177.403
+Chicago,+IL6572	NA	8.84677	-177.262
+Chicago,+IL6654	NA	12.3805	-177.05
+Chicago,+IL6468	NA	15.9094	-176.768
+Chicago,+IL6648	NA	19.4319	-176.415
+Chicago,+IL6747	NA	22.9467	-175.993
+Chicago,+IL6586	NA	26.4524	-175.5
+Chicago,+IL6595	NA	29.9475	-174.938
+Chicago,+IL6669	NA	33.4307	-174.305
+Springfield,+MA4023	NA	36.9007	-173.604
+Chicago,+IL6414	NA	40.3559	-172.833
+Chicago,+IL6441	NA	43.7951	-171.994
+Chicago,+IL6603	NA	47.2169	-171.086
+Chicago,+IL6611	NA	50.6198	-170.111
+Chicago,+IL6531	NA	54.0027	-169.067
+Chicago,+IL6621	NA	57.364	-167.956
+Orlando,+FL6459	NA	60.7026	-166.779
+New+York,+NY6427	NA	64.0169	-165.535
+New+York,+NY4107	NA	67.3058	-164.225
+New+York,+NY4116	NA	70.568	-162.85
+New+York,+NY6496	NA	73.802	-161.41
+Seattle,+WA6476	NA	77.0067	-159.906
+Seattle,+WA4019	NA	80.1808	-158.338
+Relay,+MD4029	NA	83.3229	-156.708
+Cheyenne,+WY6455	NA	86.4319	-155.015
+Denver,+Colorado5501	NA	89.5066	-153.26
+Cheyenne,+WY2439	NA	92.5456	-151.444
+Cheyenne,+WY6723	NA	95.5478	-149.568
+Cheyenne,+WY6629	NA	98.5119	-147.633
+Cheyenne,+WY6388	NA	101.437	-145.638
+Cheyenne,+WY6413	NA	104.322	-143.586
+Cheyenne,+WY6542	NA	107.165	-141.477
+Dallas,+TX6726	NA	109.965	-139.311
+Dallas,+TX6580	NA	112.722	-137.09
+Brussels,+Belgium4075	NA	115.434	-134.815
+Chicago,+IL6644	NA	118.1	-132.486
+Stockton,+CA6452	NA	120.719	-130.104
+Stockton,+CA4064	NA	123.29	-127.67
+Pennsauken,+NJ4135	NA	125.812	-125.186
+Dallas,+TX6483	NA	128.283	-122.651
+Dallas,+TX6737	NA	130.704	-120.068
+Orlando,+FL4089	NA	133.073	-117.438
+Dallas,+TX6749	NA	135.389	-114.76
+Chicago,+IL4123	NA	137.651	-112.037
+Dallas,+TX6598	NA	139.858	-109.269
+Dallas,+TX6689	NA	142.01	-106.458
+Dallas,+TX1742	NA	144.105	-103.604
+Dallas,+TX6504	NA	146.142	-100.709
+Dallas,+TX3549	NA	148.122	-97.7745
+Dallas,+TX6604	NA	150.043	-94.8007
+Dallas,+TX6612	NA	151.904	-91.7892
+Dallas,+TX6419	NA	153.704	-88.7412
+Dallas,+TX6622	NA	155.444	-85.6579
+Dallas,+TX6444	NA	157.121	-82.5405
+Dallas,+TX6706	NA	158.736	-79.3902
+Dallas,+TX6471	NA	160.288	-76.2084
+Kansas+City,+MO6472	NA	161.776	-72.9962
+Kansas+City,+MO6458	NA	163.2	-69.755
+Kansas+City,+MO6395	NA	164.559	-66.4861
+Kansas+City,+MO6422	NA	165.852	-63.1907
+Kansas+City,+MO6690	NA	167.08	-59.8701
+Chicago,+IL6652	NA	168.24	-56.5258
+Dallas,+TX6658	NA	169.334	-53.1589
+Springfield,+MA4020	NA	170.361	-49.7709
+New+York,+NY4124	NA	171.32	-46.3631
+Pennsauken,+NJ4125	NA	172.21	-42.9369
+Pennsauken,+NJ4126	NA	173.033	-39.4935
+Roachdale,+IN6677	NA	173.786	-36.0345
+Relay,+MD6576	NA	174.47	-32.5611
+Relay,+MD4127	NA	175.085	-29.0748
+Seattle,+WA6450	NA	175.63	-25.5769
+Pennsauken,+NJ6647	NA	176.105	-22.0688
+Stockton,+CA6602	NA	176.51	-18.552
+Pennsauken,+NJ6516	NA	176.845	-15.0277
+Pennsauken,+NJ6614	NA	177.11	-11.4975
+Pennsauken,+NJ6525	NA	177.304	-7.96272
+Pennsauken,+NJ6517	NA	177.427	-4.42476
+Pennsauken,+NJ6448	NA	177.48	-0.88504
+Pennsauken,+NJ6728	NA	177.463	2.65503
+Pennsauken,+NJ6754	NA	177.374	6.19405
+Dallas,+TX6663	NA	177.215	9.7306
+Chicago,+IL6651	NA	176.986	13.2633
+Amsterdam4030	NA	176.686	16.7907
+Stockton,+CA6609	NA	176.316	20.3114
+Stockton,+CA6463	NA	175.876	23.824
+San+Jose,+CA6477	NA	175.366	27.3272
+Kansas+City,+MO6750	NA	174.786	30.8195
+Lees+Summit,+MO5504	NA	174.137	34.2995
+Hong+Kong4042	NA	173.418	37.7659
+Hong+Kong6421	NA	172.63	41.2173
+Tokyo4069	NA	171.774	44.6522
+Relay,+MD4136	NA	170.849	48.0694
+Relay,+MD6461	NA	169.856	51.4675
+Relay,+MD6518	NA	168.796	54.8451
+Relay,+MD4138	NA	167.668	58.2008
+Relay,+MD6431	NA	166.474	61.5335
+Relay,+MD6696	NA	165.214	64.8416
+Relay,+MD6675	NA	163.888	68.1239
+Relay,+MD4118	NA	162.496	71.3792
+Relay,+MD6449	NA	161.04	74.606
+New+York,+NY6446	NA	159.52	77.8032
+Sydney,+Australia6437	NA	157.937	80.9694
+Sydney,+Australia4068	NA	156.29	84.1033
+Atlanta,+GA6530	NA	154.582	87.2039
+Springfield,+MA4025	NA	152.812	90.2697
+Stockton,+CA6619	NA	150.981	93.2996
+Stockton,+CA6479	NA	149.09	96.2924
+Frankfurt4040	NA	147.14	99.2469
+Copenhagen4077	NA	145.131	102.162
+New+York,+NY6524	NA	143.064	105.036
+New+York,+NY4129	NA	140.941	107.869
+Reston,+VA5496	NA	138.761	110.658
+Ashburn,+VA10163	NA	136.527	113.404
+Pennsauken,+NJ6399	NA	134.238	116.105
+Dallas,+TX6683	NA	131.895	118.759
+Anaheim,+CA6610	NA	129.5	121.366
+New+York,+NY6605	NA	127.054	123.925
+New+York,+NY6606	NA	124.557	126.434
+New+York,+NY6532	NA	122.01	128.893
+New+York,+NY6397	NA	119.415	131.301
+Ashburn,+VA10162	NA	116.773	133.657
+Paris4051	NA	114.083	135.959
+Frankfurt4079	NA	111.349	138.208
+Ashburn,+VA10161	NA	108.57	140.401
+Stockton,+CA6563	NA	105.748	142.539
+Richardson,+TX5500	NA	102.884	144.62
+Stockton,+CA6569	NA	99.9794	146.643
+Orlando,+FL6429	NA	97.0347	148.608
+Orlando,+FL6693	NA	94.0513	150.514
+Seattle,+WA6432	NA	91.0306	152.36
+Stockton,+CA6719	NA	87.9736	154.145
+Lees+Summit,+MO5503	NA	84.8817	155.869
+Lees+Summit,+MO5505	NA	81.7559	157.531
+Stockton,+CA6577	NA	78.5977	159.13
+Stockholm,+Sweden4066	NA	75.4081	160.666
+New+York,+NY4017	NA	72.1886	162.138
+London4045	NA	68.9403	163.546
+New+York,+NY4134	NA	65.6647	164.888
+New+York,+NY6559	NA	62.3628	166.165
+Stockton,+CA6407	NA	59.0362	167.376
+Stockton,+CA6590	NA	55.6861	168.52
+Stockton,+CA3402	NA	52.3139	169.597
+Stockton,+CA6583	NA	48.9208	170.607
+Stockton,+CA6758	NA	45.5082	171.549
+Boston5499	NA	42.0776	172.422
+Springfield,+MA6406	NA	38.6302	173.227
+New+York,+NY4137	NA	35.1675	173.963
+Boston5509	NA	31.6907	174.63
+Stockholm,+Sweden4097	NA	28.2014	175.228
+Reston,+VA5497	NA	24.7008	175.755
+Tokyo4071	NA	21.1904	176.213
+Singapore4094	NA	17.6715	176.6
+New+York,+NY6751	NA	14.1457	176.918
+New+York,+NY6752	NA	10.6142	177.165
+Santa+Clara,+CA5508	NA	7.07847	177.341
+Dublin,+Ireland4039	NA	3.53994	177.447
+# link section defines point-to-point links between nodes and characteristics of these links
+
+link
+
+# Each line should be in the following format (only first two are required, the rest can be omitted)
+# srcNode   dstNode     bandwidth   metric  delay   queue
+# bandwidth: link bandwidth
+# metric: routing metric
+# delay:  link delay
+# queue:  MaxPackets for transmission queue on the link (both directions)
+# error:  comma-separated list, specifying class for ErrorModel and necessary attributes
+San+Jose,+CA4062	Anaheim,+CA4101	10Mbps	25	4ms	100	
+San+Jose,+CA4062	San+Jose,+CA4119	10Mbps	20	1ms	100	
+San+Jose,+CA4062	Tacoma,+WA3251	10Mbps	65	7ms	100	
+San+Jose,+CA4062	Relay,+MD4110	10Mbps	80	21ms	100	
+San+Jose,+CA4062	Anaheim,+CA4099	10Mbps	85	4ms	100	
+San+Jose,+CA4062	San+Jose,+CA4112	10Mbps	20	1ms	100	
+San+Jose,+CA4062	San+Jose,+CA6742	10Mbps	40	1ms	100	
+San+Jose,+CA4062	San+Jose,+CA4095	10Mbps	20	1ms	100	
+San+Jose,+CA4062	San+Jose,+CA6405	10Mbps	20	1ms	100	
+San+Jose,+CA4062	San+Jose,+CA4132	10Mbps	40	1ms	100	
+San+Jose,+CA4062	Chicago,+IL4037	10Mbps	90	16ms	100	
+Anaheim,+CA6490	Anaheim,+CA4101	10Mbps	20	1ms	100	
+Anaheim,+CA6490	Anaheim,+CA4099	10Mbps	80	1ms	100	
+Manasquan,+NJ4086	New+York,+NY4088	10Mbps	45	2ms	100	
+Manasquan,+NJ4086	Copenhagen4038	10Mbps	30	33ms	100	
+Manasquan,+NJ4086	Manasquan,+NJ4047	10Mbps	20	1ms	100	
+Manasquan,+NJ4086	Relay,+MD4110	10Mbps	40	3ms	100	
+Anaheim,+CA6564	Anaheim,+CA4099	10Mbps	80	1ms	100	
+Anaheim,+CA6564	Anaheim,+CA4101	10Mbps	20	1ms	100	
+Anaheim,+CA6564	Anaheim,+CA4031	10Mbps	20	1ms	100	
+Anaheim,+CA6564	Anaheim,+CA4073	10Mbps	30	1ms	100	
+Anaheim,+CA6564	Anaheim,+CA6721	10Mbps	20	1ms	100	
+Anaheim,+CA6564	Anaheim,+CA4100	10Mbps	20	1ms	100	
+Dallas,+TX6566	Dallas,+TX2635	10Mbps	30	1ms	100	
+Dallas,+TX6566	Dallas,+TX4015	10Mbps	30	1ms	100	
+Dallas,+TX6566	Dallas,+TX4080	10Mbps	30	1ms	100	
+Dallas,+TX6566	New+York,+NY4028	10Mbps	20	13ms	100	
+Dallas,+TX6566	Dallas,+TX4115	10Mbps	20	1ms	100	
+Washington,+DC6456	Washington,+DC6736	10Mbps	30	1ms	100	
+Washington,+DC6456	Washington,+DC6543	10Mbps	20	1ms	100	
+Washington,+DC6456	Washington,+DC6415	10Mbps	20	1ms	100	
+Washington,+DC6456	Relay,+MD4110	10Mbps	25	2ms	100	
+Washington,+DC6456	Relay,+MD4093	10Mbps	25	2ms	100	
+Washington,+DC6456	Washington,+DC6393	10Mbps	30	1ms	100	
+Washington,+DC6456	Relay,+MD4054	10Mbps	25	2ms	100	
+Tacoma,+WA6720	Tacoma,+WA3251	10Mbps	10	1ms	100	
+Dallas,+TX6494	Dallas,+TX2635	10Mbps	20	1ms	100	
+Dallas,+TX6494	Dallas,+TX4015	10Mbps	20	1ms	100	
+Dallas,+TX6494	New+York,+NY4028	10Mbps	30	13ms	100	
+Dallas,+TX6494	Dallas,+TX4080	10Mbps	20	1ms	100	
+Dallas,+TX6494	Dallas,+TX4115	10Mbps	30	1ms	100	
+Roachdale,+IN6712	Roachdale,+IN4111	10Mbps	20	1ms	100	
+Roachdale,+IN6712	Roachdale,+IN4056	10Mbps	20	1ms	100	
+London4083	London4044	10Mbps	20	1ms	100	
+London4083	Brussels,+Belgium4033	10Mbps	20	3ms	100	
+London4083	Manasquan,+NJ4047	10Mbps	25	30ms	100	
+London4083	Dublin,+Ireland4078	10Mbps	10	4ms	100	
+London4083	New+York,+NY4022	10Mbps	95	29ms	100	
+London4084	New+York,+NY4024	10Mbps	90	29ms	100	
+London4084	Brussels,+Belgium4033	10Mbps	80	3ms	100	
+London4084	Manasquan,+NJ4047	10Mbps	45	30ms	100	
+London4084	New+York,+NY4022	10Mbps	75	29ms	100	
+Research+Triangle+Park,+NC4057	Relay,+MD4054	10Mbps	10	4ms	100	
+Milan,+Italy4046	Milan,+Italy4085	10Mbps	50	1ms	100	
+Milan,+Italy4046	Paris4090	10Mbps	20	5ms	100	
+Pearl+Harbor,+HI4092	Anaheim,+CA4099	10Mbps	70	22ms	100	
+Pearl+Harbor,+HI4092	Pearl+Harbor,+HI6400	10Mbps	25	1ms	100	
+Pearl+Harbor,+HI4092	Pearl+Harbor,+HI4053	10Mbps	95	1ms	100	
+Pearl+Harbor,+HI4092	Stockton,+CA4096	10Mbps	85	21ms	100	
+Pearl+Harbor,+HI4092	Pearl+Harbor,+HI6550	10Mbps	30	1ms	100	
+Pearl+Harbor,+HI4092	Anaheim,+CA4100	10Mbps	160	22ms	100	
+Research+Triangle+Park,+NC4058	Atlanta,+GA4074	10Mbps	10	4ms	100	
+Tacoma,+WA4114	San+Jose,+CA4095	10Mbps	65	7ms	100	
+Tacoma,+WA4114	Tacoma,+WA6408	10Mbps	30	1ms	100	
+Tacoma,+WA4114	Tacoma,+WA3251	10Mbps	20	1ms	100	
+Tacoma,+WA4114	Cheyenne,+WY4076	10Mbps	55	9ms	100	
+Tacoma,+WA4114	Tacoma,+WA6555	10Mbps	20	1ms	100	
+Tacoma,+WA4114	Tokyo4070	10Mbps	60	40ms	100	
+Hamburg,+Germany4041	Copenhagen4038	10Mbps	45	3ms	100	
+Hamburg,+Germany4041	Amsterdam4072	10Mbps	20	3ms	100	
+Hamburg,+Germany4041	Hamburg,+Germany4081	10Mbps	40	1ms	100	
+Hamburg,+Germany4041	Munich,+Germany4087	10Mbps	10	5ms	100	
+Atlanta,+GA6565	Atlanta,+GA3957	10Mbps	20	1ms	100	
+Atlanta,+GA6565	Atlanta,+GA4032	10Mbps	20	1ms	100	
+Relay,+MD6551	Relay,+MD4093	10Mbps	25	1ms	100	
+Relay,+MD6551	Relay,+MD4110	10Mbps	25	1ms	100	
+Relay,+MD6551	Relay,+MD4054	10Mbps	25	1ms	100	
+Denver,+Colorado5511	Cheyenne,+WY4034	10Mbps	10	2ms	100	
+Pennsauken,+NJ6624	Pennsauken,+NJ4109	10Mbps	30	1ms	100	
+Pennsauken,+NJ6624	Pennsauken,+NJ4052	10Mbps	20	1ms	100	
+Pennsauken,+NJ6624	Pennsauken,+NJ4091	10Mbps	30	1ms	100	
+Lees+Summit,+MO5512	Kansas+City,+MO4105	10Mbps	35	2ms	100	
+Lees+Summit,+MO5512	Kansas+City,+MO4106	10Mbps	20	2ms	100	
+Cheyenne,+WY6746	Kansas+City,+MO6544	10Mbps	10	6ms	100	
+Rancho+Cordova,+CA5507	Rancho+Cordova,+CA5514	10Mbps	25	1ms	100	
+Rancho+Cordova,+CA5507	Stockton,+CA4113	10Mbps	25	2ms	100	
+Rancho+Cordova,+CA5507	Stockton,+CA4065	10Mbps	25	2ms	100	
+Relay,+MD6487	Relay,+MD4110	10Mbps	10	1ms	100	
+Pennsauken,+NJ6486	Pennsauken,+NJ4109	10Mbps	30	1ms	100	
+Pennsauken,+NJ6486	Pennsauken,+NJ4052	10Mbps	20	1ms	100	
+Pennsauken,+NJ6486	Pennsauken,+NJ4091	10Mbps	30	1ms	100	
+Dallas,+TX6641	Atlanta,+GA3957	10Mbps	75	7ms	100	
+Dallas,+TX6641	Dallas,+TX2635	10Mbps	30	1ms	100	
+Dallas,+TX6641	Dallas,+TX4015	10Mbps	30	1ms	100	
+Dallas,+TX6641	Dallas,+TX4080	10Mbps	30	1ms	100	
+Dallas,+TX6641	Chicago,+IL6593	10Mbps	65	8ms	100	
+Dallas,+TX6641	New+York,+NY4028	10Mbps	40	13ms	100	
+Dallas,+TX6641	Dallas,+TX4115	10Mbps	40	1ms	100	
+Anaheim,+CA4100	Anaheim,+CA4101	10Mbps	20	1ms	100	
+Anaheim,+CA4100	San+Jose,+CA4119	10Mbps	25	4ms	100	
+Anaheim,+CA4100	Anaheim,+CA6464	10Mbps	20	1ms	100	
+Anaheim,+CA4100	Anaheim,+CA6570	10Mbps	20	1ms	100	
+Anaheim,+CA4100	Anaheim,+CA6627	10Mbps	20	1ms	100	
+Anaheim,+CA4100	Anaheim,+CA4031	10Mbps	20	1ms	100	
+Anaheim,+CA4100	Anaheim,+CA6539	10Mbps	20	1ms	100	
+Anaheim,+CA4100	Pearl+Harbor,+HI4053	10Mbps	75	22ms	100	
+Anaheim,+CA4100	Anaheim,+CA6556	10Mbps	35	1ms	100	
+Anaheim,+CA4100	Anaheim,+CA6744	10Mbps	20	1ms	100	
+Anaheim,+CA4100	Anaheim,+CA6591	10Mbps	45	1ms	100	
+Anaheim,+CA4100	Dallas,+TX4133	10Mbps	20	11ms	100	
+Anaheim,+CA4100	Anaheim,+CA6584	10Mbps	20	1ms	100	
+Anaheim,+CA4100	Dallas,+TX6587	10Mbps	60	11ms	100	
+Anaheim,+CA4100	Anaheim,+CA6684	10Mbps	20	1ms	100	
+Anaheim,+CA4100	Dallas,+TX4080	10Mbps	40	11ms	100	
+Anaheim,+CA4100	Anaheim,+CA4073	10Mbps	20	1ms	100	
+Anaheim,+CA4100	Anaheim,+CA6502	10Mbps	25	1ms	100	
+Anaheim,+CA4100	Anaheim,+CA6520	10Mbps	20	1ms	100	
+Anaheim,+CA4100	Anaheim,+CA6512	10Mbps	20	1ms	100	
+Anaheim,+CA4100	Anaheim,+CA4099	10Mbps	90	1ms	100	
+Anaheim,+CA4100	San+Jose,+CA4112	10Mbps	55	4ms	100	
+Anaheim,+CA4100	Anaheim,+CA6702	10Mbps	20	1ms	100	
+Anaheim,+CA4100	Anaheim,+CA6453	10Mbps	30	1ms	100	
+Anaheim,+CA4100	Anaheim,+CA6721	10Mbps	30	1ms	100	
+Anaheim,+CA4100	Anaheim,+CA6438	10Mbps	35	1ms	100	
+Anaheim,+CA4101	Anaheim,+CA6464	10Mbps	20	1ms	100	
+Anaheim,+CA4101	Anaheim,+CA6627	10Mbps	20	1ms	100	
+Anaheim,+CA4101	Pearl+Harbor,+HI4053	10Mbps	75	22ms	100	
+Anaheim,+CA4101	Anaheim,+CA4031	10Mbps	20	1ms	100	
+Anaheim,+CA4101	Anaheim,+CA6539	10Mbps	20	1ms	100	
+Anaheim,+CA4101	Anaheim,+CA6556	10Mbps	25	1ms	100	
+Anaheim,+CA4101	Anaheim,+CA6744	10Mbps	30	1ms	100	
+Anaheim,+CA4101	Anaheim,+CA6591	10Mbps	25	1ms	100	
+Anaheim,+CA4101	Anaheim,+CA6584	10Mbps	20	1ms	100	
+Anaheim,+CA4101	Anaheim,+CA6684	10Mbps	30	1ms	100	
+Anaheim,+CA4101	Dallas,+TX4080	10Mbps	70	11ms	100	
+Anaheim,+CA4101	Anaheim,+CA4073	10Mbps	20	1ms	100	
+Anaheim,+CA4101	Dallas,+TX2635	10Mbps	40	11ms	100	
+Anaheim,+CA4101	Anaheim,+CA6502	10Mbps	25	1ms	100	
+Anaheim,+CA4101	Anaheim,+CA6520	10Mbps	20	1ms	100	
+Anaheim,+CA4101	Anaheim,+CA6512	10Mbps	20	1ms	100	
+Anaheim,+CA4101	Anaheim,+CA4099	10Mbps	90	1ms	100	
+Anaheim,+CA4101	Anaheim,+CA6702	10Mbps	20	1ms	100	
+Anaheim,+CA4101	Anaheim,+CA6721	10Mbps	20	1ms	100	
+Anaheim,+CA4101	Anaheim,+CA6453	10Mbps	20	1ms	100	
+Anaheim,+CA4101	Anaheim,+CA6438	10Mbps	25	1ms	100	
+Kansas+City,+MO6707	Kansas+City,+MO4082	10Mbps	20	1ms	100	
+Kansas+City,+MO6707	Kansas+City,+MO4043	10Mbps	20	1ms	100	
+Kansas+City,+MO6707	Kansas+City,+MO4105	10Mbps	30	1ms	100	
+Kansas+City,+MO6707	Kansas+City,+MO4106	10Mbps	25	1ms	100	
+Anaheim,+CA6570	Anaheim,+CA4031	10Mbps	20	1ms	100	
+Dallas,+TX6645	Dallas,+TX2635	10Mbps	30	1ms	100	
+Dallas,+TX6645	Dallas,+TX4015	10Mbps	30	1ms	100	
+Dallas,+TX6645	New+York,+NY4028	10Mbps	20	13ms	100	
+Dallas,+TX6645	Dallas,+TX4080	10Mbps	30	1ms	100	
+Dallas,+TX6645	Dallas,+TX4115	10Mbps	20	1ms	100	
+Anaheim,+CA4031	Anaheim,+CA6464	10Mbps	20	1ms	100	
+Anaheim,+CA4031	Anaheim,+CA6627	10Mbps	20	1ms	100	
+Anaheim,+CA4031	Anaheim,+CA6539	10Mbps	20	1ms	100	
+Anaheim,+CA4031	Anaheim,+CA6556	10Mbps	25	1ms	100	
+Anaheim,+CA4031	New+York,+NY4028	10Mbps	60	21ms	100	
+Anaheim,+CA4031	Dallas,+TX4115	10Mbps	40	11ms	100	
+Anaheim,+CA4031	Anaheim,+CA6744	10Mbps	30	1ms	100	
+Anaheim,+CA4031	Los+Angeles,+CA5502	10Mbps	10	2ms	100	
+Anaheim,+CA4031	Anaheim,+CA6578	10Mbps	10	1ms	100	
+Anaheim,+CA4031	Anaheim,+CA6684	10Mbps	30	1ms	100	
+Anaheim,+CA4031	Anaheim,+CA6502	10Mbps	25	1ms	100	
+Anaheim,+CA4031	Anaheim,+CA6512	10Mbps	20	1ms	100	
+Anaheim,+CA4031	Anaheim,+CA6520	10Mbps	20	1ms	100	
+Anaheim,+CA4031	Anaheim,+CA4099	10Mbps	80	1ms	100	
+Anaheim,+CA4031	San+Jose,+CA4112	10Mbps	25	4ms	100	
+Anaheim,+CA4031	Anaheim,+CA6702	10Mbps	20	1ms	100	
+Anaheim,+CA4031	Anaheim,+CA6453	10Mbps	20	1ms	100	
+Anaheim,+CA4031	Anaheim,+CA6721	10Mbps	20	1ms	100	
+Anaheim,+CA4031	Anaheim,+CA6438	10Mbps	25	1ms	100	
+Dallas,+TX6573	Dallas,+TX2635	10Mbps	30	1ms	100	
+Dallas,+TX6573	Dallas,+TX4015	10Mbps	30	1ms	100	
+Dallas,+TX6573	New+York,+NY4028	10Mbps	20	13ms	100	
+Dallas,+TX6573	Dallas,+TX4080	10Mbps	30	1ms	100	
+Dallas,+TX6573	Dallas,+TX6558	10Mbps	50	1ms	100	
+Dallas,+TX6573	Dallas,+TX4115	10Mbps	20	1ms	100	
+Dallas,+TX6573	Relay,+MD5801	10Mbps	155	11ms	100	
+Washington,+DC6393	Washington,+DC6443	10Mbps	30	1ms	100	
+Washington,+DC6393	Washington,+DC9643	10Mbps	30	1ms	100	
+Washington,+DC6393	Washington,+DC6469	10Mbps	40	1ms	100	
+Washington,+DC6393	Washington,+DC4139	10Mbps	30	1ms	100	
+Washington,+DC6393	Washington,+DC4140	10Mbps	30	1ms	100	
+Washington,+DC6393	Washington,+DC6748	10Mbps	30	1ms	100	
+Washington,+DC6393	Washington,+DC4142	10Mbps	20	1ms	100	
+Chicago,+IL6492	Chicago,+IL1391	10Mbps	20	1ms	100	
+Chicago,+IL6492	Chicago,+IL4122	10Mbps	20	1ms	100	
+Chicago,+IL6492	Chicago,+IL4036	10Mbps	20	1ms	100	
+Chicago,+IL6492	Chicago,+IL1484	10Mbps	20	1ms	100	
+Chicago,+IL6492	Chicago,+IL4037	10Mbps	20	1ms	100	
+Chicago,+IL6492	Chicago,+IL4104	10Mbps	20	1ms	100	
+Chicago,+IL6639	Chicago,+IL1391	10Mbps	20	1ms	100	
+Chicago,+IL6639	Chicago,+IL4122	10Mbps	30	1ms	100	
+Chicago,+IL6639	Chicago,+IL4036	10Mbps	20	1ms	100	
+Chicago,+IL6639	Chicago,+IL1484	10Mbps	20	1ms	100	
+Chicago,+IL6639	Chicago,+IL4037	10Mbps	20	1ms	100	
+Chicago,+IL6639	Chicago,+IL4104	10Mbps	20	1ms	100	
+Washington,+DC6469	Washington,+DC6415	10Mbps	30	1ms	100	
+Washington,+DC6469	Relay,+MD4110	10Mbps	25	2ms	100	
+Washington,+DC6469	Relay,+MD4093	10Mbps	25	2ms	100	
+Washington,+DC6469	Relay,+MD4054	10Mbps	25	2ms	100	
+Roachdale,+IN4111	Pennsauken,+NJ4117	10Mbps	90	7ms	100	
+Roachdale,+IN4111	Roachdale,+IN6729	10Mbps	20	1ms	100	
+Roachdale,+IN4111	Roachdale,+IN6676	10Mbps	10	1ms	100	
+Roachdale,+IN4111	Roachdale,+IN4056	10Mbps	20	1ms	100	
+Roachdale,+IN4111	Chicago,+IL4104	10Mbps	65	3ms	100	
+Roachdale,+IN4111	Roachdale,+IN6552	10Mbps	20	1ms	100	
+Roachdale,+IN4111	Roachdale,+IN6697	10Mbps	20	1ms	100	
+Roachdale,+IN4111	Roachdale,+IN6402	10Mbps	20	1ms	100	
+Roachdale,+IN4111	Roachdale,+IN6636	10Mbps	20	1ms	100	
+Roachdale,+IN4111	Chicago,+IL4036	10Mbps	95	3ms	100	
+Atlanta,+GA4102	Orlando,+FL4049	10Mbps	30	5ms	100	
+Atlanta,+GA4102	Atlanta,+GA6735	10Mbps	50	1ms	100	
+Atlanta,+GA4102	Atlanta,+GA4032	10Mbps	20	1ms	100	
+Atlanta,+GA4102	Atlanta,+GA6745	10Mbps	20	1ms	100	
+Atlanta,+GA4102	Atlanta,+GA2344	10Mbps	20	1ms	100	
+Atlanta,+GA4102	Atlanta,+GA6685	10Mbps	20	1ms	100	
+Atlanta,+GA4102	Atlanta,+GA2338	10Mbps	20	1ms	100	
+Atlanta,+GA4102	Atlanta,+GA6540	10Mbps	20	1ms	100	
+Atlanta,+GA4102	Orlando,+FL4050	10Mbps	35	5ms	100	
+Atlanta,+GA4102	Atlanta,+GA2347	10Mbps	20	1ms	100	
+Atlanta,+GA4102	Atlanta,+GA4074	10Mbps	20	1ms	100	
+Atlanta,+GA4102	Relay,+MD4131	10Mbps	40	6ms	100	
+Atlanta,+GA4102	Atlanta,+GA6439	10Mbps	10	1ms	100	
+Atlanta,+GA4102	Atlanta,+GA6465	10Mbps	20	1ms	100	
+Atlanta,+GA4102	Atlanta,+GA6481	10Mbps	20	1ms	100	
+Atlanta,+GA4102	Atlanta,+GA6628	10Mbps	20	1ms	100	
+Roachdale,+IN6729	Roachdale,+IN4056	10Mbps	20	1ms	100	
+Atlanta,+GA4032	Relay,+MD4093	10Mbps	40	6ms	100	
+Atlanta,+GA4032	Atlanta,+GA6540	10Mbps	20	1ms	100	
+Atlanta,+GA4032	New+York,+NY4048	10Mbps	65	8ms	100	
+Atlanta,+GA4032	Chicago,+IL4037	10Mbps	80	6ms	100	
+Atlanta,+GA4032	Atlanta,+GA6481	10Mbps	20	1ms	100	
+Atlanta,+GA4032	Atlanta,+GA6465	10Mbps	20	1ms	100	
+Atlanta,+GA4032	Atlanta,+GA6628	10Mbps	20	1ms	100	
+Atlanta,+GA4032	Dallas,+TX2635	10Mbps	55	7ms	100	
+Atlanta,+GA4032	Atlanta,+GA6735	10Mbps	50	1ms	100	
+Atlanta,+GA4032	Atlanta,+GA3957	10Mbps	20	1ms	100	
+Atlanta,+GA4032	Atlanta,+GA6745	10Mbps	20	1ms	100	
+Atlanta,+GA4032	Atlanta,+GA2344	10Mbps	20	1ms	100	
+Atlanta,+GA4032	Atlanta,+GA6685	10Mbps	20	1ms	100	
+Atlanta,+GA4032	Atlanta,+GA2338	10Mbps	20	1ms	100	
+Atlanta,+GA4032	Atlanta,+GA2347	10Mbps	20	1ms	100	
+Atlanta,+GA4032	Orlando,+FL4108	10Mbps	20	5ms	100	
+Atlanta,+GA4032	Atlanta,+GA4074	10Mbps	20	1ms	100	
+Tacoma,+WA3251	Tacoma,+WA6408	10Mbps	30	1ms	100	
+Tacoma,+WA3251	Cheyenne,+WY4076	10Mbps	55	9ms	100	
+Tacoma,+WA3251	Tacoma,+WA6701	10Mbps	20	1ms	100	
+Tacoma,+WA3251	Seattle,+WA4059	10Mbps	20	2ms	100	
+Tacoma,+WA3251	Sydney,+Australia4067	10Mbps	65	64ms	100	
+Tacoma,+WA3251	Cheyenne,+WY4034	10Mbps	55	9ms	100	
+Tacoma,+WA3251	Tacoma,+WA6555	10Mbps	20	1ms	100	
+Tacoma,+WA3251	Seattle,+WA4060	10Mbps	30	2ms	100	
+Tacoma,+WA3251	Tokyo4070	10Mbps	80	40ms	100	
+Chicago,+IL1484	Cheyenne,+WY4076	10Mbps	50	9ms	100	
+Chicago,+IL1484	Chicago,+IL6724	10Mbps	20	1ms	100	
+Chicago,+IL1484	Chicago,+IL6643	10Mbps	20	1ms	100	
+Chicago,+IL1484	Chicago,+IL6572	10Mbps	30	1ms	100	
+Chicago,+IL1484	Chicago,+IL4104	10Mbps	20	1ms	100	
+Chicago,+IL1484	Chicago,+IL6654	10Mbps	20	1ms	100	
+Chicago,+IL1484	Chicago,+IL6468	10Mbps	20	1ms	100	
+Chicago,+IL1484	Chicago,+IL4122	10Mbps	20	1ms	100	
+Chicago,+IL1484	Chicago,+IL6648	10Mbps	20	1ms	100	
+Chicago,+IL1484	Chicago,+IL6747	10Mbps	20	1ms	100	
+Chicago,+IL1484	Chicago,+IL6593	10Mbps	30	1ms	100	
+Chicago,+IL1484	Dallas,+TX4080	10Mbps	55	8ms	100	
+Chicago,+IL1484	Chicago,+IL6586	10Mbps	20	1ms	100	
+Chicago,+IL1484	Chicago,+IL4037	10Mbps	20	1ms	100	
+Chicago,+IL1484	Chicago,+IL6595	10Mbps	20	1ms	100	
+Chicago,+IL1484	Chicago,+IL6669	10Mbps	20	1ms	100	
+Chicago,+IL1484	New+York,+NY4088	10Mbps	85	7ms	100	
+Chicago,+IL1484	Chicago,+IL1391	10Mbps	20	1ms	100	
+Chicago,+IL1484	Springfield,+MA4023	10Mbps	55	8ms	100	
+Chicago,+IL1484	Cheyenne,+WY4034	10Mbps	80	9ms	100	
+Chicago,+IL1484	Chicago,+IL6414	10Mbps	20	1ms	100	
+Chicago,+IL1484	Atlanta,+GA4074	10Mbps	80	6ms	100	
+Chicago,+IL1484	Chicago,+IL6441	10Mbps	20	1ms	100	
+Chicago,+IL1484	Chicago,+IL6603	10Mbps	20	1ms	100	
+Chicago,+IL1484	Chicago,+IL6611	10Mbps	20	1ms	100	
+Chicago,+IL1484	Chicago,+IL6531	10Mbps	20	1ms	100	
+Chicago,+IL1484	Chicago,+IL6621	10Mbps	20	1ms	100	
+Orlando,+FL6459	Orlando,+FL4049	10Mbps	20	1ms	100	
+Orlando,+FL6459	Orlando,+FL4050	10Mbps	45	1ms	100	
+New+York,+NY6427	New+York,+NY4088	10Mbps	35	1ms	100	
+New+York,+NY6427	New+York,+NY4048	10Mbps	25	1ms	100	
+New+York,+NY6427	New+York,+NY4107	10Mbps	25	1ms	100	
+New+York,+NY6427	New+York,+NY4116	10Mbps	25	1ms	100	
+New+York,+NY6427	New+York,+NY6496	10Mbps	20	1ms	100	
+Rancho+Cordova,+CA5514	Stockton,+CA4096	10Mbps	20	2ms	100	
+Seattle,+WA6476	Seattle,+WA4019	10Mbps	10	1ms	100	
+Anaheim,+CA6721	Anaheim,+CA6464	10Mbps	20	1ms	100	
+Anaheim,+CA6721	Anaheim,+CA6627	10Mbps	20	1ms	100	
+Anaheim,+CA6721	Anaheim,+CA6539	10Mbps	20	1ms	100	
+Anaheim,+CA6721	Anaheim,+CA6556	10Mbps	20	1ms	100	
+Anaheim,+CA6721	Anaheim,+CA6744	10Mbps	20	1ms	100	
+Anaheim,+CA6721	Anaheim,+CA6684	10Mbps	20	1ms	100	
+Anaheim,+CA6721	Anaheim,+CA4073	10Mbps	30	1ms	100	
+Anaheim,+CA6721	Anaheim,+CA6502	10Mbps	35	1ms	100	
+Anaheim,+CA6721	Anaheim,+CA6520	10Mbps	20	1ms	100	
+Anaheim,+CA6721	Anaheim,+CA6512	10Mbps	20	1ms	100	
+Anaheim,+CA6721	Anaheim,+CA6702	10Mbps	20	1ms	100	
+Anaheim,+CA6721	Anaheim,+CA6453	10Mbps	20	1ms	100	
+Anaheim,+CA6721	Anaheim,+CA6438	10Mbps	20	1ms	100	
+Relay,+MD4029	Relay,+MD4110	10Mbps	20	1ms	100	
+Relay,+MD4029	Relay,+MD4054	10Mbps	30	1ms	100	
+Cheyenne,+WY4076	Cheyenne,+WY6455	10Mbps	20	1ms	100	
+Cheyenne,+WY4076	Denver,+Colorado5501	10Mbps	10	2ms	100	
+Cheyenne,+WY4076	Cheyenne,+WY2439	10Mbps	20	1ms	100	
+Cheyenne,+WY4076	Cheyenne,+WY6723	10Mbps	20	1ms	100	
+Cheyenne,+WY4076	Cheyenne,+WY6629	10Mbps	20	1ms	100	
+Cheyenne,+WY4076	Cheyenne,+WY6388	10Mbps	20	1ms	100	
+Cheyenne,+WY4076	Cheyenne,+WY6413	10Mbps	20	1ms	100	
+Cheyenne,+WY4076	Cheyenne,+WY4034	10Mbps	30	1ms	100	
+Cheyenne,+WY4076	Dallas,+TX4080	10Mbps	135	7ms	100	
+Cheyenne,+WY4076	Cheyenne,+WY6542	10Mbps	20	1ms	100	
+Dallas,+TX6726	Dallas,+TX2635	10Mbps	30	1ms	100	
+Dallas,+TX6726	Dallas,+TX4015	10Mbps	30	1ms	100	
+Dallas,+TX6726	Dallas,+TX4080	10Mbps	30	1ms	100	
+Dallas,+TX6726	New+York,+NY4028	10Mbps	20	13ms	100	
+Dallas,+TX6726	Dallas,+TX4115	10Mbps	20	1ms	100	
+Dallas,+TX6580	Dallas,+TX2635	10Mbps	30	1ms	100	
+Dallas,+TX6580	Dallas,+TX4015	10Mbps	30	1ms	100	
+Dallas,+TX6580	Dallas,+TX4080	10Mbps	20	1ms	100	
+Dallas,+TX6580	New+York,+NY4028	10Mbps	30	13ms	100	
+Dallas,+TX6580	Dallas,+TX4115	10Mbps	20	1ms	100	
+Washington,+DC6543	Washington,+DC6443	10Mbps	20	1ms	100	
+Washington,+DC6543	Washington,+DC4139	10Mbps	20	1ms	100	
+Washington,+DC6543	Washington,+DC4140	10Mbps	20	1ms	100	
+Washington,+DC6543	Washington,+DC4142	10Mbps	20	1ms	100	
+Washington,+DC6543	Washington,+DC6748	10Mbps	20	1ms	100	
+Brussels,+Belgium4033	London4044	10Mbps	50	3ms	100	
+Brussels,+Belgium4033	Brussels,+Belgium4075	10Mbps	20	1ms	100	
+Chicago,+IL6643	Atlanta,+GA6735	10Mbps	130	6ms	100	
+Chicago,+IL6643	Chicago,+IL6644	10Mbps	50	1ms	100	
+Stockton,+CA6452	Stockton,+CA4064	10Mbps	30	1ms	100	
+Stockton,+CA6452	Stockton,+CA4113	10Mbps	30	1ms	100	
+Stockton,+CA6452	Stockton,+CA4065	10Mbps	30	1ms	100	
+Stockton,+CA6452	Stockton,+CA4096	10Mbps	30	1ms	100	
+Dallas,+TX4115	Pennsauken,+NJ4135	10Mbps	90	12ms	100	
+Dallas,+TX4115	Dallas,+TX4015	10Mbps	20	1ms	100	
+Dallas,+TX4115	Dallas,+TX6483	10Mbps	20	1ms	100	
+Dallas,+TX4115	Kansas+City,+MO4105	10Mbps	45	5ms	100	
+Dallas,+TX4115	Dallas,+TX6737	10Mbps	20	1ms	100	
+Dallas,+TX4115	Orlando,+FL4089	10Mbps	65	9ms	100	
+Dallas,+TX4115	Dallas,+TX6587	10Mbps	20	1ms	100	
+Dallas,+TX4115	Dallas,+TX6749	10Mbps	30	1ms	100	
+Dallas,+TX4115	Chicago,+IL4123	10Mbps	10	8ms	100	
+Dallas,+TX4115	Dallas,+TX4080	10Mbps	20	1ms	100	
+Dallas,+TX4115	Dallas,+TX6598	10Mbps	45	1ms	100	
+Dallas,+TX4115	Dallas,+TX6689	10Mbps	30	1ms	100	
+Dallas,+TX4115	Dallas,+TX1742	10Mbps	20	1ms	100	
+Dallas,+TX4115	Chicago,+IL1391	10Mbps	55	8ms	100	
+Dallas,+TX4115	Dallas,+TX2635	10Mbps	20	1ms	100	
+Dallas,+TX4115	Dallas,+TX6504	10Mbps	30	1ms	100	
+Dallas,+TX4115	Dallas,+TX3549	10Mbps	20	1ms	100	
+Dallas,+TX4115	Dallas,+TX6604	10Mbps	30	1ms	100	
+Dallas,+TX4115	Dallas,+TX6612	10Mbps	30	1ms	100	
+Dallas,+TX4115	Dallas,+TX6419	10Mbps	20	1ms	100	
+Dallas,+TX4115	Dallas,+TX6622	10Mbps	20	1ms	100	
+Dallas,+TX4115	Dallas,+TX6444	10Mbps	20	1ms	100	
+Dallas,+TX4115	Dallas,+TX6706	10Mbps	35	1ms	100	
+Dallas,+TX4115	Dallas,+TX6471	10Mbps	20	1ms	100	
+Chicago,+IL6644	Chicago,+IL4037	10Mbps	40	1ms	100	
+Kansas+City,+MO4105	Kansas+City,+MO4082	10Mbps	30	1ms	100	
+Kansas+City,+MO4105	Pennsauken,+NJ4117	10Mbps	125	10ms	100	
+Kansas+City,+MO4105	Dallas,+TX2635	10Mbps	55	5ms	100	
+Kansas+City,+MO4105	Kansas+City,+MO6544	10Mbps	40	1ms	100	
+Kansas+City,+MO4105	Kansas+City,+MO6472	10Mbps	40	1ms	100	
+Kansas+City,+MO4105	Kansas+City,+MO6458	10Mbps	40	1ms	100	
+Kansas+City,+MO4105	New+York,+NY4028	10Mbps	65	10ms	100	
+Kansas+City,+MO4105	Kansas+City,+MO6395	10Mbps	30	1ms	100	
+Kansas+City,+MO4105	Kansas+City,+MO6422	10Mbps	25	1ms	100	
+Kansas+City,+MO4105	Kansas+City,+MO4043	10Mbps	30	1ms	100	
+Kansas+City,+MO4105	Kansas+City,+MO6690	10Mbps	40	1ms	100	
+Chicago,+IL6572	Chicago,+IL4037	10Mbps	20	1ms	100	
+Kansas+City,+MO4106	Kansas+City,+MO4082	10Mbps	25	1ms	100	
+Kansas+City,+MO4106	Pennsauken,+NJ4117	10Mbps	120	10ms	100	
+Kansas+City,+MO4106	Dallas,+TX2635	10Mbps	50	5ms	100	
+Kansas+City,+MO4106	Kansas+City,+MO6544	10Mbps	25	1ms	100	
+Kansas+City,+MO4106	Kansas+City,+MO6472	10Mbps	35	1ms	100	
+Kansas+City,+MO4106	Kansas+City,+MO6458	10Mbps	35	1ms	100	
+Kansas+City,+MO4106	Kansas+City,+MO6395	10Mbps	25	1ms	100	
+Kansas+City,+MO4106	Kansas+City,+MO6422	10Mbps	20	1ms	100	
+Kansas+City,+MO4106	Kansas+City,+MO4043	10Mbps	25	1ms	100	
+Kansas+City,+MO4106	Kansas+City,+MO6690	10Mbps	25	1ms	100	
+Chicago,+IL4104	New+York,+NY4116	10Mbps	115	7ms	100	
+Chicago,+IL4104	Seattle,+WA4059	10Mbps	35	15ms	100	
+Chicago,+IL4104	Chicago,+IL6724	10Mbps	20	1ms	100	
+Chicago,+IL4104	Chicago,+IL6652	10Mbps	10	1ms	100	
+Chicago,+IL4104	New+York,+NY4048	10Mbps	85	7ms	100	
+Chicago,+IL4104	Chicago,+IL6468	10Mbps	20	1ms	100	
+Chicago,+IL4104	Kansas+City,+MO4043	10Mbps	60	5ms	100	
+Chicago,+IL4104	Chicago,+IL4122	10Mbps	20	1ms	100	
+Chicago,+IL4104	Chicago,+IL6747	10Mbps	20	1ms	100	
+Chicago,+IL4104	Chicago,+IL4036	10Mbps	20	1ms	100	
+Chicago,+IL4104	Chicago,+IL6593	10Mbps	30	1ms	100	
+Chicago,+IL4104	Dallas,+TX4080	10Mbps	75	8ms	100	
+Chicago,+IL4104	Chicago,+IL6586	10Mbps	20	1ms	100	
+Chicago,+IL4104	Chicago,+IL4037	10Mbps	20	1ms	100	
+Chicago,+IL4104	Chicago,+IL6595	10Mbps	20	1ms	100	
+Chicago,+IL4104	Chicago,+IL6669	10Mbps	20	1ms	100	
+Chicago,+IL4104	Chicago,+IL1391	10Mbps	20	1ms	100	
+Chicago,+IL4104	Dallas,+TX2635	10Mbps	55	8ms	100	
+Chicago,+IL4104	Cheyenne,+WY4034	10Mbps	50	9ms	100	
+Chicago,+IL4104	Chicago,+IL6414	10Mbps	20	1ms	100	
+Chicago,+IL4104	Chicago,+IL6441	10Mbps	20	1ms	100	
+Chicago,+IL4104	Chicago,+IL6603	10Mbps	20	1ms	100	
+Chicago,+IL4104	Chicago,+IL6611	10Mbps	20	1ms	100	
+Chicago,+IL4104	Chicago,+IL6531	10Mbps	20	1ms	100	
+Chicago,+IL4104	Chicago,+IL6621	10Mbps	20	1ms	100	
+Dallas,+TX6658	Dallas,+TX4015	10Mbps	20	1ms	100	
+Dallas,+TX6658	Dallas,+TX4080	10Mbps	20	1ms	100	
+Anaheim,+CA6584	Anaheim,+CA4099	10Mbps	100	1ms	100	
+Chicago,+IL6648	Chicago,+IL4037	10Mbps	20	1ms	100	
+Dallas,+TX6587	Dallas,+TX2635	10Mbps	20	1ms	100	
+Dallas,+TX6587	Dallas,+TX4015	10Mbps	20	1ms	100	
+Dallas,+TX6587	New+York,+NY4028	10Mbps	30	13ms	100	
+Dallas,+TX6587	Dallas,+TX4080	10Mbps	20	1ms	100	
+San+Jose,+CA6405	San+Jose,+CA4095	10Mbps	30	1ms	100	
+Chicago,+IL4036	Chicago,+IL6724	10Mbps	20	1ms	100	
+Chicago,+IL4036	Chicago,+IL6468	10Mbps	20	1ms	100	
+Chicago,+IL4036	Chicago,+IL4122	10Mbps	20	1ms	100	
+Chicago,+IL4036	Stockton,+CA4113	10Mbps	120	16ms	100	
+Chicago,+IL4036	Chicago,+IL6593	10Mbps	30	1ms	100	
+Chicago,+IL4036	Chicago,+IL6747	10Mbps	20	1ms	100	
+Chicago,+IL4036	Dallas,+TX4080	10Mbps	55	8ms	100	
+Chicago,+IL4036	Chicago,+IL4037	10Mbps	20	1ms	100	
+Chicago,+IL4036	Chicago,+IL6586	10Mbps	20	1ms	100	
+Chicago,+IL4036	Chicago,+IL6595	10Mbps	20	1ms	100	
+Chicago,+IL4036	Chicago,+IL6669	10Mbps	20	1ms	100	
+Chicago,+IL4036	Chicago,+IL1391	10Mbps	20	1ms	100	
+Chicago,+IL4036	Springfield,+MA4020	10Mbps	60	8ms	100	
+Chicago,+IL4036	Stockton,+CA4065	10Mbps	110	16ms	100	
+Chicago,+IL4036	Chicago,+IL6414	10Mbps	20	1ms	100	
+Chicago,+IL4036	Chicago,+IL6611	10Mbps	20	1ms	100	
+Chicago,+IL4036	Chicago,+IL6441	10Mbps	20	1ms	100	
+Chicago,+IL4036	Chicago,+IL6603	10Mbps	30	1ms	100	
+Chicago,+IL4036	Chicago,+IL6531	10Mbps	20	1ms	100	
+Chicago,+IL4036	Chicago,+IL6621	10Mbps	20	1ms	100	
+Chicago,+IL4037	New+York,+NY4124	10Mbps	75	7ms	100	
+Chicago,+IL4037	Chicago,+IL6724	10Mbps	20	1ms	100	
+Chicago,+IL4037	Chicago,+IL6654	10Mbps	20	1ms	100	
+Chicago,+IL4037	Chicago,+IL6468	10Mbps	20	1ms	100	
+Chicago,+IL4037	Kansas+City,+MO4043	10Mbps	60	5ms	100	
+Chicago,+IL4037	Chicago,+IL4122	10Mbps	20	1ms	100	
+Chicago,+IL4037	Chicago,+IL6747	10Mbps	20	1ms	100	
+Chicago,+IL4037	Chicago,+IL6593	10Mbps	40	1ms	100	
+Chicago,+IL4037	Dallas,+TX4080	10Mbps	75	8ms	100	
+Chicago,+IL4037	Chicago,+IL6586	10Mbps	20	1ms	100	
+Chicago,+IL4037	Chicago,+IL6595	10Mbps	20	1ms	100	
+Chicago,+IL4037	Chicago,+IL6669	10Mbps	20	1ms	100	
+Chicago,+IL4037	Roachdale,+IN4056	10Mbps	65	3ms	100	
+Chicago,+IL4037	Cheyenne,+WY4034	10Mbps	50	9ms	100	
+Chicago,+IL4037	Chicago,+IL6414	10Mbps	20	1ms	100	
+Chicago,+IL4037	Chicago,+IL6603	10Mbps	20	1ms	100	
+Chicago,+IL4037	Chicago,+IL6441	10Mbps	20	1ms	100	
+Chicago,+IL4037	Chicago,+IL6611	10Mbps	20	1ms	100	
+Chicago,+IL4037	Chicago,+IL6531	10Mbps	20	1ms	100	
+Chicago,+IL4037	Chicago,+IL6621	10Mbps	20	1ms	100	
+Roachdale,+IN4056	Pennsauken,+NJ4125	10Mbps	85	7ms	100	
+Roachdale,+IN4056	Pennsauken,+NJ4126	10Mbps	75	7ms	100	
+Roachdale,+IN4056	Roachdale,+IN6677	10Mbps	10	1ms	100	
+Roachdale,+IN4056	Roachdale,+IN6697	10Mbps	20	1ms	100	
+Roachdale,+IN4056	Roachdale,+IN6552	10Mbps	20	1ms	100	
+Roachdale,+IN4056	Roachdale,+IN6402	10Mbps	20	1ms	100	
+Roachdale,+IN4056	Roachdale,+IN6636	10Mbps	20	1ms	100	
+Relay,+MD6576	Relay,+MD4093	10Mbps	20	1ms	100	
+Relay,+MD6576	Relay,+MD4127	10Mbps	20	1ms	100	
+Seattle,+WA4019	Seattle,+WA4059	10Mbps	30	1ms	100	
+Seattle,+WA4019	Seattle,+WA4060	10Mbps	20	1ms	100	
+Seattle,+WA4019	Seattle,+WA6450	10Mbps	10	1ms	100	
+Pennsauken,+NJ6647	Pennsauken,+NJ4135	10Mbps	10	1ms	100	
+Stockton,+CA6602	Stockton,+CA4064	10Mbps	20	1ms	100	
+Stockton,+CA6602	Stockton,+CA4096	10Mbps	20	1ms	100	
+Pennsauken,+NJ4109	Pennsauken,+NJ4052	10Mbps	20	1ms	100	
+Pennsauken,+NJ4109	Pennsauken,+NJ4117	10Mbps	20	1ms	100	
+Pennsauken,+NJ4109	New+York,+NY4107	10Mbps	60	2ms	100	
+Pennsauken,+NJ4109	Dallas,+TX4015	10Mbps	90	12ms	100	
+Pennsauken,+NJ4109	Pennsauken,+NJ4135	10Mbps	20	1ms	100	
+Pennsauken,+NJ4109	New+York,+NY4116	10Mbps	60	2ms	100	
+Pennsauken,+NJ4109	Pennsauken,+NJ4091	10Mbps	20	1ms	100	
+Pennsauken,+NJ4109	Pennsauken,+NJ6516	10Mbps	30	1ms	100	
+Pennsauken,+NJ4109	Pennsauken,+NJ6614	10Mbps	30	1ms	100	
+Pennsauken,+NJ4109	Pennsauken,+NJ6525	10Mbps	30	1ms	100	
+Pennsauken,+NJ4109	Pennsauken,+NJ6517	10Mbps	20	1ms	100	
+Pennsauken,+NJ4109	Pennsauken,+NJ6448	10Mbps	30	1ms	100	
+Pennsauken,+NJ4109	Stockton,+CA4096	10Mbps	65	21ms	100	
+Pennsauken,+NJ4109	Pennsauken,+NJ6728	10Mbps	20	1ms	100	
+Pennsauken,+NJ4109	Pennsauken,+NJ6754	10Mbps	30	1ms	100	
+Chicago,+IL6724	Chicago,+IL1391	10Mbps	20	1ms	100	
+Dallas,+TX6663	Dallas,+TX2635	10Mbps	20	1ms	100	
+Dallas,+TX6663	Dallas,+TX4080	10Mbps	20	1ms	100	
+Chicago,+IL6651	Chicago,+IL4122	10Mbps	10	1ms	100	
+Amsterdam4072	Amsterdam4030	10Mbps	60	1ms	100	
+Dallas,+TX6737	Dallas,+TX2635	10Mbps	20	1ms	100	
+Dallas,+TX6737	Dallas,+TX4015	10Mbps	20	1ms	100	
+Dallas,+TX6737	Dallas,+TX4080	10Mbps	20	1ms	100	
+Dallas,+TX6737	New+York,+NY4028	10Mbps	50	13ms	100	
+Anaheim,+CA6591	Anaheim,+CA4099	10Mbps	75	1ms	100	
+Stockton,+CA6609	Stockton,+CA4113	10Mbps	45	1ms	100	
+Stockton,+CA6609	Stockton,+CA4096	10Mbps	25	1ms	100	
+Stockton,+CA6609	Stockton,+CA4065	10Mbps	25	1ms	100	
+Stockton,+CA6463	Stockton,+CA4113	10Mbps	35	1ms	100	
+Stockton,+CA6463	Stockton,+CA4064	10Mbps	25	1ms	100	
+Stockton,+CA6463	Stockton,+CA4096	10Mbps	25	1ms	100	
+Stockton,+CA6463	Stockton,+CA4065	10Mbps	25	1ms	100	
+San+Jose,+CA4095	San+Jose,+CA4119	10Mbps	20	1ms	100	
+San+Jose,+CA4095	Stockton,+CA4065	10Mbps	50	2ms	100	
+San+Jose,+CA4095	San+Jose,+CA4112	10Mbps	20	1ms	100	
+San+Jose,+CA4095	San+Jose,+CA6477	10Mbps	10	1ms	100	
+San+Jose,+CA4095	Stockton,+CA4113	10Mbps	60	2ms	100	
+San+Jose,+CA4095	Anaheim,+CA4073	10Mbps	25	4ms	100	
+Kansas+City,+MO4043	Kansas+City,+MO4082	10Mbps	20	1ms	100	
+Kansas+City,+MO4043	Kansas+City,+MO6544	10Mbps	20	1ms	100	
+Kansas+City,+MO4043	Dallas,+TX4015	10Mbps	55	5ms	100	
+Kansas+City,+MO4043	Kansas+City,+MO6472	10Mbps	20	1ms	100	
+Kansas+City,+MO4043	Kansas+City,+MO6458	10Mbps	30	1ms	100	
+Kansas+City,+MO4043	Kansas+City,+MO6750	10Mbps	20	1ms	100	
+Kansas+City,+MO4043	Kansas+City,+MO6395	10Mbps	20	1ms	100	
+Kansas+City,+MO4043	Lees+Summit,+MO5504	10Mbps	10	2ms	100	
+Kansas+City,+MO4043	Kansas+City,+MO6690	10Mbps	20	1ms	100	
+Kansas+City,+MO4043	Seattle,+WA4060	10Mbps	65	14ms	100	
+Dallas,+TX6598	Dallas,+TX2635	10Mbps	35	1ms	100	
+Dallas,+TX6598	Atlanta,+GA6735	10Mbps	70	7ms	100	
+Dallas,+TX6598	Dallas,+TX4015	10Mbps	35	1ms	100	
+Dallas,+TX6598	Dallas,+TX4080	10Mbps	35	1ms	100	
+Dallas,+TX6598	Chicago,+IL6593	10Mbps	60	8ms	100	
+Dallas,+TX6598	New+York,+NY4028	10Mbps	65	13ms	100	
+Dallas,+TX6598	Kansas+City,+MO6458	10Mbps	70	5ms	100	
+Chicago,+IL6586	Chicago,+IL1391	10Mbps	30	1ms	100	
+Atlanta,+GA6735	Atlanta,+GA4074	10Mbps	50	1ms	100	
+Hong+Kong4042	Hong+Kong6421	10Mbps	125	1ms	100	
+Hong+Kong4042	Tokyo4069	10Mbps	45	16ms	100	
+Hong+Kong4042	Tokyo4070	10Mbps	20	16ms	100	
+Relay,+MD4110	New+York,+NY4048	10Mbps	55	3ms	100	
+Relay,+MD4110	Washington,+DC6443	10Mbps	25	2ms	100	
+Relay,+MD4110	Relay,+MD4136	10Mbps	20	1ms	100	
+Relay,+MD4110	Washington,+DC9643	10Mbps	25	2ms	100	
+Relay,+MD4110	Relay,+MD6461	10Mbps	25	1ms	100	
+Relay,+MD4110	Relay,+MD6518	10Mbps	25	1ms	100	
+Relay,+MD4110	Relay,+MD4138	10Mbps	20	1ms	100	
+Relay,+MD4110	Atlanta,+GA4074	10Mbps	40	6ms	100	
+Relay,+MD4110	Relay,+MD4131	10Mbps	20	1ms	100	
+Relay,+MD4110	New+York,+NY4116	10Mbps	75	3ms	100	
+Relay,+MD4110	Washington,+DC4139	10Mbps	25	2ms	100	
+Relay,+MD4110	Relay,+MD6431	10Mbps	25	1ms	100	
+Relay,+MD4110	Washington,+DC4140	10Mbps	25	2ms	100	
+Relay,+MD4110	Relay,+MD6696	10Mbps	25	1ms	100	
+Relay,+MD4110	Relay,+MD6675	10Mbps	25	1ms	100	
+Relay,+MD4110	Relay,+MD4118	10Mbps	20	1ms	100	
+Relay,+MD4110	Relay,+MD4093	10Mbps	20	1ms	100	
+Relay,+MD4110	Relay,+MD6449	10Mbps	25	1ms	100	
+Relay,+MD4110	Relay,+MD5801	10Mbps	30	1ms	100	
+Relay,+MD4110	Washington,+DC6748	10Mbps	25	2ms	100	
+New+York,+NY6446	New+York,+NY4088	10Mbps	30	1ms	100	
+New+York,+NY6446	New+York,+NY4048	10Mbps	20	1ms	100	
+New+York,+NY6446	New+York,+NY4107	10Mbps	30	1ms	100	
+New+York,+NY6446	New+York,+NY4116	10Mbps	30	1ms	100	
+New+York,+NY6446	New+York,+NY6496	10Mbps	25	1ms	100	
+Pennsauken,+NJ6728	Pennsauken,+NJ4052	10Mbps	20	1ms	100	
+Pennsauken,+NJ6728	Pennsauken,+NJ4091	10Mbps	30	1ms	100	
+Relay,+MD4118	Relay,+MD4093	10Mbps	20	1ms	100	
+Relay,+MD4118	Pennsauken,+NJ4091	10Mbps	45	2ms	100	
+Relay,+MD4118	Relay,+MD4054	10Mbps	20	1ms	100	
+Relay,+MD4118	Relay,+MD4127	10Mbps	20	1ms	100	
+Pennsauken,+NJ4117	Pennsauken,+NJ4126	10Mbps	45	1ms	100	
+Pennsauken,+NJ4117	Pennsauken,+NJ4135	10Mbps	20	1ms	100	
+Pennsauken,+NJ4117	Pennsauken,+NJ4091	10Mbps	40	1ms	100	
+Sydney,+Australia6437	Sydney,+Australia4067	10Mbps	40	1ms	100	
+Sydney,+Australia6437	Sydney,+Australia4068	10Mbps	20	1ms	100	
+Anaheim,+CA6744	Anaheim,+CA4099	10Mbps	80	1ms	100	
+Anaheim,+CA6744	Anaheim,+CA4073	10Mbps	30	1ms	100	
+Cheyenne,+WY6413	Cheyenne,+WY4034	10Mbps	20	1ms	100	
+Cheyenne,+WY6413	Atlanta,+GA6530	10Mbps	10	11ms	100	
+Dallas,+TX4133	Anaheim,+CA4099	10Mbps	80	11ms	100	
+Dallas,+TX4133	Dallas,+TX2635	10Mbps	40	1ms	100	
+Chicago,+IL4122	Chicago,+IL1391	10Mbps	20	1ms	100	
+Chicago,+IL4122	Springfield,+MA4025	10Mbps	50	8ms	100	
+Chicago,+IL4122	Chicago,+IL6414	10Mbps	20	1ms	100	
+Chicago,+IL4122	Chicago,+IL6611	10Mbps	20	1ms	100	
+Chicago,+IL4122	Chicago,+IL6621	10Mbps	20	1ms	100	
+Dallas,+TX6749	Dallas,+TX4015	10Mbps	30	1ms	100	
+Dallas,+TX6749	Dallas,+TX4080	10Mbps	30	1ms	100	
+Dallas,+TX6749	New+York,+NY4028	10Mbps	20	13ms	100	
+Stockton,+CA6619	Stockton,+CA4113	10Mbps	45	1ms	100	
+Stockton,+CA6619	Stockton,+CA4096	10Mbps	25	1ms	100	
+Stockton,+CA6619	Stockton,+CA4065	10Mbps	25	1ms	100	
+Chicago,+IL6593	Chicago,+IL1391	10Mbps	20	1ms	100	
+Chicago,+IL6593	Dallas,+TX4080	10Mbps	85	8ms	100	
+Chicago,+IL6595	Chicago,+IL1391	10Mbps	30	1ms	100	
+Chicago,+IL6669	Chicago,+IL1391	10Mbps	20	1ms	100	
+Stockton,+CA6479	Stockton,+CA4113	10Mbps	35	1ms	100	
+Stockton,+CA6479	Stockton,+CA4064	10Mbps	25	1ms	100	
+Stockton,+CA6479	Stockton,+CA4065	10Mbps	25	1ms	100	
+Stockton,+CA6479	Stockton,+CA4096	10Mbps	25	1ms	100	
+Milan,+Italy4085	Frankfurt4040	10Mbps	20	4ms	100	
+Atlanta,+GA6745	Atlanta,+GA4074	10Mbps	20	1ms	100	
+Hamburg,+Germany4081	Copenhagen4077	10Mbps	65	3ms	100	
+Hamburg,+Germany4081	Frankfurt4040	10Mbps	30	4ms	100	
+New+York,+NY6524	New+York,+NY4088	10Mbps	25	1ms	100	
+New+York,+NY6524	New+York,+NY4129	10Mbps	25	1ms	100	
+Relay,+MD4054	Washington,+DC6443	10Mbps	25	2ms	100	
+Relay,+MD4054	Relay,+MD4136	10Mbps	20	1ms	100	
+Relay,+MD4054	Reston,+VA5496	10Mbps	20	2ms	100	
+Relay,+MD4054	New+York,+NY4107	10Mbps	75	3ms	100	
+Relay,+MD4054	Relay,+MD4138	10Mbps	20	1ms	100	
+Relay,+MD4054	Relay,+MD6696	10Mbps	25	1ms	100	
+Relay,+MD4054	New+York,+NY4129	10Mbps	35	3ms	100	
+Relay,+MD4054	Washington,+DC4140	10Mbps	25	2ms	100	
+Relay,+MD4054	Relay,+MD6431	10Mbps	25	1ms	100	
+Relay,+MD4054	Washington,+DC6748	10Mbps	25	2ms	100	
+Relay,+MD4054	Relay,+MD6461	10Mbps	25	1ms	100	
+Relay,+MD4054	Relay,+MD6518	10Mbps	25	1ms	100	
+Relay,+MD4054	Washington,+DC9643	10Mbps	25	2ms	100	
+Relay,+MD4054	Washington,+DC4139	10Mbps	25	2ms	100	
+Relay,+MD4054	Relay,+MD6449	10Mbps	25	1ms	100	
+Relay,+MD4054	Relay,+MD4131	10Mbps	20	1ms	100	
+Relay,+MD4054	Manasquan,+NJ4047	10Mbps	40	3ms	100	
+Relay,+MD4054	Relay,+MD6675	10Mbps	25	1ms	100	
+Relay,+MD4054	Relay,+MD4127	10Mbps	20	1ms	100	
+Relay,+MD4127	Relay,+MD4136	10Mbps	30	1ms	100	
+Relay,+MD4127	Relay,+MD4131	10Mbps	20	1ms	100	
+Relay,+MD4127	Ashburn,+VA10163	10Mbps	20	2ms	100	
+Relay,+MD4127	Relay,+MD4093	10Mbps	20	1ms	100	
+Pennsauken,+NJ4052	Pennsauken,+NJ4126	10Mbps	35	1ms	100	
+Pennsauken,+NJ4052	Pennsauken,+NJ6399	10Mbps	10	1ms	100	
+Pennsauken,+NJ4052	Pennsauken,+NJ4091	10Mbps	20	1ms	100	
+Pennsauken,+NJ4052	New+York,+NY4048	10Mbps	60	2ms	100	
+Pennsauken,+NJ4052	Kansas+City,+MO4082	10Mbps	125	10ms	100	
+Pennsauken,+NJ4052	Pennsauken,+NJ6516	10Mbps	20	1ms	100	
+Pennsauken,+NJ4052	Stockton,+CA4064	10Mbps	75	21ms	100	
+Pennsauken,+NJ4052	Pennsauken,+NJ6517	10Mbps	20	1ms	100	
+Pennsauken,+NJ4052	Pennsauken,+NJ6525	10Mbps	20	1ms	100	
+Pennsauken,+NJ4052	Pennsauken,+NJ6614	10Mbps	20	1ms	100	
+Pennsauken,+NJ4052	Pennsauken,+NJ6448	10Mbps	20	1ms	100	
+Pennsauken,+NJ4052	Pennsauken,+NJ6754	10Mbps	20	1ms	100	
+Pennsauken,+NJ4125	Springfield,+MA4020	10Mbps	20	3ms	100	
+Pennsauken,+NJ4125	Pennsauken,+NJ4091	10Mbps	65	1ms	100	
+Tacoma,+WA6408	Tacoma,+WA6555	10Mbps	20	1ms	100	
+Pennsauken,+NJ4126	Springfield,+MA4020	10Mbps	20	3ms	100	
+Pennsauken,+NJ4126	Pennsauken,+NJ4135	10Mbps	35	1ms	100	
+Pennsauken,+NJ4126	Pennsauken,+NJ4091	10Mbps	55	1ms	100	
+Dallas,+TX6683	Dallas,+TX2635	10Mbps	20	1ms	100	
+Dallas,+TX6683	Dallas,+TX4080	10Mbps	20	1ms	100	
+Anaheim,+CA6684	Anaheim,+CA4073	10Mbps	30	1ms	100	
+Chicago,+IL6747	Chicago,+IL1391	10Mbps	20	1ms	100	
+Anaheim,+CA4073	Anaheim,+CA6464	10Mbps	30	1ms	100	
+Anaheim,+CA4073	Dallas,+TX4015	10Mbps	40	11ms	100	
+Anaheim,+CA4073	Anaheim,+CA6627	10Mbps	30	1ms	100	
+Anaheim,+CA4073	Anaheim,+CA6539	10Mbps	30	1ms	100	
+Anaheim,+CA4073	Anaheim,+CA6556	10Mbps	35	1ms	100	
+Anaheim,+CA4073	Anaheim,+CA6502	10Mbps	35	1ms	100	
+Anaheim,+CA4073	Anaheim,+CA6512	10Mbps	30	1ms	100	
+Anaheim,+CA4073	Anaheim,+CA6520	10Mbps	30	1ms	100	
+Anaheim,+CA4073	Anaheim,+CA6610	10Mbps	10	1ms	100	
+Anaheim,+CA4073	Anaheim,+CA4099	10Mbps	80	1ms	100	
+Anaheim,+CA4073	Anaheim,+CA6702	10Mbps	20	1ms	100	
+Anaheim,+CA4073	Anaheim,+CA6453	10Mbps	30	1ms	100	
+Anaheim,+CA4073	Anaheim,+CA6438	10Mbps	35	1ms	100	
+Dallas,+TX6689	Dallas,+TX2635	10Mbps	30	1ms	100	
+Dallas,+TX6689	Dallas,+TX4015	10Mbps	20	1ms	100	
+Dallas,+TX6689	Dallas,+TX4080	10Mbps	30	1ms	100	
+Dallas,+TX6689	New+York,+NY4028	10Mbps	30	13ms	100	
+Dallas,+TX1742	Dallas,+TX2635	10Mbps	30	1ms	100	
+Dallas,+TX1742	Dallas,+TX4015	10Mbps	30	1ms	100	
+Dallas,+TX1742	Dallas,+TX4080	10Mbps	30	1ms	100	
+Dallas,+TX1742	New+York,+NY4028	10Mbps	20	13ms	100	
+New+York,+NY6605	New+York,+NY6606	10Mbps	30	1ms	100	
+New+York,+NY6605	New+York,+NY4124	10Mbps	20	1ms	100	
+New+York,+NY6605	New+York,+NY4116	10Mbps	20	1ms	100	
+New+York,+NY6532	New+York,+NY4088	10Mbps	25	1ms	100	
+New+York,+NY6532	New+York,+NY4048	10Mbps	25	1ms	100	
+New+York,+NY6532	New+York,+NY4107	10Mbps	25	1ms	100	
+New+York,+NY6532	New+York,+NY4116	10Mbps	25	1ms	100	
+Atlanta,+GA6685	Atlanta,+GA4074	10Mbps	20	1ms	100	
+New+York,+NY6606	New+York,+NY4116	10Mbps	30	1ms	100	
+New+York,+NY6606	New+York,+NY4124	10Mbps	30	1ms	100	
+Atlanta,+GA4074	Orlando,+FL4049	10Mbps	40	5ms	100	
+Atlanta,+GA4074	Dallas,+TX4015	10Mbps	55	7ms	100	
+Atlanta,+GA4074	Atlanta,+GA6540	10Mbps	20	1ms	100	
+Atlanta,+GA4074	Atlanta,+GA6465	10Mbps	20	1ms	100	
+Atlanta,+GA4074	Atlanta,+GA6481	10Mbps	20	1ms	100	
+Atlanta,+GA4074	Atlanta,+GA6628	10Mbps	20	1ms	100	
+Atlanta,+GA4074	New+York,+NY4088	10Mbps	65	8ms	100	
+Atlanta,+GA4074	Atlanta,+GA3957	10Mbps	20	1ms	100	
+Atlanta,+GA4074	Atlanta,+GA2344	10Mbps	20	1ms	100	
+Atlanta,+GA4074	Atlanta,+GA2338	10Mbps	20	1ms	100	
+Atlanta,+GA4074	Atlanta,+GA2347	10Mbps	20	1ms	100	
+Atlanta,+GA4074	Orlando,+FL4050	10Mbps	35	5ms	100	
+Relay,+MD4131	Relay,+MD4136	10Mbps	20	1ms	100	
+Relay,+MD4131	New+York,+NY6397	10Mbps	90	3ms	100	
+Relay,+MD4131	Ashburn,+VA10162	10Mbps	10	2ms	100	
+Relay,+MD4131	Relay,+MD4093	10Mbps	20	1ms	100	
+Paris4051	Paris4090	10Mbps	20	1ms	100	
+Paris4051	Frankfurt4079	10Mbps	20	4ms	100	
+Relay,+MD6675	Relay,+MD4093	10Mbps	25	1ms	100	
+Relay,+MD4136	Ashburn,+VA10163	10Mbps	20	2ms	100	
+Relay,+MD4136	Relay,+MD5801	10Mbps	20	1ms	100	
+New+York,+NY6397	New+York,+NY4088	10Mbps	25	1ms	100	
+New+York,+NY6397	New+York,+NY4048	10Mbps	25	1ms	100	
+New+York,+NY6397	New+York,+NY4107	10Mbps	25	1ms	100	
+New+York,+NY6397	New+York,+NY4116	10Mbps	25	1ms	100	
+Pennsauken,+NJ4135	New+York,+NY4028	10Mbps	110	2ms	100	
+Pennsauken,+NJ4135	Relay,+MD4093	10Mbps	85	2ms	100	
+Pennsauken,+NJ4135	Pennsauken,+NJ4091	10Mbps	20	1ms	100	
+Relay,+MD4138	Ashburn,+VA10161	10Mbps	10	2ms	100	
+Relay,+MD4138	Relay,+MD4093	10Mbps	20	1ms	100	
+Kansas+City,+MO6750	Kansas+City,+MO4082	10Mbps	20	1ms	100	
+Stockton,+CA6563	Stockton,+CA4113	10Mbps	45	1ms	100	
+Stockton,+CA6563	Stockton,+CA4064	10Mbps	25	1ms	100	
+Stockton,+CA6563	Stockton,+CA4096	10Mbps	25	1ms	100	
+Stockton,+CA6563	Stockton,+CA4065	10Mbps	25	1ms	100	
+Dallas,+TX4080	Richardson,+TX5500	10Mbps	20	2ms	100	
+Dallas,+TX4080	San+Jose,+CA4119	10Mbps	75	13ms	100	
+Dallas,+TX4080	Dallas,+TX6604	10Mbps	30	1ms	100	
+Dallas,+TX4080	Dallas,+TX6622	10Mbps	30	1ms	100	
+Dallas,+TX4080	Dallas,+TX6444	10Mbps	20	1ms	100	
+Dallas,+TX4080	Dallas,+TX4015	10Mbps	20	1ms	100	
+Dallas,+TX4080	Dallas,+TX6483	10Mbps	30	1ms	100	
+Dallas,+TX4080	New+York,+NY4028	10Mbps	40	13ms	100	
+Dallas,+TX4080	Dallas,+TX6558	10Mbps	20	1ms	100	
+Dallas,+TX4080	Kansas+City,+MO4082	10Mbps	55	5ms	100	
+Dallas,+TX4080	Dallas,+TX2635	10Mbps	20	1ms	100	
+Dallas,+TX4080	Anaheim,+CA6502	10Mbps	75	11ms	100	
+Dallas,+TX4080	Dallas,+TX6504	10Mbps	40	1ms	100	
+Dallas,+TX4080	Dallas,+TX3549	10Mbps	20	1ms	100	
+Dallas,+TX4080	Anaheim,+CA4099	10Mbps	120	11ms	100	
+Dallas,+TX4080	Dallas,+TX6612	10Mbps	20	1ms	100	
+Dallas,+TX4080	Dallas,+TX6419	10Mbps	30	1ms	100	
+Dallas,+TX4080	Chicago,+IL6441	10Mbps	75	8ms	100	
+Dallas,+TX4080	Dallas,+TX6471	10Mbps	20	1ms	100	
+Dallas,+TX4080	Dallas,+TX6706	10Mbps	25	1ms	100	
+Brussels,+Belgium4075	Amsterdam4030	10Mbps	20	2ms	100	
+Stockton,+CA6569	Stockton,+CA4113	10Mbps	35	1ms	100	
+Stockton,+CA6569	Stockton,+CA4064	10Mbps	25	1ms	100	
+Stockton,+CA6569	Stockton,+CA4096	10Mbps	25	1ms	100	
+Stockton,+CA6569	Stockton,+CA4065	10Mbps	25	1ms	100	
+Orlando,+FL4108	Orlando,+FL4089	10Mbps	20	1ms	100	
+Orlando,+FL4108	Orlando,+FL4049	10Mbps	30	1ms	100	
+Orlando,+FL4108	Orlando,+FL6429	10Mbps	40	1ms	100	
+Orlando,+FL4108	Orlando,+FL4050	10Mbps	35	1ms	100	
+Orlando,+FL4108	Orlando,+FL6693	10Mbps	45	1ms	100	
+Pennsauken,+NJ6754	Pennsauken,+NJ4091	10Mbps	30	1ms	100	
+Seattle,+WA4059	Seattle,+WA6432	10Mbps	30	1ms	100	
+Seattle,+WA4059	Seattle,+WA4060	10Mbps	20	1ms	100	
+Washington,+DC6736	Washington,+DC6443	10Mbps	30	1ms	100	
+Washington,+DC6736	Washington,+DC9643	10Mbps	40	1ms	100	
+Washington,+DC6736	Washington,+DC4139	10Mbps	30	1ms	100	
+Washington,+DC6736	Washington,+DC4140	10Mbps	30	1ms	100	
+Washington,+DC6736	Washington,+DC4142	10Mbps	20	1ms	100	
+Washington,+DC6736	Washington,+DC6748	10Mbps	30	1ms	100	
+Kansas+City,+MO6690	Kansas+City,+MO4082	10Mbps	20	1ms	100	
+Kansas+City,+MO6690	Kansas+City,+MO6472	10Mbps	20	1ms	100	
+Kansas+City,+MO6690	Dallas,+TX4015	10Mbps	95	5ms	100	
+Stockton,+CA6719	Stockton,+CA4113	10Mbps	35	1ms	100	
+Stockton,+CA6719	Stockton,+CA4064	10Mbps	25	1ms	100	
+Stockton,+CA6719	Stockton,+CA4096	10Mbps	25	1ms	100	
+Stockton,+CA6719	Stockton,+CA4065	10Mbps	25	1ms	100	
+Kansas+City,+MO4082	Kansas+City,+MO6544	10Mbps	20	1ms	100	
+Kansas+City,+MO4082	Kansas+City,+MO6472	10Mbps	20	1ms	100	
+Kansas+City,+MO4082	Kansas+City,+MO6458	10Mbps	30	1ms	100	
+Kansas+City,+MO4082	Kansas+City,+MO6395	10Mbps	20	1ms	100	
+Kansas+City,+MO4082	Lees+Summit,+MO5503	10Mbps	10	2ms	100	
+Kansas+City,+MO4082	Kansas+City,+MO6422	10Mbps	25	1ms	100	
+Kansas+City,+MO4082	Lees+Summit,+MO5505	10Mbps	10	2ms	100	
+Stockton,+CA6577	Stockton,+CA4113	10Mbps	25	1ms	100	
+Stockton,+CA6577	Stockton,+CA4064	10Mbps	35	1ms	100	
+Stockton,+CA6577	Stockton,+CA4096	10Mbps	25	1ms	100	
+Stockton,+CA6577	Stockton,+CA4065	10Mbps	25	1ms	100	
+Dallas,+TX2635	Dallas,+TX6604	10Mbps	40	1ms	100	
+Dallas,+TX2635	Dallas,+TX6444	10Mbps	30	1ms	100	
+Dallas,+TX2635	Dallas,+TX6622	10Mbps	30	1ms	100	
+Dallas,+TX2635	Dallas,+TX4015	10Mbps	20	1ms	100	
+Dallas,+TX2635	Dallas,+TX6483	10Mbps	30	1ms	100	
+Dallas,+TX2635	New+York,+NY4028	10Mbps	40	13ms	100	
+Dallas,+TX2635	Dallas,+TX6504	10Mbps	30	1ms	100	
+Dallas,+TX2635	Anaheim,+CA4099	10Mbps	100	11ms	100	
+Dallas,+TX2635	Dallas,+TX3549	10Mbps	30	1ms	100	
+Dallas,+TX2635	Dallas,+TX6612	10Mbps	20	1ms	100	
+Dallas,+TX2635	Dallas,+TX6419	10Mbps	30	1ms	100	
+Dallas,+TX2635	Dallas,+TX6471	10Mbps	20	1ms	100	
+Dallas,+TX2635	Dallas,+TX6706	10Mbps	25	1ms	100	
+Washington,+DC9643	Washington,+DC6415	10Mbps	30	1ms	100	
+Washington,+DC9643	Relay,+MD4093	10Mbps	25	2ms	100	
+Pearl+Harbor,+HI6550	Pearl+Harbor,+HI4053	10Mbps	75	1ms	100	
+Anaheim,+CA4099	Anaheim,+CA6627	10Mbps	80	1ms	100	
+Anaheim,+CA4099	Anaheim,+CA6539	10Mbps	80	1ms	100	
+Anaheim,+CA4099	Anaheim,+CA6556	10Mbps	75	1ms	100	
+Anaheim,+CA4099	Anaheim,+CA6502	10Mbps	75	1ms	100	
+Anaheim,+CA4099	Anaheim,+CA6512	10Mbps	90	1ms	100	
+Anaheim,+CA4099	Anaheim,+CA6520	10Mbps	90	1ms	100	
+Anaheim,+CA4099	Anaheim,+CA6702	10Mbps	80	1ms	100	
+Anaheim,+CA4099	Anaheim,+CA6453	10Mbps	90	1ms	100	
+Anaheim,+CA4099	Anaheim,+CA6438	10Mbps	75	1ms	100	
+Copenhagen4038	Copenhagen4077	10Mbps	20	1ms	100	
+Copenhagen4038	Stockholm,+Sweden4066	10Mbps	50	4ms	100	
+Dallas,+TX6419	Dallas,+TX4015	10Mbps	30	1ms	100	
+Dallas,+TX6419	New+York,+NY4028	10Mbps	20	13ms	100	
+Seattle,+WA4060	Seattle,+WA6432	10Mbps	20	1ms	100	
+Orlando,+FL4049	Orlando,+FL6429	10Mbps	20	1ms	100	
+Orlando,+FL4049	Orlando,+FL4089	10Mbps	30	1ms	100	
+Orlando,+FL4049	Dallas,+TX4015	10Mbps	75	9ms	100	
+Orlando,+FL4049	Orlando,+FL6693	10Mbps	25	1ms	100	
+New+York,+NY4017	New+York,+NY4048	10Mbps	25	1ms	100	
+New+York,+NY4017	London4045	10Mbps	90	29ms	100	
+New+York,+NY4017	New+York,+NY4134	10Mbps	25	1ms	100	
+New+York,+NY6559	New+York,+NY4088	10Mbps	30	1ms	100	
+New+York,+NY6559	New+York,+NY4048	10Mbps	20	1ms	100	
+New+York,+NY6559	New+York,+NY4107	10Mbps	30	1ms	100	
+New+York,+NY6559	New+York,+NY4116	10Mbps	30	1ms	100	
+Relay,+MD6696	Relay,+MD4093	10Mbps	25	1ms	100	
+Stockton,+CA4113	Stockton,+CA6407	10Mbps	35	1ms	100	
+Stockton,+CA4113	Pennsauken,+NJ4091	10Mbps	85	21ms	100	
+Stockton,+CA4113	Stockton,+CA6590	10Mbps	35	1ms	100	
+Stockton,+CA4113	Stockton,+CA3402	10Mbps	60	1ms	100	
+Stockton,+CA4113	Stockton,+CA6583	10Mbps	30	1ms	100	
+Stockton,+CA4113	Stockton,+CA6758	10Mbps	45	1ms	100	
+Stockton,+CA4113	Stockton,+CA4096	10Mbps	30	1ms	100	
+Washington,+DC6748	Washington,+DC6415	10Mbps	20	1ms	100	
+Washington,+DC6748	Relay,+MD4093	10Mbps	25	2ms	100	
+Frankfurt4040	Frankfurt4079	10Mbps	20	1ms	100	
+Stockton,+CA6583	Stockton,+CA4064	10Mbps	30	1ms	100	
+Stockton,+CA6583	Stockton,+CA4096	10Mbps	30	1ms	100	
+Stockton,+CA6583	Stockton,+CA4065	10Mbps	30	1ms	100	
+Springfield,+MA4020	Springfield,+MA4023	10Mbps	25	1ms	100	
+Springfield,+MA4020	Boston5499	10Mbps	25	2ms	100	
+Springfield,+MA4020	Springfield,+MA4025	10Mbps	30	1ms	100	
+Springfield,+MA4020	Springfield,+MA6406	10Mbps	20	1ms	100	
+Springfield,+MA4020	New+York,+NY4137	10Mbps	75	2ms	100	
+Cheyenne,+WY6455	Cheyenne,+WY4034	10Mbps	20	1ms	100	
+Washington,+DC4139	Washington,+DC6415	10Mbps	20	1ms	100	
+Washington,+DC4139	Relay,+MD4093	10Mbps	25	2ms	100	
+Springfield,+MA4023	Boston5509	10Mbps	20	2ms	100	
+Springfield,+MA4023	Springfield,+MA4025	10Mbps	25	1ms	100	
+Springfield,+MA4023	Pennsauken,+NJ4091	10Mbps	40	3ms	100	
+Springfield,+MA4023	Springfield,+MA6406	10Mbps	25	1ms	100	
+Cheyenne,+WY6388	Cheyenne,+WY4034	10Mbps	20	1ms	100	
+Orlando,+FL4050	Orlando,+FL6429	10Mbps	35	1ms	100	
+Orlando,+FL4050	Orlando,+FL4089	10Mbps	45	1ms	100	
+Orlando,+FL4050	Dallas,+TX4015	10Mbps	90	9ms	100	
+Orlando,+FL4050	Orlando,+FL6693	10Mbps	70	1ms	100	
+Stockholm,+Sweden4066	Stockholm,+Sweden4097	10Mbps	20	1ms	100	
+Chicago,+IL6414	Chicago,+IL1391	10Mbps	30	1ms	100	
+New+York,+NY4022	New+York,+NY4048	10Mbps	35	1ms	100	
+New+York,+NY4024	New+York,+NY4048	10Mbps	20	1ms	100	
+New+York,+NY4024	New+York,+NY4134	10Mbps	20	1ms	100	
+Reston,+VA5496	Reston,+VA5497	10Mbps	30	1ms	100	
+Reston,+VA5497	Relay,+MD4093	10Mbps	20	2ms	100	
+New+York,+NY4028	Dallas,+TX4015	10Mbps	40	13ms	100	
+New+York,+NY4028	Dallas,+TX6483	10Mbps	20	13ms	100	
+New+York,+NY4028	Orlando,+FL4089	10Mbps	85	9ms	100	
+New+York,+NY4028	Chicago,+IL1391	10Mbps	75	7ms	100	
+New+York,+NY4028	Dallas,+TX6504	10Mbps	20	13ms	100	
+New+York,+NY4028	Dallas,+TX3549	10Mbps	30	13ms	100	
+New+York,+NY4028	Dallas,+TX6604	10Mbps	20	13ms	100	
+New+York,+NY4028	Dallas,+TX6612	10Mbps	30	13ms	100	
+New+York,+NY4028	Dallas,+TX6622	10Mbps	20	13ms	100	
+New+York,+NY4028	Dallas,+TX6444	10Mbps	30	13ms	100	
+New+York,+NY4028	Dallas,+TX6706	10Mbps	25	13ms	100	
+New+York,+NY4028	Dallas,+TX6471	10Mbps	30	13ms	100	
+New+York,+NY6496	New+York,+NY4088	10Mbps	25	1ms	100	
+New+York,+NY6496	New+York,+NY4048	10Mbps	25	1ms	100	
+New+York,+NY6496	New+York,+NY4107	10Mbps	25	1ms	100	
+New+York,+NY6496	New+York,+NY4116	10Mbps	25	1ms	100	
+Boston5509	Boston5499	10Mbps	30	1ms	100	
+Relay,+MD4093	Washington,+DC6443	10Mbps	25	2ms	100	
+Relay,+MD4093	Relay,+MD6431	10Mbps	25	1ms	100	
+Relay,+MD4093	Washington,+DC4140	10Mbps	25	2ms	100	
+Relay,+MD4093	Washington,+DC4142	10Mbps	35	2ms	100	
+Relay,+MD4093	Relay,+MD6518	10Mbps	25	1ms	100	
+Relay,+MD4093	Relay,+MD6461	10Mbps	25	1ms	100	
+Relay,+MD4093	Relay,+MD6449	10Mbps	25	1ms	100	
+Relay,+MD4093	San+Jose,+CA4112	10Mbps	60	21ms	100	
+Pennsauken,+NJ4091	New+York,+NY4124	10Mbps	60	2ms	100	
+Pennsauken,+NJ4091	Pennsauken,+NJ6516	10Mbps	30	1ms	100	
+Pennsauken,+NJ4091	Pennsauken,+NJ6614	10Mbps	30	1ms	100	
+Pennsauken,+NJ4091	Pennsauken,+NJ6525	10Mbps	30	1ms	100	
+Pennsauken,+NJ4091	Stockton,+CA4065	10Mbps	75	21ms	100	
+Pennsauken,+NJ4091	Pennsauken,+NJ6448	10Mbps	30	1ms	100	
+Washington,+DC4140	Washington,+DC6415	10Mbps	20	1ms	100	
+Washington,+DC4142	Washington,+DC6415	10Mbps	20	1ms	100	
+Stockton,+CA6590	Stockton,+CA4064	10Mbps	25	1ms	100	
+Stockton,+CA6590	Stockton,+CA4096	10Mbps	25	1ms	100	
+Stockton,+CA6590	Stockton,+CA4065	10Mbps	25	1ms	100	
+Tokyo4069	Stockton,+CA4064	10Mbps	70	44ms	100	
+Tokyo4069	Tokyo4070	10Mbps	25	1ms	100	
+Dallas,+TX6504	Dallas,+TX4015	10Mbps	30	1ms	100	
+Hong+Kong6421	Stockton,+CA4096	10Mbps	20	57ms	100	
+New+York,+NY4107	New+York,+NY4088	10Mbps	20	1ms	100	
+New+York,+NY4107	New+York,+NY4116	10Mbps	20	1ms	100	
+New+York,+NY4107	New+York,+NY4134	10Mbps	20	1ms	100	
+New+York,+NY4107	New+York,+NY4048	10Mbps	20	1ms	100	
+Paris4090	London4044	10Mbps	20	3ms	100	
+Stockton,+CA3402	Stockton,+CA4064	10Mbps	50	1ms	100	
+Stockton,+CA3402	Stockton,+CA4065	10Mbps	50	1ms	100	
+Stockton,+CA3402	Stockton,+CA4096	10Mbps	50	1ms	100	
+Stockton,+CA3402	Anaheim,+CA6512	10Mbps	65	4ms	100	
+Tokyo4070	Tokyo4071	10Mbps	20	1ms	100	
+Tokyo4070	Singapore4094	10Mbps	20	28ms	100	
+Cheyenne,+WY6542	Cheyenne,+WY4034	10Mbps	20	1ms	100	
+Tokyo4071	Singapore4094	10Mbps	50	28ms	100	
+Tokyo4071	Stockton,+CA4064	10Mbps	75	44ms	100	
+Stockton,+CA4064	Stockton,+CA6407	10Mbps	25	1ms	100	
+Stockton,+CA4064	San+Jose,+CA4119	10Mbps	50	2ms	100	
+Stockton,+CA4064	Pearl+Harbor,+HI4053	10Mbps	30	21ms	100	
+Stockton,+CA4064	Stockton,+CA6758	10Mbps	25	1ms	100	
+Stockton,+CA4064	Sydney,+Australia4068	10Mbps	20	62ms	100	
+Stockton,+CA4064	Stockton,+CA4096	10Mbps	20	1ms	100	
+Stockton,+CA4065	Stockton,+CA6407	10Mbps	25	1ms	100	
+Stockton,+CA4065	Pearl+Harbor,+HI4053	10Mbps	50	21ms	100	
+Stockton,+CA4065	Stockton,+CA6758	10Mbps	25	1ms	100	
+Stockton,+CA4065	Stockton,+CA4096	10Mbps	20	1ms	100	
+Dallas,+TX6444	Dallas,+TX4015	10Mbps	30	1ms	100	
+New+York,+NY4116	New+York,+NY4088	10Mbps	20	1ms	100	
+New+York,+NY4116	New+York,+NY4124	10Mbps	20	1ms	100	
+New+York,+NY4116	New+York,+NY4137	10Mbps	20	1ms	100	
+New+York,+NY4048	New+York,+NY6751	10Mbps	20	1ms	100	
+New+York,+NY4048	New+York,+NY6752	10Mbps	20	1ms	100	
+New+York,+NY4048	New+York,+NY4134	10Mbps	20	1ms	100	
+New+York,+NY4048	New+York,+NY4137	10Mbps	20	1ms	100	
+New+York,+NY4048	New+York,+NY4088	10Mbps	20	1ms	100	
+New+York,+NY4048	Manasquan,+NJ4047	10Mbps	45	2ms	100	
+Santa+Clara,+CA5508	San+Jose,+CA4119	10Mbps	10	2ms	100	
+Stockton,+CA6758	Stockton,+CA4096	10Mbps	25	1ms	100	
+Cheyenne,+WY6629	Cheyenne,+WY4034	10Mbps	20	1ms	100	
+Dallas,+TX3549	Dallas,+TX4015	10Mbps	20	1ms	100	
+Washington,+DC6415	Washington,+DC6443	10Mbps	20	1ms	100	
+Chicago,+IL6441	Chicago,+IL1391	10Mbps	30	1ms	100	
+Orlando,+FL6693	Orlando,+FL4089	10Mbps	35	1ms	100	
+Orlando,+FL6693	Atlanta,+GA2347	10Mbps	45	5ms	100	
+Stockholm,+Sweden4097	Copenhagen4077	10Mbps	20	4ms	100	
+Copenhagen4077	London4044	10Mbps	25	6ms	100	
+London4044	London4045	10Mbps	35	1ms	100	
+London4044	Dublin,+Ireland4039	10Mbps	10	4ms	100	
+Richardson,+TX5500	Dallas,+TX4015	10Mbps	40	2ms	100	
+New+York,+NY4124	New+York,+NY4137	10Mbps	20	1ms	100	
+New+York,+NY4124	New+York,+NY4129	10Mbps	20	1ms	100	
+New+York,+NY4124	New+York,+NY4088	10Mbps	20	1ms	100	
+New+York,+NY4124	New+York,+NY4134	10Mbps	20	1ms	100	
+Pearl+Harbor,+HI4053	Pearl+Harbor,+HI6400	10Mbps	80	1ms	100	
+Pearl+Harbor,+HI4053	Stockton,+CA4096	10Mbps	30	21ms	100	
+New+York,+NY4129	New+York,+NY4137	10Mbps	20	1ms	100	
+New+York,+NY4129	New+York,+NY4134	10Mbps	20	1ms	100	
+Orlando,+FL4089	Orlando,+FL6429	10Mbps	30	1ms	100	
+Dallas,+TX6604	Dallas,+TX4015	10Mbps	40	1ms	100	
+Stockton,+CA6407	Stockton,+CA4096	10Mbps	25	1ms	100	
+New+York,+NY4134	New+York,+NY4137	10Mbps	20	1ms	100	
+New+York,+NY4134	New+York,+NY6751	10Mbps	20	1ms	100	
+New+York,+NY4134	New+York,+NY6752	10Mbps	20	1ms	100	
+Cheyenne,+WY4034	Cheyenne,+WY2439	10Mbps	20	1ms	100	
+Cheyenne,+WY4034	Cheyenne,+WY6723	10Mbps	20	1ms	100	
+San+Jose,+CA4112	Stockton,+CA4096	10Mbps	50	2ms	100	
+San+Jose,+CA4112	San+Jose,+CA4132	10Mbps	40	1ms	100	
+Dallas,+TX6612	Dallas,+TX4015	10Mbps	20	1ms	100	
+Stockton,+CA4096	Sydney,+Australia4068	10Mbps	20	62ms	100	
+Stockton,+CA4096	San+Jose,+CA4132	10Mbps	30	2ms	100	
+Chicago,+IL6603	Chicago,+IL1391	10Mbps	20	1ms	100	
+Chicago,+IL6531	Chicago,+IL1391	10Mbps	30	1ms	100	
+Dallas,+TX6471	Dallas,+TX4015	10Mbps	20	1ms	100	
+San+Jose,+CA4119	San+Jose,+CA4132	10Mbps	40	1ms	100	
+Tacoma,+WA6701	Roachdale,+IN6552	10Mbps	130	16ms	100	
+Chicago,+IL6468	Chicago,+IL1391	10Mbps	30	1ms	100	
+Dallas,+TX6622	Dallas,+TX4015	10Mbps	30	1ms	100	
+Chicago,+IL6611	Chicago,+IL1391	10Mbps	20	1ms	100	
+Dallas,+TX4015	Dallas,+TX6483	10Mbps	30	1ms	100	
+Dallas,+TX4015	Dallas,+TX6558	10Mbps	20	1ms	100	
+Dallas,+TX4015	Dallas,+TX6706	10Mbps	25	1ms	100	
+Chicago,+IL1391	Chicago,+IL6621	10Mbps	20	1ms	100	
+San+Jose,+CA6742	San+Jose,+CA4132	10Mbps	20	1ms	100	
