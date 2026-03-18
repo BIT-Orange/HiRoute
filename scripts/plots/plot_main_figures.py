@@ -19,31 +19,38 @@ os.environ.setdefault("MPLCONFIGDIR", str(CACHE_ROOT / "matplotlib"))
 os.environ.setdefault("XDG_CACHE_HOME", str(CACHE_ROOT))
 
 import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-from scripts.eval.eval_support import aggregate_output_path, figure_output_path, is_v3_experiment, load_experiment
+from scripts.eval.eval_support import (
+    aggregate_output_path,
+    declared_output_filenames,
+    figure_output_path,
+    is_v3_experiment,
+    load_experiment,
+)
 from tools.workflow_support import repo_root
 
 
 COLORS = {
     "exact": "#2b2b2b",
-    "flood": "#c94c3c",
-    "flat": "#e4a52b",
-    "flat_iroute": "#e4a52b",
-    "inf_tag_forwarding": "#7a8c2f",
-    "central_directory": "#2f7d57",
-    "oracle": "#2f7d57",
+    "flat": "#6f8396",
+    "flat_iroute": "#6f8396",
+    "inf_tag_forwarding": "#d98a3a",
+    "flood": "#4a4a4a",
     "hiroute": "#2451a4",
-    "predicates_only": "#b85c38",
-    "flat_semantic_only": "#8c6a16",
-    "predicates_plus_flat": "#4f7f2b",
+    "central_directory": "#1f5f46",
+    "oracle": "#1f5f46",
+    "predicates_only": "#8e5a3c",
+    "flat_semantic_only": "#c79a3a",
+    "predicates_plus_flat": "#5f8773",
     "full_hiroute": "#2451a4",
 }
 
 FAILURE_COLORS = {
     "predicate_miss": "#b7b7b7",
-    "wrong_domain": "#d97a3a",
+    "wrong_domain": "#d98a3a",
     "wrong_object": "#c94c3c",
     "no_reply": "#7c5aa6",
     "fetch_timeout": "#4f7fbe",
@@ -52,20 +59,31 @@ FAILURE_COLORS = {
 
 SCHEME_LABELS = {
     "exact": "Exact name",
-    "flood": "Flood",
     "flat": "Flat iRoute",
     "flat_iroute": "Flat iRoute",
     "inf_tag_forwarding": "INF-style tags",
+    "flood": "Flood",
+    "hiroute": "HiRoute",
     "central_directory": "Central directory",
     "oracle": "Central directory",
-    "hiroute": "HiRoute",
     "predicates_only": "Predicates only",
     "flat_semantic_only": "Flat semantic only",
     "predicates_plus_flat": "Predicates + flat",
     "full_hiroute": "Full HiRoute",
 }
 
+MARKERS = {
+    "flat_iroute": "o",
+    "inf_tag_forwarding": "s",
+    "flood": "^",
+    "hiroute": "D",
+    "central_directory": "P",
+    "oracle": "P",
+}
+
 MAIN_SCHEME_ORDER = ["flat_iroute", "inf_tag_forwarding", "flood", "hiroute", "central_directory", "oracle"]
+COMPACT_ROUTING_ORDER = ["flat_iroute", "inf_tag_forwarding", "hiroute", "central_directory"]
+COMPACT_ABLATION_ORDER = ["predicates_only", "flat_semantic_only", "predicates_plus_flat", "full_hiroute"]
 FAILURE_ORDER = ["predicate_miss", "wrong_domain", "wrong_object", "no_reply", "fetch_timeout", "success"]
 
 SHRINKAGE_STAGE_ORDER = [
@@ -76,6 +94,13 @@ SHRINKAGE_STAGE_ORDER = [
     "refined_cells",
     "probed_cells",
     "manifest_candidates",
+]
+
+FIG4_STAGE_ORDER = [
+    "all_domains",
+    "predicate_filtered_domains",
+    "refined_cells",
+    "probed_cells",
 ]
 
 SHRINKAGE_STAGE_LABELS = {
@@ -101,10 +126,13 @@ def _read_csv(path: Path) -> pd.DataFrame:
     return pd.read_csv(path)
 
 
-def _save(fig: plt.Figure, filename: str) -> None:
+def _save(fig: plt.Figure, filename: str, rect: tuple[float, float, float, float] | None = None) -> None:
     output_path = _figure_path(filename)
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    fig.tight_layout()
+    if rect is None:
+        fig.tight_layout()
+    else:
+        fig.tight_layout(rect=rect)
     fig.savefig(output_path, format="pdf", bbox_inches="tight")
     plt.close(fig)
 
@@ -140,7 +168,191 @@ def _figure_path(filename: str) -> Path:
     return repo_root() / "results" / "figures" / filename
 
 
+def _output_filenames() -> set[str]:
+    if CURRENT_EXPERIMENT is None:
+        return set()
+    return declared_output_filenames(CURRENT_EXPERIMENT)
+
+
+def _ablation_filename() -> str:
+    outputs = _output_filenames()
+    if "fig_ablation_summary.pdf" in outputs:
+        return "fig_ablation_summary.pdf"
+    return "fig_ablation.pdf"
+
+
+def _selected_budget(default: int = 16) -> int:
+    if CURRENT_EXPERIMENT is None:
+        return default
+    selected = int(CURRENT_EXPERIMENT.get("default_budget") or 0)
+    return selected or default
+
+
+def _selected_manifest(default: int = 1) -> int:
+    if CURRENT_EXPERIMENT is None:
+        return default
+    selected = int(CURRENT_EXPERIMENT.get("default_manifest_size") or 0)
+    return selected or default
+
+
+def _is_experiment(*experiment_ids: str) -> bool:
+    if CURRENT_EXPERIMENT is None:
+        return False
+    return str(CURRENT_EXPERIMENT.get("experiment_id", "")) in set(experiment_ids)
+
+
+def _ordered_rows(frame: pd.DataFrame, order: list[str], column: str = "scheme") -> pd.DataFrame:
+    if frame.empty:
+        return frame
+    frame = frame.copy()
+    rank = {value: index for index, value in enumerate(order)}
+    frame["_order"] = frame[column].map(rank).fillna(len(order)).astype(int)
+    frame = frame.sort_values(["_order", column]).drop(columns="_order")
+    return frame
+
+
+def _add_panel_label(axis: plt.Axes, label: str) -> None:
+    axis.text(
+        -0.15,
+        1.05,
+        label,
+        transform=axis.transAxes,
+        fontsize=11,
+        fontweight="bold",
+        va="top",
+        ha="left",
+    )
+
+
+def _bar_panel(axis: plt.Axes, labels: list[str], values: list[float], errors: list[float], colors: list[str], ylabel: str) -> None:
+    x_positions = list(range(len(labels)))
+    axis.bar(
+        x_positions,
+        values,
+        yerr=errors,
+        color=colors,
+        alpha=0.92,
+        capsize=3,
+        width=0.68,
+        linewidth=0,
+    )
+    axis.set_xticks(x_positions)
+    axis.set_xticklabels(labels, rotation=16, ha="right")
+    axis.set_ylabel(ylabel)
+    axis.grid(axis="y", alpha=0.22)
+    axis.set_axisbelow(True)
+
+
+def _line_panel(
+    axis: plt.Axes,
+    frame: pd.DataFrame,
+    schemes: list[str],
+    x_column: str,
+    y_column: str,
+    yerr_column: str | None,
+    ylabel: str,
+    xlabel: str,
+) -> None:
+    for scheme in schemes:
+        group = frame[frame["scheme"] == scheme].sort_values(x_column)
+        if group.empty:
+            continue
+        axis.errorbar(
+            group[x_column],
+            group[y_column],
+            yerr=group[yerr_column] if yerr_column and yerr_column in group.columns else None,
+            color=_scheme_color(scheme),
+            marker=MARKERS.get(scheme, "o"),
+            linewidth=2.0,
+            markersize=5.5,
+            capsize=3,
+            label=_scheme_label(scheme),
+        )
+    axis.set_xlabel(xlabel)
+    axis.set_ylabel(ylabel)
+    axis.grid(alpha=0.22)
+    axis.set_axisbelow(True)
+
+
+def _plot_compact_routing_support() -> None:
+    main_frame = _read_csv(_aggregate_path("main_success_overhead.csv"))
+    stage_frame = _read_csv(_aggregate_path("candidate_shrinkage.csv"))
+    if main_frame.empty or stage_frame.empty:
+        _placeholder("fig_main_success_overhead.pdf", "Figure 4", "Awaiting compact routing support aggregates")
+        return
+
+    selected_budget = _selected_budget(16)
+    main_frame = main_frame[main_frame["budget"] == selected_budget].copy()
+    main_frame = main_frame[main_frame["scheme"].isin(COMPACT_ROUTING_ORDER)].copy()
+    main_frame = _ordered_rows(main_frame, COMPACT_ROUTING_ORDER)
+    if main_frame.empty:
+        _placeholder("fig_main_success_overhead.pdf", "Figure 4", "No compact routing support slice at the default budget")
+        return
+
+    stage_frame = stage_frame[
+        (stage_frame["budget"] == selected_budget)
+        & (stage_frame["scheme"].isin(["flat_iroute", "hiroute"]))
+        & (stage_frame["stage"].isin(FIG4_STAGE_ORDER))
+    ].copy()
+
+    fig, axes = plt.subplots(1, 3, figsize=(10.6, 3.35), gridspec_kw={"width_ratios": [1.0, 1.0, 1.45]})
+
+    labels = [_scheme_label(scheme) for scheme in main_frame["scheme"]]
+    colors = [_scheme_color(scheme) for scheme in main_frame["scheme"]]
+
+    _bar_panel(
+        axes[0],
+        labels,
+        main_frame["relevant_domain_reached_at_1"].tolist(),
+        main_frame.get("ci_relevant_domain_reached_at_1", pd.Series(0.0, index=main_frame.index)).tolist(),
+        colors,
+        "Relevant-domain reach@1",
+    )
+    axes[0].set_ylim(0, 0.8)
+    _add_panel_label(axes[0], "A")
+
+    _bar_panel(
+        axes[1],
+        labels,
+        main_frame["mean_discovery_bytes"].tolist(),
+        main_frame.get("ci_discovery_bytes", pd.Series(0.0, index=main_frame.index)).tolist(),
+        colors,
+        "Discovery bytes / query",
+    )
+    _add_panel_label(axes[1], "B")
+
+    for scheme in ["flat_iroute", "hiroute"]:
+        group = stage_frame[stage_frame["scheme"] == scheme].copy()
+        if group.empty:
+            continue
+        group["stage"] = pd.Categorical(group["stage"], categories=FIG4_STAGE_ORDER, ordered=True)
+        group = group.sort_values("stage")
+        x_positions = [FIG4_STAGE_ORDER.index(stage) for stage in group["stage"].astype(str)]
+        axes[2].plot(
+            x_positions,
+            group["mean_shrinkage_ratio"],
+            color=_scheme_color(scheme),
+            marker=MARKERS.get(scheme, "o"),
+            linewidth=2.0,
+            markersize=5.5,
+            label=_scheme_label(scheme),
+        )
+    axes[2].set_xticks(list(range(len(FIG4_STAGE_ORDER))))
+    axes[2].set_xticklabels([SHRINKAGE_STAGE_LABELS[stage] for stage in FIG4_STAGE_ORDER])
+    axes[2].set_ylabel("Candidate ratio")
+    axes[2].grid(alpha=0.22)
+    axes[2].set_axisbelow(True)
+    axes[2].legend(fontsize=7.8, frameon=False, loc="upper right")
+    _add_panel_label(axes[2], "C")
+
+    _save(fig, "fig_main_success_overhead.pdf")
+
+
 def plot_main_success() -> None:
+    if _is_experiment("exp_routing_main_v3_compact"):
+        _plot_compact_routing_support()
+        return
+
     frame = _read_csv(_aggregate_path("main_success_overhead.csv"))
     if frame.empty:
         _placeholder("fig_main_success_overhead.pdf", "Figure 4", "Awaiting aggregate data")
@@ -158,15 +370,13 @@ def plot_main_success() -> None:
             continue
         if "budget" in group.columns:
             group = group.sort_values("budget")
-        marker = "*" if scheme == "oracle" else "o"
-        markersize = 12 if scheme == "oracle" else 7
         ax.errorbar(
             group["mean_discovery_bytes"],
             group["mean_success_at_1"],
             xerr=group.get("ci_discovery_bytes", 0.0),
             yerr=group.get("ci_success_at_1", 0.0),
-            fmt=f"{marker}-",
-            markersize=markersize,
+            fmt=f"{MARKERS.get(scheme, 'o')}-",
+            markersize=6.5,
             linewidth=1.8,
             capsize=3,
             color=_scheme_color(scheme),
@@ -176,11 +386,62 @@ def plot_main_success() -> None:
     ax.set_xlabel("Mean Discovery Bytes / Query")
     ax.set_ylabel("ServiceSuccess@1")
     ax.grid(alpha=0.25)
-    ax.legend(fontsize=8, loc="lower right")
+    ax.legend(fontsize=8, loc="lower right", frameon=False)
     _save(fig, "fig_main_success_overhead.pdf")
 
 
+def _plot_object_manifest_sweep() -> None:
+    frame = _read_csv(_aggregate_path("object_main_manifest_sweep.csv"))
+    if frame.empty:
+        _placeholder("fig_failure_breakdown.pdf", "Figure 5", "Awaiting object manifest-sweep aggregate")
+        return
+
+    frame = frame[frame["scheme"].isin(COMPACT_ROUTING_ORDER)].copy()
+    frame = _ordered_rows(frame, COMPACT_ROUTING_ORDER)
+    if frame.empty:
+        _placeholder("fig_failure_breakdown.pdf", "Figure 5", "No manifest-sweep rows found")
+        return
+
+    fig, axes = plt.subplots(1, 2, figsize=(8.7, 3.35), sharex=True)
+    schemes = [scheme for scheme in COMPACT_ROUTING_ORDER if scheme in set(frame["scheme"])]
+
+    _line_panel(
+        axes[0],
+        frame,
+        schemes,
+        "manifest_size",
+        "mean_success_at_1",
+        "ci_success_at_1",
+        "ServiceSuccess@1",
+        "Manifest size",
+    )
+    axes[0].set_xticks(sorted(frame["manifest_size"].unique().tolist()))
+    axes[0].set_ylim(0.5, 1.03)
+    _add_panel_label(axes[0], "A")
+
+    _line_panel(
+        axes[1],
+        frame,
+        schemes,
+        "manifest_size",
+        "wrong_object_rate",
+        "ci_wrong_object_rate",
+        "Wrong-object rate",
+        "Manifest size",
+    )
+    axes[1].set_xticks(sorted(frame["manifest_size"].unique().tolist()))
+    axes[1].set_ylim(0.0, max(0.22, float(frame["wrong_object_rate"].max()) + 0.03))
+    axes[1].legend(fontsize=7.8, frameon=False, loc="upper right")
+    _add_panel_label(axes[1], "B")
+
+    _save(fig, "fig_failure_breakdown.pdf")
+
+
 def plot_failure_breakdown() -> None:
+    if _is_experiment("exp_object_main_v3", "exp_object_main_v3_compact"):
+        _plot_object_manifest_sweep()
+        return
+
     frame = _read_csv(_aggregate_path("failure_breakdown.csv"))
     if frame.empty:
         _placeholder("fig_failure_breakdown.pdf", "Figure 5", "Awaiting aggregate data")
@@ -191,11 +452,10 @@ def plot_failure_breakdown() -> None:
         _placeholder("fig_failure_breakdown.pdf", "Figure 5", "No comparable discovery baselines found")
         return
     if CURRENT_EXPERIMENT and CURRENT_EXPERIMENT.get("manifest_sizes"):
-        selected_manifest = int(CURRENT_EXPERIMENT.get("default_manifest_size") or 0)
-        if selected_manifest:
-            frame = frame[frame["manifest_size"] == selected_manifest].copy()
+        selected_manifest = _selected_manifest()
+        frame = frame[frame["manifest_size"] == selected_manifest].copy()
     elif "budget" in frame.columns and frame["budget"].nunique() > 1:
-        selected_budget = int(CURRENT_EXPERIMENT.get("default_budget") or 16) if CURRENT_EXPERIMENT else 16
+        selected_budget = _selected_budget()
         selected_budget = selected_budget if selected_budget in set(frame["budget"]) else sorted(set(frame["budget"]))[0]
         frame = frame[frame["budget"] == selected_budget].copy()
 
@@ -217,7 +477,7 @@ def plot_failure_breakdown() -> None:
         bottom += pivot[failure_type]
     ax.set_ylim(0, 1.0)
     ax.set_ylabel("Query Fraction")
-    ax.legend(fontsize=8, ncol=2, loc="upper center", bbox_to_anchor=(0.5, 1.18))
+    ax.legend(fontsize=8, ncol=2, loc="upper center", bbox_to_anchor=(0.5, 1.18), frameon=False)
     ax.grid(axis="y", alpha=0.25)
     _save(fig, "fig_failure_breakdown.pdf")
 
@@ -228,7 +488,7 @@ def plot_candidate_shrinkage() -> None:
         _placeholder("fig_candidate_shrinkage.pdf", "Figure 6", "Awaiting aggregate data")
         return
 
-    fig, axes = plt.subplots(1, 2, figsize=(10.2, 4.1), gridspec_kw={"width_ratios": [1.65, 1.0]})
+    fig, axes = plt.subplots(1, 2, figsize=(10.0, 3.9), gridspec_kw={"width_ratios": [1.6, 1.0]})
     left, right = axes
 
     hiroute = frame[frame["scheme"] == "hiroute"].copy()
@@ -242,22 +502,21 @@ def plot_candidate_shrinkage() -> None:
     left.plot(
         [SHRINKAGE_STAGE_ORDER.index(stage) for stage in ordered["stage"]],
         ordered["mean_shrinkage_ratio"],
-        marker="o",
-        linewidth=2.2,
+        marker=MARKERS["hiroute"],
+        linewidth=2.0,
         color=_scheme_color("hiroute"),
     )
     left.set_xticks(x_positions)
     left.set_xticklabels([SHRINKAGE_STAGE_LABELS[stage] for stage in SHRINKAGE_STAGE_ORDER])
     left.set_ylim(0, 1.05)
-    left.set_ylabel("Candidate Ratio vs All Domains")
-    left.set_title("HiRoute staged contraction", fontsize=10)
+    left.set_ylabel("Candidate ratio")
     left.grid(axis="x", alpha=0.2)
     left.grid(axis="y", alpha=0.25)
 
     main_frame = _read_csv(_aggregate_path("main_success_overhead.csv"))
     main_frame = main_frame[main_frame["scheme"] != "exact"].copy()
     if CURRENT_EXPERIMENT and CURRENT_EXPERIMENT.get("budgets"):
-        selected_budget = int(CURRENT_EXPERIMENT.get("default_budget") or 0)
+        selected_budget = _selected_budget()
         if selected_budget:
             main_frame = main_frame[main_frame["budget"] == selected_budget].copy()
     ordered_schemes = [scheme for scheme in MAIN_SCHEME_ORDER if scheme in set(main_frame["scheme"])]
@@ -268,10 +527,9 @@ def plot_candidate_shrinkage() -> None:
         yerr=probe_rows.get("ci_num_remote_probes", pd.Series(0.0, index=probe_rows.index)),
         color=[_scheme_color(scheme) for scheme in probe_rows.index],
         capsize=3,
-        alpha=0.9,
+        alpha=0.92,
     )
-    right.set_ylabel("Mean Remote Probes / Query")
-    right.set_title("Cross-method discovery breadth", fontsize=10)
+    right.set_ylabel("Remote probes / query")
     right.grid(axis="y", alpha=0.25)
     _save(fig, "fig_candidate_shrinkage.pdf")
 
@@ -287,11 +545,11 @@ def plot_deadlines() -> None:
         _placeholder("fig_deadline_summary.pdf", "Figure 7", "No comparable discovery baselines found")
         return
     if CURRENT_EXPERIMENT and CURRENT_EXPERIMENT.get("budgets"):
-        selected_budget = int(CURRENT_EXPERIMENT.get("default_budget") or 0)
+        selected_budget = _selected_budget()
         if selected_budget:
             frame = frame[frame["budget"] == selected_budget].copy()
 
-    fig, axes = plt.subplots(1, 2, figsize=(10.0, 4.0), gridspec_kw={"width_ratios": [1.5, 1.0]})
+    fig, axes = plt.subplots(1, 2, figsize=(9.8, 3.9), gridspec_kw={"width_ratios": [1.5, 1.0]})
     left, right = axes
     ordered_schemes = [scheme for scheme in MAIN_SCHEME_ORDER if scheme in set(frame["scheme"])]
     for scheme in ordered_schemes:
@@ -299,15 +557,15 @@ def plot_deadlines() -> None:
         left.plot(
             group["deadline_ms"],
             group["success_before_deadline_rate"],
-            marker="o",
-            linewidth=2,
+            marker=MARKERS.get(scheme, "o"),
+            linewidth=2.0,
             color=_scheme_color(scheme),
             label=_scheme_label(scheme),
         )
     left.set_xlabel("Deadline (ms)")
-    left.set_ylabel("Success Within Deadline")
+    left.set_ylabel("Success within deadline")
     left.grid(alpha=0.25)
-    left.legend(fontsize=8, loc="lower right")
+    left.legend(fontsize=7.8, loc="lower right", frameon=False)
 
     latency_rows = (
         frame.groupby("scheme", as_index=False)["median_success_latency_ms"]
@@ -320,9 +578,9 @@ def plot_deadlines() -> None:
         [_scheme_label(scheme) for scheme in latency_rows.index],
         latency_rows["median_success_latency_ms"],
         color=[_scheme_color(scheme) for scheme in latency_rows.index],
-        alpha=0.9,
+        alpha=0.92,
     )
-    right.set_ylabel("Median Successful Latency (ms)")
+    right.set_ylabel("Median successful latency (ms)")
     right.grid(axis="y", alpha=0.25)
     _save(fig, "fig_deadline_summary.pdf")
 
@@ -349,18 +607,16 @@ def plot_state_scaling() -> None:
             axis.plot(
                 ordered["scaling_value"],
                 ordered["mean_total_exported_summaries"],
-                marker="o",
+                marker=MARKERS.get(scheme, "o"),
                 linewidth=2,
                 color=_scheme_color(scheme),
                 label=_scheme_label(scheme),
             )
         axis.set_xlabel(xlabel)
         axis.grid(alpha=0.25)
-        axis.set_title(f"{xlabel} Sweep")
-    axes[0].set_ylabel("Mean Exported Summaries")
-    axes[0].legend(fontsize=8)
-    axes[1].legend(fontsize=8)
-    fig.suptitle("Figure 8: Routing-State Scaling Under Fixed Export Budget", fontsize=12)
+    axes[0].set_ylabel("Mean exported summaries")
+    axes[0].legend(fontsize=8, frameon=False)
+    axes[1].legend(fontsize=8, frameon=False)
     _save(fig, "fig_state_scaling.pdf")
 
 
@@ -381,57 +637,60 @@ def plot_robustness() -> None:
             axis.plot(
                 group["time_bin_s"],
                 group["success_at_1_rate"],
-                marker="o",
+                marker=MARKERS.get(scheme, "o"),
                 linewidth=2,
                 color=_scheme_color(scheme),
                 label=_scheme_label(scheme),
             )
-        axis.set_title(variant.replace("_", " "))
         axis.set_xlabel("Time (s)")
         axis.grid(alpha=0.25)
     axes[0].set_ylabel("ServiceSuccess@1")
-    axes[0].legend(fontsize=8, loc="lower right")
+    axes[0].legend(fontsize=8, loc="lower right", frameon=False)
     _save(fig, "fig_robustness.pdf")
 
 
 def plot_ablation() -> None:
+    output_filename = _ablation_filename()
     frame = _read_csv(_aggregate_path("ablation_summary.csv"))
     if frame.empty:
-        _placeholder("fig_ablation_summary.pdf", "Figure 10", "Awaiting ablation aggregate")
+        _placeholder(output_filename, "Figure 10", "Awaiting ablation aggregate")
         return
 
-    if CURRENT_EXPERIMENT and CURRENT_EXPERIMENT.get("manifest_sizes"):
-        selected_manifest = int(CURRENT_EXPERIMENT.get("default_manifest_size") or 0)
-        if selected_manifest:
-            frame = frame[frame["manifest_size"] == selected_manifest].copy()
+    selected_manifest = _selected_manifest(1)
+    if "manifest_size" in frame.columns:
+        frame = frame[frame["manifest_size"] == selected_manifest].copy()
     elif "budget" in frame.columns and frame["budget"].nunique() > 1:
-        selected_budget = int(CURRENT_EXPERIMENT.get("default_budget") or 16) if CURRENT_EXPERIMENT else 16
+        selected_budget = _selected_budget()
         selected_budget = selected_budget if selected_budget in set(frame["budget"]) else sorted(set(frame["budget"]))[0]
         frame = frame[frame["budget"] == selected_budget].copy()
 
-    fig, axes = plt.subplots(1, 3, figsize=(12.0, 4.0), sharex=True)
-    schemes = frame["scheme"].tolist()
-    x_positions = list(range(len(schemes)))
+    schemes = [scheme for scheme in COMPACT_ABLATION_ORDER if scheme in set(frame["scheme"])]
+    frame = _ordered_rows(frame[frame["scheme"].isin(schemes)].copy(), COMPACT_ABLATION_ORDER)
+    if frame.empty:
+        _placeholder(output_filename, "Figure 10", "No ablation slice found at manifest size 1")
+        return
+
+    fig, axes = plt.subplots(1, 3, figsize=(11.6, 3.4), sharex=True)
+    x_positions = list(range(len(frame)))
+    labels = [_scheme_label(scheme) for scheme in frame["scheme"]]
+    colors = [_scheme_color(scheme) for scheme in frame["scheme"]]
 
     panels = [
-        ("mean_success_at_1", "ServiceSuccess@1", 1.0),
-        ("wrong_object_rate", "Wrong-Object Rate", 1.0),
-        ("mean_discovery_bytes", "Mean Discovery Bytes", None),
+        ("mean_success_at_1", "ServiceSuccess@1", (0.0, 1.02)),
+        ("wrong_object_rate", "Wrong-object rate", (0.0, max(0.22, float(frame["wrong_object_rate"].max()) + 0.03))),
+        ("mean_discovery_bytes", "Discovery bytes / query", None),
     ]
-    for axis, (column, ylabel, ymax) in zip(axes, panels):
-        axis.bar(
-            x_positions,
-            frame[column],
-            color=[_scheme_color(s) for s in schemes],
-            alpha=0.9,
-        )
+    for index, (axis, (column, ylabel, ylim)) in enumerate(zip(axes, panels)):
+        axis.bar(x_positions, frame[column], color=colors, alpha=0.92, width=0.68)
         axis.set_ylabel(ylabel)
-        if ymax is not None:
-            axis.set_ylim(0, ymax)
-        axis.grid(axis="y", alpha=0.25)
+        if ylim is not None:
+            axis.set_ylim(*ylim)
+        axis.grid(axis="y", alpha=0.22)
+        axis.set_axisbelow(True)
         axis.set_xticks(x_positions)
-        axis.set_xticklabels([_scheme_label(s) for s in schemes], rotation=18, ha="right")
-    _save(fig, "fig_ablation_summary.pdf")
+        axis.set_xticklabels(labels, rotation=18, ha="right")
+        _add_panel_label(axis, chr(ord("A") + index))
+    _save(fig, output_filename)
 
 
 def main() -> int:
@@ -441,18 +700,38 @@ def main() -> int:
         CURRENT_EXPERIMENT = load_experiment(args.experiment)
     plt.rcParams.update(
         {
-            "font.size": 10,
-            "axes.titlesize": 12,
-            "axes.labelsize": 10,
+            "font.size": 9,
+            "axes.labelsize": 9,
+            "xtick.labelsize": 8,
+            "ytick.labelsize": 8,
+            "legend.fontsize": 8,
         }
     )
-    plot_main_success()
-    plot_failure_breakdown()
-    plot_candidate_shrinkage()
-    plot_deadlines()
-    plot_state_scaling()
-    plot_robustness()
-    plot_ablation()
+
+    plotters = [
+        ("fig_main_success_overhead.pdf", plot_main_success),
+        ("fig_failure_breakdown.pdf", plot_failure_breakdown),
+        ("fig_candidate_shrinkage.pdf", plot_candidate_shrinkage),
+        ("fig_deadline_summary.pdf", plot_deadlines),
+        ("fig_state_scaling.pdf", plot_state_scaling),
+        ("fig_robustness.pdf", plot_robustness),
+        ("fig_ablation.pdf", plot_ablation),
+        ("fig_ablation_summary.pdf", plot_ablation),
+    ]
+
+    if CURRENT_EXPERIMENT is None:
+        seen = set()
+        for _, plotter in plotters:
+            if plotter in seen:
+                continue
+            plotter()
+            seen.add(plotter)
+    else:
+        outputs = _output_filenames()
+        for filename, plotter in plotters:
+            if filename in outputs:
+                plotter()
+
     if CURRENT_EXPERIMENT and is_v3_experiment(CURRENT_EXPERIMENT):
         print("results/figures/v3")
     else:

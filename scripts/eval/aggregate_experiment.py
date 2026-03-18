@@ -58,9 +58,11 @@ SCRIPT_MAP = {
         "scripts/eval/build_deadline_summary.py",
     ],
     "exp_object_main_v3": [
+        "scripts/eval/build_object_main_manifest_sweep.py",
         "scripts/eval/build_failure_breakdown.py",
     ],
     "exp_object_main_v3_compact": [
+        "scripts/eval/build_object_main_manifest_sweep.py",
         "scripts/eval/build_failure_breakdown.py",
     ],
     "exp_ablation_v3": [

@@ -46,3 +46,10 @@
 - Reran the complete v2 official matrix on commit `c4e7cfc`.
 - Figure 4 is now a true budget frontier. The main signal is no longer a large success gap; instead HiRoute reduces discovery cost relative to the flat and INF-style baselines while staying near-perfect on success, and oracle remains the latency upper bound.
 - Figure 5 and Figure 10 are now marked as sanity/internal figures. Once the corrected fallback semantics are enforced, the current `object_hard` bundle no longer discriminates methods strongly enough for publication-grade failure or ablation claims.
+
+## 2026-03-18
+
+- Rebound the compact `smartcity_v3` paper path so Figure 4 is now a routing-support figure rather than a saturated success-overhead frontier.
+- Promoted the compact object-main manifest sweep to Figure 5, making object-level semantic resolution the primary compact effectiveness result.
+- Recast Figure 10 as a manifest=`1` ablation figure, which restores a paper-grade mechanism story under tight fallback.
+- Updated the paper notes and figure registry so Figure 4, Figure 5, and Figure 10 now reflect the actual compact promoted results instead of the earlier v2 roles.

@@ -38,6 +38,10 @@ def _declared_output_path(experiment: dict[str, Any], filename: str) -> Path | N
     return None
 
 
+def declared_output_filenames(experiment: dict[str, Any]) -> set[str]:
+    return {_resolve(str(output)).name for output in experiment.get("outputs", [])}
+
+
 def sweep_field(experiment: dict[str, Any]) -> str:
     return "manifest_size" if experiment.get("manifest_sizes") else "budget"
 

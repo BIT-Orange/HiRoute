@@ -2,23 +2,26 @@
 
 ## Purpose
 
-- Separate wrong-domain, wrong-object, timeout, and other failure modes across baselines.
+- Present the compact object-main manifest sweep as the primary effectiveness figure.
+- Show how object-level success and wrong-object rate change with manifest size under `object_hard_v3`.
 
 ## Built from
 
-- `results/aggregate/failure_breakdown.csv`
+- `results/aggregate/v3/compact/object_main_manifest_sweep.csv`
+- `results/aggregate/v3/compact/failure_breakdown.csv` remains a support aggregate, not the paper-facing chart.
 
 ## Promoted runs
 
-- `exp_object_main_v2` promoted runs recorded in `runs/registry/promoted_runs.csv`
+- `exp_object_main_v3_compact` promoted runs recorded in `runs/registry/promoted_runs.csv`
 
 ## Observations
 
-- On the current `object_hard` bundle, every distributed method and the centralized oracle finish with `1.0` success after shared manifest fallback is enabled.
-- As a result, the figure now functions as an evaluation sanity check: the local resolver, qrels, and runtime slicing are consistent, but the workload is no longer discriminative enough to support a strong object-resolution superiority claim.
-- This outcome is still informative because it shows the earlier v1 failure gap was partly an artifact of inconsistent fallback and incomplete runtime coverage.
+- The clearest compact discriminative signal is object-level semantic resolution, not routing success.
+- At `manifest_size=1`, `hiroute` reaches `0.9375` success with `0.0625` wrong-object rate, while `flat_iroute` and `inf_tag_forwarding` stay tied at `0.908333` success with `0.091667` wrong-object rate.
+- `central_directory` remains the upper reference at `1.0`, but the compact paper-facing claim is that `hiroute` is more manifest-efficient at local semantic resolution than the strong distributed baselines.
+- Larger manifests do not create a stronger separation than `manifest_size=1`; the main story is that the ranking advantage is already visible before broader fallback has much room to help.
 
 ## Caveats
 
-- `exact` remains omitted from the semantic-discovery comparison.
-- This figure should currently be treated as `sanity-only`; the next paper-grade iteration needs a harder object-level bundle that still respects the corrected query/qrels and fallback semantics.
+- The support `failure_breakdown.csv` is still useful for appendix diagnosis, but Figure 5 itself is no longer a stacked failure-composition chart.
+- The compact interpretation should stay centered on wrong-object reduction and manifest-efficient resolution rather than on a broad claim of universal dominance.

@@ -44,7 +44,9 @@ OUTPUT_FIELDS = [
     "mean_latency_ms",
     "ci_latency_ms",
     "relevant_domain_reached_at_1",
+    "ci_relevant_domain_reached_at_1",
     "relevant_domain_reached_at_k",
+    "ci_relevant_domain_reached_at_k",
     "best_object_chosen_given_relevant_domain",
     "manifest_rescue_rate",
     "effective_exported_summaries_total",
@@ -169,7 +171,13 @@ def main() -> int:
                     bootstrap_mean_ci(group["latency_ms"], bootstrap_replicates, seed=3), 6
                 ),
                 "relevant_domain_reached_at_1": round(group["relevant_domain_reached_at_1"].mean(), 6),
+                "ci_relevant_domain_reached_at_1": round(
+                    bootstrap_mean_ci(group["relevant_domain_reached_at_1"], bootstrap_replicates, seed=4), 6
+                ),
                 "relevant_domain_reached_at_k": round(group["relevant_domain_reached_at_k"].mean(), 6),
+                "ci_relevant_domain_reached_at_k": round(
+                    bootstrap_mean_ci(group["relevant_domain_reached_at_k"], bootstrap_replicates, seed=5), 6
+                ),
                 "best_object_chosen_given_relevant_domain": round(
                     group["best_object_chosen_given_relevant_domain"].dropna().mean() if group["best_object_chosen_given_relevant_domain"].notna().any() else 0.0,
                     6,

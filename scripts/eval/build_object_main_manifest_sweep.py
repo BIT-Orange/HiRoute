@@ -1,0 +1,113 @@
+"""Build Figure 5 manifest-sweep summary from canonical query logs."""
+
+from __future__ import annotations
+
+import argparse
+from pathlib import Path
+import sys
+
+ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from scripts.eval.eval_support import (
+    aggregate_output_path,
+    bootstrap_mean_ci,
+    load_experiment,
+    log_frame,
+    qrels_maps_by_topology,
+    require_rows,
+)
+from tools.workflow_support import write_csv
+
+
+OUTPUT_FIELDS = [
+    "experiment_id",
+    "scheme",
+    "topology_id",
+    "budget",
+    "manifest_size",
+    "query_count",
+    "mean_success_at_1",
+    "ci_success_at_1",
+    "wrong_object_rate",
+    "ci_wrong_object_rate",
+    "best_object_chosen_given_relevant_domain",
+    "ci_best_object_chosen_given_relevant_domain",
+    "source_run_ids",
+]
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--experiment", required=True, type=Path)
+    parser.add_argument("--registry-source", choices=["runs", "promoted"], default="promoted")
+    return parser.parse_args()
+
+
+def main() -> int:
+    args = parse_args()
+    experiment = load_experiment(args.experiment)
+    rows = require_rows(experiment, args.registry_source)
+    frame = log_frame(rows, "query_log.csv")
+    if frame.empty:
+        print("ERROR: no canonical query logs found")
+        return 1
+
+    bootstrap_replicates = int(experiment.get("statistics", {}).get("bootstrap_replicates", 1000))
+    qrels_maps = qrels_maps_by_topology(experiment)
+
+    def _best_object_given_domain(row):
+        relevant_domains = (
+            qrels_maps.get(str(row["registry_topology_id"]), {})
+            .get("strong_domains", {})
+            .get(str(row["query_id"]), set())
+        )
+        return float(row["success_at_1"]) if str(row["final_domain_id"]) in relevant_domains else float("nan")
+
+    frame = frame.copy()
+    frame["best_object_chosen_given_relevant_domain"] = frame.apply(_best_object_given_domain, axis=1)
+    frame["wrong_object_indicator"] = (frame["failure_type"] == "wrong_object").astype(float)
+
+    output_rows = []
+    for keys, group in frame.groupby(
+        ["registry_scheme", "registry_topology_id", "manifest_size"], sort=False
+    ):
+        scheme, topology_id, manifest_size = keys
+        run_ids = sorted(group["run_id"].unique().tolist())
+        best_object = group["best_object_chosen_given_relevant_domain"].dropna()
+        output_rows.append(
+            {
+                "experiment_id": experiment["experiment_id"],
+                "scheme": scheme,
+                "topology_id": topology_id,
+                "budget": int(group["budget"].max()),
+                "manifest_size": int(manifest_size),
+                "query_count": int(len(group)),
+                "mean_success_at_1": round(group["success_at_1"].mean(), 6),
+                "ci_success_at_1": round(
+                    bootstrap_mean_ci(group["success_at_1"], bootstrap_replicates, seed=10), 6
+                ),
+                "wrong_object_rate": round(group["wrong_object_indicator"].mean(), 6),
+                "ci_wrong_object_rate": round(
+                    bootstrap_mean_ci(group["wrong_object_indicator"], bootstrap_replicates, seed=11), 6
+                ),
+                "best_object_chosen_given_relevant_domain": round(
+                    best_object.mean() if not best_object.empty else 0.0, 6
+                ),
+                "ci_best_object_chosen_given_relevant_domain": round(
+                    bootstrap_mean_ci(best_object, bootstrap_replicates, seed=12) if not best_object.empty else 0.0,
+                    6,
+                ),
+                "source_run_ids": "|".join(run_ids),
+            }
+        )
+
+    aggregate_path = aggregate_output_path(experiment, "object_main_manifest_sweep.csv")
+    write_csv(aggregate_path, OUTPUT_FIELDS, output_rows)
+    print(str(aggregate_path.relative_to(Path.cwd())))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

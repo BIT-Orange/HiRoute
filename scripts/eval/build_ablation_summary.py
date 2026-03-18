@@ -45,13 +45,6 @@ def main() -> int:
         return 1
 
     active_sweep_field = sweep_field(experiment)
-    selected_budget = int(experiment.get("default_budget") or 0)
-    selected_manifest_size = int(experiment.get("default_manifest_size") or 0)
-    if active_sweep_field == "budget" and selected_budget:
-        frame = frame[frame["budget"] == selected_budget].copy()
-    if active_sweep_field == "manifest_size" and selected_manifest_size:
-        frame = frame[frame["manifest_size"] == selected_manifest_size].copy()
-
     frame["discovery_bytes_total"] = frame["discovery_tx_bytes"] + frame["discovery_rx_bytes"]
     output_rows = []
     for keys, group in frame.groupby(

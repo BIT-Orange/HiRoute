@@ -24,6 +24,7 @@
     "bootstrap_replicates": 1000
   },
   "outputs": [
+    "results/aggregate/v3/object_main_manifest_sweep.csv",
     "results/aggregate/v3/failure_breakdown.csv",
     "results/figures/v3/fig_failure_breakdown.pdf"
   ],

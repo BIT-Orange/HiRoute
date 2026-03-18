@@ -24,7 +24,7 @@
   },
   "outputs": [
     "results/aggregate/v3/ablation_summary.csv",
-    "results/figures/v3/fig_ablation.pdf"
+    "results/figures/v3/fig_ablation_summary.pdf"
   ],
   "promotion_rule": {
     "min_runs_per_scheme": 1,

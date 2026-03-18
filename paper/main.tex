@@ -282,33 +282,33 @@ Four workload factors should be varied systematically. The first is naming heter
 
 The evaluation is organized around the dimensions that determine whether semantic name resolution is practically useful in NDN-IoT. Each subsection states the experimental objective and the interpretation that the final measurements should support. The figure positions are fixed so that the experimental campaign can proceed against a stable manuscript outline.
 
-The current implementation-level results in Figures~\ref{fig:main}, \ref{fig:waterfall}, \ref{fig:shrinkage}, \ref{fig:latency}, and \ref{fig:ablation} come from the corrected `smartcity\_v2` workflow. Figures~\ref{fig:main}, \ref{fig:shrinkage}, and \ref{fig:latency} are sourced from `exp\_routing\_main\_v2` on the `routing\_hard` test split. Figure~\ref{fig:waterfall} comes from `exp\_object\_main\_v2`, and Figure~\ref{fig:ablation} comes from `exp\_ablation\_v2`. All three use topology-consistent query bundles on `rf\_3967\_exodus`, clean-commit official runs, and query-bootstrap confidence intervals.
+The current paper-facing compact results in Figures~\ref{fig:main}, \ref{fig:waterfall}, \ref{fig:shrinkage}, \ref{fig:latency}, and \ref{fig:ablation} come from promoted `smartcity\_v3` runs on the compact topology `rf\_3967\_exodus\_compact`. Figure~\ref{fig:main} uses the compact routing-support slice from `exp\_routing\_main\_v3\_compact`, Figure~\ref{fig:waterfall} uses the compact object-main manifest sweep from `exp\_object\_main\_v3\_compact`, Figures~\ref{fig:shrinkage} and \ref{fig:latency} remain routing support figures from the same compact routing experiment, and Figure~\ref{fig:ablation} uses `exp\_ablation\_v3\_compact` at tight manifest size. Figures~\ref{fig:state} and \ref{fig:robust} remain support evidence rather than the core compact proof path.
 
-\subsection{End-to-End Service Success Versus Discovery Overhead}
+\subsection{Routing Support Under Saturated End-to-End Success}
 
-The first experiment should compare ServiceSuccess@1 against discovery overhead while increasing naming heterogeneity or semantic ambiguity. The main-paper version of this figure should use the mixed-ambiguity workload rather than the constraint-dominant sanity tier. The central question is whether hierarchical constraint-guided resolution closes more of the gap to the centralized oracle than the flat semantic baseline does, without incurring flooding-like overhead.
+Under compact-medium evaluation, shared fallback causes end-to-end routing success to saturate across all compared discovery methods. The compact paper path therefore treats routing as a support result rather than as the primary effectiveness proof. The central question is not which scheme reaches the highest final `ServiceSuccess@1`, because they all do, but which scheme reaches the first relevant domain more reliably and what discovery cost that gain requires.
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=0.95\linewidth]{../results/figures/fig_main_success_overhead.pdf}
-\caption{Primary result comparing end-to-end service success and discovery overhead.}
+\includegraphics[width=0.95\linewidth]{../results/figures/v3/compact/fig_main_success_overhead.pdf}
+\caption{Compact routing-support figure showing first relevant-domain reach, discovery cost, and staged candidate shrinkage.}
 \label{fig:main}
 \end{figure}
 
-The corrected v2 routing frontier now supports a narrower but more defensible claim than the old v1 plots. Once topology-consistent query bundles, shared manifest fallback, and full-query completion are enforced, all distributed methods reach near-perfect success on the current `routing_hard` bundle. The remaining separation is frontier cost rather than raw success. `flat\_iroute` and `inf\_tag\_forwarding` remain at roughly `386` discovery bytes/query and `2.86` remote probes/query across budgets, whereas \sysname{} traces a budget-dependent curve from about `332` bytes/query at budget `8` down to about `261` bytes/query at budget `64` while keeping ServiceSuccess@1 at `0.996` to `1.0`. The centralized oracle remains the latency upper reference, and flooding remains the broad-search reference point. The present routing result is therefore implementation-consistent and mechanism-informative, but not yet a large success-gap result.
+Figure~\ref{fig:main} is therefore a routing-support figure rather than a saturated success-overhead frontier. At the default compact budget `16`, `flat\_iroute` and `inf\_tag\_forwarding` tie on first relevant-domain reach (`0.425`) and discovery cost (`149.87` bytes/query), whereas \sysname{} improves first relevant-domain reach to `0.641667` at the cost of higher discovery traffic (`186.67` bytes/query). The third panel shows why: the staged search surface contracts from `1.0` at `all\_domains` to roughly `0.196` by `refined\_cells` and `probed\_cells`. The centralized directory remains useful as a discovery-cost reference, but not as a meaningful upper bound on first-domain reach because it does not follow the same probing path semantics.
 
-\subsection{Failure Decomposition}
+\subsection{Object-Level Semantic Resolution Under Manifest Sweep}
 
-A semantic routing paper becomes much stronger when it shows where errors arise. The second experiment should decompose failures into predicate miss, wrong-domain resolution, wrong-object resolution inside a relevant domain, and fetch-stage timeout or loss. This decomposition is particularly important because it exposes the difference between a domain-level semantic hint and an object-level answer. As in the first figure, the focus should remain on the comparable discovery methods and the centralized oracle; exact-name retrieval is not informative in this failure taxonomy because it bypasses discovery once the canonical name is known.
+The clearest discriminative signal in the current compact results is object-level semantic resolution, not routing success. The main compact effectiveness figure therefore sweeps manifest size and measures both final success and wrong-object rate. This makes the local ranking problem explicit: once a scheme is near the correct domain, can it select the correct object before wider manifest fallback narrows the difference?
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=0.95\linewidth]{../results/figures/fig_failure_breakdown.pdf}
-\caption{Failure decomposition for \sysname{} and the most relevant baselines.}
+\includegraphics[width=0.95\linewidth]{../results/figures/v3/compact/fig_failure_breakdown.pdf}
+\caption{Compact object-main manifest sweep showing end-to-end success and wrong-object rate.}
 \label{fig:waterfall}
 \end{figure}
 
-Under the corrected `object_hard` bundle, however, every distributed method and the centralized oracle currently reach `1.0` success. Figure~\ref{fig:waterfall} therefore functions as a consistency check rather than as a final discriminative result. This is still useful because it confirms that the query/qrels contract, the local resolver, and the shared fallback logic are aligned. At the same time it shows that a harder object-level bundle is still required before the paper can claim a large wrong-object reduction against fair baselines.
+Figure~\ref{fig:waterfall} is now the primary compact effectiveness figure. At `manifest\_size=1`, `flat\_iroute` and `inf\_tag\_forwarding` both reach `0.908333` success with `0.091667` wrong-object rate, whereas \sysname{} improves to `0.9375` success and reduces wrong-object errors to `0.0625`. The centralized directory remains the `1.0` upper reference. Larger manifests do not create a stronger compact separation than `manifest\_size=1`, so the current compact story is that \sysname{} is strongest at manifest-efficient semantic resolution rather than at a broad routing-success gap.
 
 \subsection{Candidate Shrinkage Through Hierarchical Filtering}
 
@@ -316,12 +316,12 @@ The third experiment should report how aggressively the search frontier contract
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=0.95\linewidth]{../results/figures/fig_candidate_shrinkage.pdf}
+\includegraphics[width=0.95\linewidth]{../results/figures/v3/compact/fig_candidate_shrinkage.pdf}
 \caption{Candidate shrinkage under hierarchical filtering and refinement.}
 \label{fig:shrinkage}
 \end{figure}
 
-Figure~\ref{fig:shrinkage} remains one of the strongest mechanism figures in the corrected workflow. At budget `16`, the \sysname{} frontier contracts to roughly `0.41` of the original domain surface by the refined-cell stage, whereas `flat\_iroute`, `flood`, and `inf\_tag\_forwarding` remain around `0.60`. The cross-method probe panel also shows that \sysname{} uses fewer remote probes than the flat and INF-style baselines at the same budget. This is precisely the kind of mechanism evidence needed once raw success begins to saturate.
+Figure~\ref{fig:shrinkage} is now a support mechanism figure for the compact routing result. At budget `16`, the \sysname{} candidate surface contracts from `1.0` at `all\_domains` to roughly `0.196` by the `refined\_cells` and `probed\_cells` stages. This more detailed stage trace supports the compressed mechanism panel already shown in Figure~\ref{fig:main}.
 
 \subsection{Deadline-Sensitive Latency}
 
@@ -329,12 +329,12 @@ Average latency is often too blunt for IoT applications. The fourth experiment s
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=0.95\linewidth]{../results/figures/fig_deadline_summary.pdf}
+\includegraphics[width=0.95\linewidth]{../results/figures/v3/compact/fig_deadline_summary.pdf}
 \caption{Deadline-sensitive latency evaluation.}
 \label{fig:latency}
 \end{figure}
 
-The corrected deadline figure still yields a useful systems story even though success saturates on the routing workload. The centralized oracle remains fastest, with median successful latency near `107 ms`. Among the distributed methods, \sysname{} reaches about `0.867` deadline-success by `500 ms`, slightly above flooding and above the flat and INF-style baselines, while also keeping a lower median successful latency (`202 ms` versus `238 ms` for the flat and INF-style baselines and `275.5 ms` for flooding). The deadline result therefore supports a bounded-latency efficiency claim rather than a broad claim of universal superiority.
+Figure~\ref{fig:latency} should be read as support evidence rather than as the main proof of superiority. At the default compact budget, the centralized directory has the best `100 ms` deadline-success (`0.916667`), the flat and INF-style baselines remain at `0.879167`, and \sysname{} trails at `0.75` while still preserving the stronger first relevant-domain reach seen in Figure~\ref{fig:main}. The latency result therefore reinforces the tradeoff interpretation: \sysname{} gains better first-domain targeting in compact routing, but not a universal latency advantage.
 
 \subsection{Routing-State Scaling}
 
@@ -368,12 +368,12 @@ The final experiment should isolate the contribution of query decomposition, hie
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=0.95\linewidth]{../results/figures/fig_ablation.pdf}
-\caption{Ablation of the principal components of \sysname{}.}
+\includegraphics[width=0.95\linewidth]{../results/figures/v3/compact/fig_ablation_summary.pdf}
+\caption{Compact object-hard ablation at manifest size `1`.}
 \label{fig:ablation}
 \end{figure}
 
-The corrected ablation no longer supports the earlier causal narrative. In the current `object_hard` bundle, `predicates\_only`, `predicates\_plus\_flat`, and the full \sysname{} stack all reach full success once sequential fallback is enforced, while `flat\_semantic\_only` still fails badly. This means the present bundle remains too constraint-dominant for a publication-grade ablation. Figure~\ref{fig:ablation} should therefore be read as an internal workload audit: semantics without the hard predicate header is inadequate, but the next iteration still needs a harder object-level stress tier before the paper can claim that the full hierarchy is strictly necessary for end-to-end success.
+Figure~\ref{fig:ablation} is now a paper-grade mechanism figure, fixed to `manifest\_size=1` because this setting best exposes ranking differences before wider fallback can wash them out. Under that tight setting, the ordering is stable: `full\_hiroute (0.9375)` outperforms `predicates\_plus\_flat (0.908333)`, which in turn exceeds `predicates\_only (0.841667)`, while `flat\_semantic\_only (0.575)` fails badly. The same ordering appears in wrong-object rate, so the compact ablation now supports a clear mechanism claim: the full hierarchy is most useful when object-level semantic resolution remains hard enough that fallback cannot hide local ranking errors.
 
 \section{Discussion}
 

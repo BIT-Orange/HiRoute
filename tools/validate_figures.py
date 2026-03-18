@@ -215,6 +215,7 @@ def main() -> int:
         if args.aggregate.name in {
             "main_success_overhead.csv",
             "failure_breakdown.csv",
+            "object_main_manifest_sweep.csv",
             "candidate_shrinkage.csv",
             "deadline_summary.csv",
             "ablation_summary.csv",
@@ -231,7 +232,7 @@ def main() -> int:
             if workload_tiers != expected_tier:
                 print("ERROR: routing aggregates must come from routing_hard workload")
                 return 1
-        if args.aggregate.name in {"failure_breakdown.csv", "ablation_summary.csv"}:
+        if args.aggregate.name in {"failure_breakdown.csv", "object_main_manifest_sweep.csv", "ablation_summary.csv"}:
             expected_tier = {"object_hard_v3"} if is_v3 else {"object_hard"}
             if workload_tiers != expected_tier:
                 print("ERROR: failure and ablation aggregates must come from object_hard workload")
