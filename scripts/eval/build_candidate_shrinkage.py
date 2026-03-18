@@ -75,7 +75,15 @@ def main() -> int:
     frame = frame.sort_values(["run_id", "query_id", "timestamp_ms"])
     per_query_stage = (
         frame.groupby(
-            ["run_id", "registry_scheme", "registry_topology_id", "query_id", "stage"],
+            [
+                "run_id",
+                "registry_scheme",
+                "registry_topology_id",
+                "budget",
+                "manifest_size",
+                "query_id",
+                "stage",
+            ],
             as_index=False,
         )
         .agg(

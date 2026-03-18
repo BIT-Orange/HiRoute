@@ -397,7 +397,7 @@ def plot_robustness() -> None:
 def plot_ablation() -> None:
     frame = _read_csv(_aggregate_path("ablation_summary.csv"))
     if frame.empty:
-        _placeholder("fig_ablation.pdf", "Figure 10", "Awaiting ablation aggregate")
+        _placeholder("fig_ablation_summary.pdf", "Figure 10", "Awaiting ablation aggregate")
         return
 
     if CURRENT_EXPERIMENT and CURRENT_EXPERIMENT.get("manifest_sizes"):
@@ -431,7 +431,7 @@ def plot_ablation() -> None:
         axis.grid(axis="y", alpha=0.25)
         axis.set_xticks(x_positions)
         axis.set_xticklabels([_scheme_label(s) for s in schemes], rotation=18, ha="right")
-    _save(fig, "fig_ablation.pdf")
+    _save(fig, "fig_ablation_summary.pdf")
 
 
 def main() -> int:
