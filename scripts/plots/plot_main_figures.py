@@ -25,6 +25,11 @@ import matplotlib.pyplot as plt
 
 from scripts.eval.eval_support import (
     aggregate_output_path,
+    COMPACT_ABLATION_SCHEMES,
+    COMPACT_OBJECT_MAIN_SCHEMES,
+    COMPACT_ROUTING_PANEL_A_SCHEMES,
+    COMPACT_ROUTING_PANEL_B_SCHEMES,
+    COMPACT_ROUTING_REQUIRED_SCHEMES,
     declared_output_filenames,
     figure_output_path,
     is_v3_experiment,
@@ -43,6 +48,7 @@ COLORS = {
     "central_directory": "#1f5f46",
     "oracle": "#1f5f46",
     "predicates_only": "#8e5a3c",
+    "random_admissible": "#7a6aa8",
     "flat_semantic_only": "#c79a3a",
     "predicates_plus_flat": "#5f8773",
     "full_hiroute": "#2451a4",
@@ -67,6 +73,7 @@ SCHEME_LABELS = {
     "central_directory": "Central directory",
     "oracle": "Central directory",
     "predicates_only": "Predicates only",
+    "random_admissible": "Random admissible",
     "flat_semantic_only": "Flat semantic only",
     "predicates_plus_flat": "Predicates + flat",
     "full_hiroute": "Full HiRoute",
@@ -79,11 +86,20 @@ MARKERS = {
     "hiroute": "D",
     "central_directory": "P",
     "oracle": "P",
+    "predicates_only": "X",
+    "random_admissible": "v",
 }
 
-MAIN_SCHEME_ORDER = ["flat_iroute", "inf_tag_forwarding", "flood", "hiroute", "central_directory", "oracle"]
-COMPACT_ROUTING_ORDER = ["flat_iroute", "inf_tag_forwarding", "hiroute", "central_directory"]
-COMPACT_ABLATION_ORDER = ["predicates_only", "flat_semantic_only", "predicates_plus_flat", "full_hiroute"]
+MAIN_SCHEME_ORDER = [
+    "predicates_only",
+    "random_admissible",
+    "flat_iroute",
+    "inf_tag_forwarding",
+    "flood",
+    "hiroute",
+    "central_directory",
+    "oracle",
+]
 FAILURE_ORDER = ["predicate_miss", "wrong_domain", "wrong_object", "no_reply", "fetch_timeout", "success"]
 
 SHRINKAGE_STAGE_ORDER = [
@@ -283,29 +299,47 @@ def _plot_compact_routing_support() -> None:
 
     selected_budget = _selected_budget(16)
     main_frame = main_frame[main_frame["budget"] == selected_budget].copy()
-    main_frame = main_frame[main_frame["scheme"].isin(COMPACT_ROUTING_ORDER)].copy()
-    main_frame = _ordered_rows(main_frame, COMPACT_ROUTING_ORDER)
-    if main_frame.empty:
-        _placeholder("fig_main_success_overhead.pdf", "Figure 4", "No compact routing support slice at the default budget")
+    available_schemes = set(main_frame["scheme"])
+    missing_required = [scheme for scheme in COMPACT_ROUTING_REQUIRED_SCHEMES if scheme not in available_schemes]
+    if missing_required:
+        _placeholder(
+            "fig_main_success_overhead.pdf",
+            "Figure 4",
+            "Awaiting compact routing rerun with predicates_only and random_admissible baselines",
+        )
         return
+
+    panel_a_frame = _ordered_rows(
+        main_frame[main_frame["scheme"].isin(COMPACT_ROUTING_PANEL_A_SCHEMES)].copy(),
+        COMPACT_ROUTING_PANEL_A_SCHEMES,
+    )
+    panel_b_frame = _ordered_rows(
+        main_frame[main_frame["scheme"].isin(COMPACT_ROUTING_PANEL_B_SCHEMES)].copy(),
+        COMPACT_ROUTING_PANEL_B_SCHEMES,
+    )
 
     stage_frame = stage_frame[
         (stage_frame["budget"] == selected_budget)
         & (stage_frame["scheme"].isin(["flat_iroute", "hiroute"]))
         & (stage_frame["stage"].isin(FIG4_STAGE_ORDER))
     ].copy()
+    if panel_a_frame.empty or panel_b_frame.empty or stage_frame.empty:
+        _placeholder("fig_main_success_overhead.pdf", "Figure 4", "No compact routing support slice at the default budget")
+        return
 
     fig, axes = plt.subplots(1, 3, figsize=(10.6, 3.35), gridspec_kw={"width_ratios": [1.0, 1.0, 1.45]})
 
-    labels = [_scheme_label(scheme) for scheme in main_frame["scheme"]]
-    colors = [_scheme_color(scheme) for scheme in main_frame["scheme"]]
+    panel_a_labels = [_scheme_label(scheme) for scheme in panel_a_frame["scheme"]]
+    panel_a_colors = [_scheme_color(scheme) for scheme in panel_a_frame["scheme"]]
+    panel_b_labels = [_scheme_label(scheme) for scheme in panel_b_frame["scheme"]]
+    panel_b_colors = [_scheme_color(scheme) for scheme in panel_b_frame["scheme"]]
 
     _bar_panel(
         axes[0],
-        labels,
-        main_frame["relevant_domain_reached_at_1"].tolist(),
-        main_frame.get("ci_relevant_domain_reached_at_1", pd.Series(0.0, index=main_frame.index)).tolist(),
-        colors,
+        panel_a_labels,
+        panel_a_frame["relevant_domain_reached_at_1"].tolist(),
+        panel_a_frame.get("ci_relevant_domain_reached_at_1", pd.Series(0.0, index=panel_a_frame.index)).tolist(),
+        panel_a_colors,
         "Relevant-domain reach@1",
     )
     axes[0].set_ylim(0, 0.8)
@@ -313,10 +347,10 @@ def _plot_compact_routing_support() -> None:
 
     _bar_panel(
         axes[1],
-        labels,
-        main_frame["mean_discovery_bytes"].tolist(),
-        main_frame.get("ci_discovery_bytes", pd.Series(0.0, index=main_frame.index)).tolist(),
-        colors,
+        panel_b_labels,
+        panel_b_frame["mean_discovery_bytes"].tolist(),
+        panel_b_frame.get("ci_discovery_bytes", pd.Series(0.0, index=panel_b_frame.index)).tolist(),
+        panel_b_colors,
         "Discovery bytes / query",
     )
     _add_panel_label(axes[1], "B")
@@ -338,7 +372,14 @@ def _plot_compact_routing_support() -> None:
             label=_scheme_label(scheme),
         )
     axes[2].set_xticks(list(range(len(FIG4_STAGE_ORDER))))
-    axes[2].set_xticklabels([SHRINKAGE_STAGE_LABELS[stage] for stage in FIG4_STAGE_ORDER])
+    axes[2].set_xticklabels(
+        [
+            "All\ndomains",
+            "Admissible\ndomains",
+            "Refined\ncells",
+            "Probed\ncells",
+        ]
+    )
     axes[2].set_ylabel("Candidate ratio")
     axes[2].grid(alpha=0.22)
     axes[2].set_axisbelow(True)
@@ -396,14 +437,14 @@ def _plot_object_manifest_sweep() -> None:
         _placeholder("fig_failure_breakdown.pdf", "Figure 5", "Awaiting object manifest-sweep aggregate")
         return
 
-    frame = frame[frame["scheme"].isin(COMPACT_ROUTING_ORDER)].copy()
-    frame = _ordered_rows(frame, COMPACT_ROUTING_ORDER)
+    frame = frame[frame["scheme"].isin(COMPACT_OBJECT_MAIN_SCHEMES)].copy()
+    frame = _ordered_rows(frame, COMPACT_OBJECT_MAIN_SCHEMES)
     if frame.empty:
         _placeholder("fig_failure_breakdown.pdf", "Figure 5", "No manifest-sweep rows found")
         return
 
     fig, axes = plt.subplots(1, 2, figsize=(8.7, 3.35), sharex=True)
-    schemes = [scheme for scheme in COMPACT_ROUTING_ORDER if scheme in set(frame["scheme"])]
+    schemes = [scheme for scheme in COMPACT_OBJECT_MAIN_SCHEMES if scheme in set(frame["scheme"])]
 
     _line_panel(
         axes[0],
@@ -664,8 +705,8 @@ def plot_ablation() -> None:
         selected_budget = selected_budget if selected_budget in set(frame["budget"]) else sorted(set(frame["budget"]))[0]
         frame = frame[frame["budget"] == selected_budget].copy()
 
-    schemes = [scheme for scheme in COMPACT_ABLATION_ORDER if scheme in set(frame["scheme"])]
-    frame = _ordered_rows(frame[frame["scheme"].isin(schemes)].copy(), COMPACT_ABLATION_ORDER)
+    schemes = [scheme for scheme in COMPACT_ABLATION_SCHEMES if scheme in set(frame["scheme"])]
+    frame = _ordered_rows(frame[frame["scheme"].isin(schemes)].copy(), COMPACT_ABLATION_SCHEMES)
     if frame.empty:
         _placeholder(output_filename, "Figure 10", "No ablation slice found at manifest size 1")
         return

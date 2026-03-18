@@ -18,6 +18,7 @@
 
 #include <fstream>
 #include <map>
+#include <queue>
 #include <set>
 #include <string>
 #include <vector>
@@ -94,6 +95,9 @@ private:
   loadInputs();
 
   void
+  loadTopologyMapping();
+
+  void
   openLogs();
 
   void
@@ -158,12 +162,16 @@ private:
   bool
   usesStaticProbeFallback() const;
 
+  uint32_t
+  controllerHopCost(const std::string& controllerPrefix) const;
+
 private:
   std::string m_queryCsvPath;
   std::string m_queryEmbeddingIndexCsvPath;
   std::string m_qrelsObjectCsvPath;
   std::string m_objectsCsvPath;
   std::string m_summaryCsvPath;
+  std::string m_topologyMappingCsvPath;
   std::string m_runDirectory;
   std::string m_strategyMode;
   std::string m_oraclePrefix;
@@ -171,6 +179,7 @@ private:
   uint32_t m_maxProbeBudget = 4;
   uint32_t m_requestedManifestSize = 4;
   uint32_t m_queryLimit = 0;
+  uint32_t m_runSeed = 1;
   Time m_queryStartDelay = MilliSeconds(100);
   Time m_replyTimeout = MilliSeconds(200);
 
@@ -183,6 +192,8 @@ private:
   std::map<std::string, std::vector<std::pair<std::string, uint32_t>>> m_rankedQrels;
   std::map<std::string, std::string> m_canonicalByObjectId;
   std::map<std::string, std::string> m_objectIdByCanonicalName;
+  std::map<std::string, std::string> m_controllerNodeIdByPrefix;
+  mutable std::map<std::string, uint32_t> m_controllerHopCostCache;
   ActiveQueryState m_activeQuery;
 
   std::ofstream m_queryLog;

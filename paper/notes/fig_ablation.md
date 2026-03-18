@@ -16,6 +16,7 @@
 ## Observations
 
 - At `manifest_size=1`, the compact ablation carries a real ordering: `full_hiroute (0.9375)` > `predicates_plus_flat (0.908333)` > `predicates_only (0.841667)` >> `flat_semantic_only (0.575)`.
+- Figure 10 continues to carry the compact mechanism claim after the routing baseline expansion because it isolates the hierarchy effect under tight fallback, not the routing-support comparison.
 - The same ordering appears in wrong-object rate, with `full_hiroute` at `0.0625` and `flat_semantic_only` at `0.175`.
 - The paper-facing takeaway is now mechanism evidence rather than sanity-only diagnosis: the full hierarchy is most useful when fallback is tight enough that local ranking still matters.
 

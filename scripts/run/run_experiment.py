@@ -792,6 +792,7 @@ def _ndnsim_command(
         f"--runDir={run_dir}",
         f"--topologyId={experiment['topology_id']}",
         f"--scheme={_scheme_runtime_alias(scheme)}",
+        f"--runSeed={int(experiment.get('_selected_seed') or 0)}",
     ]
     for flag in [
         "stopSeconds",
@@ -858,6 +859,7 @@ def main() -> int:
         args.budget,
         args.manifest_size,
     )
+    experiment["_selected_seed"] = args.seed
     experiment["_experiment_path"] = str(experiment_path)
 
     run_id = make_run_id(

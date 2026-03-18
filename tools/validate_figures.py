@@ -13,6 +13,11 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from tools.workflow_support import load_json_yaml, repo_root
+from scripts.eval.eval_support import (
+    COMPACT_ABLATION_SCHEMES,
+    COMPACT_OBJECT_MAIN_SCHEMES,
+    COMPACT_ROUTING_REQUIRED_SCHEMES,
+)
 
 
 def read_csv_rows(path: Path) -> list[dict[str, str]]:
@@ -240,11 +245,29 @@ def main() -> int:
 
         if args.aggregate.name == "main_success_overhead.csv":
             sweep_key = "manifest_size" if expected_manifest_sizes else "budget"
+            if experiment["experiment_id"] == "exp_routing_main_v3_compact":
+                missing_routing_schemes = sorted(
+                    set(COMPACT_ROUTING_REQUIRED_SCHEMES) - aggregate_schemes
+                )
+                if missing_routing_schemes:
+                    print(
+                        "ERROR: compact routing support aggregate is missing schemes: "
+                        + ", ".join(missing_routing_schemes)
+                    )
+                    return 1
+                if "flood" in experiment.get("schemes", []) and "flood" not in aggregate_schemes:
+                    print("ERROR: compact routing support aggregate is missing flood even though the experiment keeps it")
+                    return 1
             budgets_by_scheme: dict[str, set[int]] = {}
             for row in aggregate_rows:
                 budgets_by_scheme.setdefault(row.get("scheme", ""), set()).add(int(row.get(sweep_key) or 0))
             expected_points = expected_manifest_sizes if expected_manifest_sizes else expected_budgets
-            for scheme in {"flat_iroute", "hiroute", "inf_tag_forwarding"} & set(experiment.get("schemes", [])):
+            frontier_schemes = (
+                set(COMPACT_ROUTING_REQUIRED_SCHEMES) - {"central_directory"}
+                if experiment["experiment_id"] == "exp_routing_main_v3_compact"
+                else {"flat_iroute", "hiroute", "inf_tag_forwarding"} & set(experiment.get("schemes", []))
+            )
+            for scheme in frontier_schemes:
                 if len(budgets_by_scheme.get(scheme, set())) < len(expected_points):
                     print(f"ERROR: routing frontier is missing budget points for {scheme}")
                     return 1
@@ -295,6 +318,11 @@ def main() -> int:
                 print("ERROR: candidate shrinkage aggregate misses required stages: " +
                       ", ".join(missing_stages))
                 return 1
+            if experiment["experiment_id"] == "exp_routing_main_v3_compact":
+                stage_schemes = {row.get("scheme", "") for row in aggregate_rows}
+                if not {"flat_iroute", "hiroute"}.issubset(stage_schemes):
+                    print("ERROR: compact candidate shrinkage aggregate must include flat_iroute and hiroute")
+                    return 1
         if experiment["experiment_id"] in {"exp_scaling_v1", "exp_scaling_v3", "exp_scaling_v3_compact"} and args.aggregate.name == "state_scaling_summary.csv":
             axes = {row.get("scaling_axis", "") for row in aggregate_rows}
             if axes != {"objects_per_domain", "domain_count"}:
@@ -336,6 +364,21 @@ def main() -> int:
             params = experiment.get("runner", {}).get("params", {})
             if int(params.get("queryLimitPerIngress", 0) or 0) != 0:
                 print("ERROR: compact routing/object/ablation must use queryLimitPerIngress=0")
+                return 1
+
+        if experiment["experiment_id"] == "exp_object_main_v3_compact" and args.aggregate.name == "object_main_manifest_sweep.csv":
+            missing_object_schemes = sorted(set(COMPACT_OBJECT_MAIN_SCHEMES) - aggregate_schemes)
+            if missing_object_schemes:
+                print("ERROR: compact object-main aggregate is missing schemes: " + ", ".join(missing_object_schemes))
+                return 1
+
+        if experiment["experiment_id"] == "exp_ablation_v3_compact" and args.aggregate.name == "ablation_summary.csv":
+            missing_ablation_schemes = sorted(set(COMPACT_ABLATION_SCHEMES) - aggregate_schemes)
+            if missing_ablation_schemes:
+                print("ERROR: compact ablation aggregate is missing schemes: " + ", ".join(missing_ablation_schemes))
+                return 1
+            if int(experiment.get("default_manifest_size") or 0) != 1:
+                print("ERROR: compact paper-facing ablation must use default_manifest_size=1")
                 return 1
 
     print("OK")

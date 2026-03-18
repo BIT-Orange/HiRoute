@@ -50,7 +50,24 @@ HiRouteDiscoveryEngine::RankCandidates(const std::vector<const HiRouteSummaryEnt
   }
 
   std::sort(candidates.begin(), candidates.end(), [] (const Candidate& left, const Candidate& right) {
-    return left.totalScore > right.totalScore;
+    if (left.totalScore != right.totalScore) {
+      return left.totalScore > right.totalScore;
+    }
+    if (left.costScore != right.costScore) {
+      return left.costScore < right.costScore;
+    }
+    const auto* leftSummary = left.summary;
+    const auto* rightSummary = right.summary;
+    if (leftSummary == nullptr || rightSummary == nullptr) {
+      return leftSummary != nullptr;
+    }
+    if (leftSummary->domainId != rightSummary->domainId) {
+      return leftSummary->domainId < rightSummary->domainId;
+    }
+    if (leftSummary->controllerPrefix != rightSummary->controllerPrefix) {
+      return leftSummary->controllerPrefix < rightSummary->controllerPrefix;
+    }
+    return leftSummary->cellId < rightSummary->cellId;
   });
 
   size_t maxCandidates = requestedLimit;

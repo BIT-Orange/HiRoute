@@ -53,3 +53,4 @@
 - Promoted the compact object-main manifest sweep to Figure 5, making object-level semantic resolution the primary compact effectiveness result.
 - Recast Figure 10 as a manifest=`1` ablation figure, which restores a paper-grade mechanism story under tight fallback.
 - Updated the paper notes and figure registry so Figure 4, Figure 5, and Figure 10 now reflect the actual compact promoted results instead of the earlier v2 roles.
+- Expanded the compact routing baseline set to include `predicates_only` and `random_admissible`, so the next Figure 4 rerun can separate hard-filter-only behavior, admissible random control, and hierarchical semantic routing.

@@ -17,6 +17,7 @@
 ## Observations
 
 - The clearest compact discriminative signal is object-level semantic resolution, not routing success.
+- Figure 5 keeps that primary role even after the compact routing baseline set expands, because the strongest current compact evidence remains object-level disambiguation rather than routing success.
 - At `manifest_size=1`, `hiroute` reaches `0.9375` success with `0.0625` wrong-object rate, while `flat_iroute` and `inf_tag_forwarding` stay tied at `0.908333` success with `0.091667` wrong-object rate.
 - `central_directory` remains the upper reference at `1.0`, but the compact paper-facing claim is that `hiroute` is more manifest-efficient at local semantic resolution than the strong distributed baselines.
 - Larger manifests do not create a stronger separation than `manifest_size=1`; the main story is that the ranking advantage is already visible before broader fallback has much room to help.

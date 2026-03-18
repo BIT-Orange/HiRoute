@@ -282,6 +282,23 @@ def _validate_v3_contract(experiment: dict[str, Any], mode: str, errors: list[st
         if int(params.get("queryLimitPerIngress", 0) or 0) != 0:
             errors.append(f"{experiment['experiment_id']} must set runner.params.queryLimitPerIngress=0")
 
+    if experiment["experiment_id"] == "exp_routing_main_v3_compact":
+        schemes = {str(value) for value in experiment.get("schemes", [])}
+        required_schemes = {
+            "predicates_only",
+            "random_admissible",
+            "flat_iroute",
+            "inf_tag_forwarding",
+            "hiroute",
+            "central_directory",
+        }
+        missing_schemes = sorted(required_schemes - schemes)
+        if missing_schemes:
+            errors.append(
+                "exp_routing_main_v3_compact is missing required routing baselines: "
+                + ", ".join(missing_schemes)
+            )
+
 
 def validate_context(
     experiment_path: Path,

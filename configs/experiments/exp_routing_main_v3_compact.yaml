@@ -4,6 +4,8 @@
   "topology_id": "rf_3967_exodus_compact",
   "scenario": "hiroute-main",
   "schemes": [
+    "predicates_only",
+    "random_admissible",
     "flat_iroute",
     "inf_tag_forwarding",
     "flood",
@@ -11,6 +13,8 @@
     "central_directory"
   ],
   "frontier_schemes": [
+    "predicates_only",
+    "random_admissible",
     "flat_iroute",
     "inf_tag_forwarding",
     "hiroute"
@@ -51,6 +55,8 @@
     "hierarchy": "configs/hierarchy/hiroute_hkm_v1.yaml",
     "topology": "configs/topologies/rocketfuel_3967_exodus_compact.yaml",
     "baselines": {
+      "predicates_only": "configs/baselines/predicates_only.yaml",
+      "random_admissible": "configs/baselines/random_admissible.yaml",
       "flat_iroute": "configs/baselines/flat_iroute.yaml",
       "inf_tag_forwarding": "configs/baselines/inf_tag_forwarding.yaml",
       "flood": "configs/baselines/flood.yaml",

@@ -15,6 +15,56 @@ if str(ROOT) not in sys.path:
 
 from tools.workflow_support import load_json_yaml, read_csv, repo_root
 
+COMPACT_ROUTING_REQUIRED_SCHEMES = [
+    "predicates_only",
+    "random_admissible",
+    "flat_iroute",
+    "inf_tag_forwarding",
+    "hiroute",
+    "central_directory",
+]
+
+COMPACT_ROUTING_EXPERIMENT_SCHEMES = [
+    "predicates_only",
+    "random_admissible",
+    "flat_iroute",
+    "inf_tag_forwarding",
+    "flood",
+    "hiroute",
+    "central_directory",
+]
+
+COMPACT_ROUTING_PANEL_A_SCHEMES = [
+    "predicates_only",
+    "random_admissible",
+    "flat_iroute",
+    "inf_tag_forwarding",
+    "hiroute",
+]
+
+COMPACT_ROUTING_PANEL_B_SCHEMES = [
+    "predicates_only",
+    "random_admissible",
+    "flat_iroute",
+    "inf_tag_forwarding",
+    "hiroute",
+    "central_directory",
+]
+
+COMPACT_OBJECT_MAIN_SCHEMES = [
+    "flat_iroute",
+    "inf_tag_forwarding",
+    "hiroute",
+    "central_directory",
+]
+
+COMPACT_ABLATION_SCHEMES = [
+    "predicates_only",
+    "flat_semantic_only",
+    "predicates_plus_flat",
+    "full_hiroute",
+]
+
 
 def load_experiment(path: Path) -> dict[str, Any]:
     experiment_path = path if path.is_absolute() else repo_root() / path

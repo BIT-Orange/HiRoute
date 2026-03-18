@@ -1,6 +1,6 @@
 {
   "scheme_id": "predicates_only",
-  "description": "Ablation using only predicate-based filtering over flat controller summaries.",
+  "description": "Hard-filter-only routing baseline that selects the cheapest admissible controller path without semantic scoring or hierarchical refinement.",
   "mock_profile": {
     "success_bias": 0.46,
     "manifest_bias": 0.5,

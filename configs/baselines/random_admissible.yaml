@@ -1,0 +1,13 @@
+{
+  "scheme_id": "random_admissible",
+  "description": "Admissible-but-nonsemantic routing baseline that picks a deterministic random admissible controller order.",
+  "mock_profile": {
+    "success_bias": 0.38,
+    "manifest_bias": 0.44,
+    "ndcg_bias": 0.36,
+    "probe_bias": 2.8,
+    "discovery_byte_bias": 260.0,
+    "fetch_byte_bias": 145.0,
+    "latency_bias": 86.0
+  }
+}

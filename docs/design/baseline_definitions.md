@@ -24,7 +24,21 @@ intent-facet tags to rank domain controllers. It does not use hierarchical refin
 shares the same controller-local resolver as the other distributed baselines so that the comparison
 isolates cross-domain discovery policy rather than domain-local ranking.
 
-## Oracle
+## Predicates Only
+
+Applies the same hard predicate admissibility filter as \sysname{} but removes both flat semantic
+scoring and hierarchical refinement. It routes to the cheapest admissible controller path first,
+using shortest-hop controller distance with deterministic lexical tie-breaks. This baseline answers
+the question of what hard constraints alone already solve before any semantic ranking is allowed.
+
+## Random Admissible
+
+Applies the same admissibility filter as \sysname{} but then chooses among admissible controllers
+with a deterministic random order keyed by query ID and run seed. It shares the same downstream
+manifest and fallback path as the other distributed baselines, making it the negative control for
+"admissible but nonsemantic" routing behavior.
+
+## Oracle / Central Directory
 
 Uses idealized global object knowledge to answer each query through a centralized semantic
 directory. It is an upper-bound reference for discovery quality, not a decentralized overhead

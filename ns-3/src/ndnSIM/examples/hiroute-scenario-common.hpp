@@ -48,6 +48,7 @@ struct HiRouteScenarioConfig {
   uint32_t manifestSize = 4;
   uint32_t probeBudget = 4;
   uint32_t queryLimitPerIngress = 5;
+  uint32_t runSeed = 1;
   uint32_t exportBudget = 16;
   std::string objectScales = "0.25,0.5,0.75,1.0";
   std::string objectsPerDomainSweep = "";
@@ -337,7 +338,7 @@ RunHiRouteScenario(int argc, char* argv[], HiRouteScenarioMode mode)
   cmd.AddValue("runDir", "Output run directory", config.runDir);
   cmd.AddValue("topologyId", "Topology identifier", config.topologyId);
   cmd.AddValue("scheme",
-               "exact, flood, flat_iroute, oracle, hiroute, inf_tag_forwarding",
+               "exact, flood, flat_iroute, oracle, hiroute, inf_tag_forwarding, predicates_only, random_admissible",
                config.scheme);
   cmd.AddValue("stopSeconds", "Simulation stop time", config.stopSeconds);
   cmd.AddValue("failureTime", "Failure injection time", config.failureTime);
@@ -348,6 +349,8 @@ RunHiRouteScenario(int argc, char* argv[], HiRouteScenarioMode mode)
   cmd.AddValue("probeBudget", "Discovery probe budget", config.probeBudget);
   cmd.AddValue("queryLimitPerIngress", "Maximum queries scheduled on each ingress node",
                config.queryLimitPerIngress);
+  cmd.AddValue("runSeed", "Deterministic run seed for admissible random baseline choices",
+               config.runSeed);
   cmd.AddValue("exportBudget", "Per-domain export budget used in scaling summaries",
                config.exportBudget);
   cmd.AddValue("objectScales", "Comma-separated object scaling factors", config.objectScales);
@@ -519,7 +522,8 @@ RunHiRouteScenario(int argc, char* argv[], HiRouteScenarioMode mode)
       ingressType = "ns3::ndn::InfTagForwardingApp";
       strategyMode = "inf_tag_forwarding";
     }
-    else if (config.scheme == "predicates_only" || config.scheme == "flat_semantic_only" ||
+    else if (config.scheme == "predicates_only" || config.scheme == "random_admissible" ||
+             config.scheme == "flat_semantic_only" ||
              config.scheme == "predicates_plus_flat" || config.scheme == "full_hiroute" ||
              config.scheme == "hiroute" || config.scheme == "oracle") {
       strategyMode = config.scheme;
@@ -532,12 +536,14 @@ RunHiRouteScenario(int argc, char* argv[], HiRouteScenarioMode mode)
     ingressHelper.SetAttribute("QrelsObjectCsvPath", StringValue(config.qrelsObjectCsv));
     ingressHelper.SetAttribute("ObjectsCsvPath", StringValue(config.objectsCsv));
     ingressHelper.SetAttribute("SummaryCsvPath", StringValue(config.summaryCsv));
+    ingressHelper.SetAttribute("TopologyMappingCsvPath", StringValue(config.topologyMappingCsv));
     ingressHelper.SetAttribute("RunDirectory", StringValue(config.runDir));
     ingressHelper.SetAttribute("IngressNodeFilter", StringValue(GetFieldOrEmpty(row, "node_id")));
     ingressHelper.SetAttribute("OraclePrefix", StringValue(config.oraclePrefix));
     ingressHelper.SetAttribute("RequestedManifestSize", UintegerValue(config.manifestSize));
     ingressHelper.SetAttribute("MaxProbeBudget", UintegerValue(config.probeBudget));
     ingressHelper.SetAttribute("QueryLimit", UintegerValue(config.queryLimitPerIngress));
+    ingressHelper.SetAttribute("RunSeed", UintegerValue(config.runSeed));
     ingressHelper.SetAttribute("ReplyTimeout", StringValue("300ms"));
     ingressHelper.SetAttribute("StrategyMode", StringValue(strategyMode));
     auto apps = ingressHelper.Install(Names::Find<Node>(GetFieldOrEmpty(row, "node_id")));

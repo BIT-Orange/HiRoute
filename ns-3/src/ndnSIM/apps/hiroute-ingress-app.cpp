@@ -1,7 +1,11 @@
 /* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
 #include "hiroute-ingress-app.hpp"
 
+#include "ns3/channel.h"
 #include "ns3/log.h"
+#include "ns3/names.h"
+#include "ns3/net-device.h"
+#include "ns3/node.h"
 #include "ns3/nstime.h"
 #include "ns3/string.h"
 #include "ns3/uinteger.h"
@@ -10,6 +14,8 @@
 #include <cmath>
 #include <cstdlib>
 #include <limits>
+#include <queue>
+#include <random>
 #include <stdexcept>
 
 NS_LOG_COMPONENT_DEFINE("ndn.HiRouteIngressApp");
@@ -56,6 +62,17 @@ escapeCsv(std::string value)
   return escaped;
 }
 
+uint64_t
+stableHash(const std::string& value)
+{
+  uint64_t hash = 1469598103934665603ull;
+  for (unsigned char ch : value) {
+    hash ^= static_cast<uint64_t>(ch);
+    hash *= 1099511628211ull;
+  }
+  return hash;
+}
+
 } // namespace
 
 TypeId
@@ -83,6 +100,9 @@ HiRouteIngressApp::GetTypeId()
       .AddAttribute("SummaryCsvPath", "Path to hslsa_export.csv",
                     StringValue("../data/processed/ndnsim/hslsa_export.csv"),
                     MakeStringAccessor(&HiRouteIngressApp::m_summaryCsvPath), MakeStringChecker())
+      .AddAttribute("TopologyMappingCsvPath", "Path to topology_mapping.csv",
+                    StringValue("../data/processed/ndnsim/topology_mapping_rf_3967_exodus.csv"),
+                    MakeStringAccessor(&HiRouteIngressApp::m_topologyMappingCsvPath), MakeStringChecker())
       .AddAttribute("RunDirectory", "Directory where query/probe/search logs are written",
                     StringValue("../runs/pending/ingress-smoke"),
                     MakeStringAccessor(&HiRouteIngressApp::m_runDirectory), MakeStringChecker())
@@ -91,7 +111,7 @@ HiRouteIngressApp::GetTypeId()
                     MakeStringAccessor(&HiRouteIngressApp::m_ingressNodeFilter),
                     MakeStringChecker())
       .AddAttribute("StrategyMode",
-                    "exact, flood, flat, hiroute, oracle, inf_tag_forwarding, predicates_only, flat_semantic_only, predicates_plus_flat, or full_hiroute",
+                    "exact, flood, flat, hiroute, oracle, inf_tag_forwarding, predicates_only, random_admissible, flat_semantic_only, predicates_plus_flat, or full_hiroute",
                     StringValue("hiroute"),
                     MakeStringAccessor(&HiRouteIngressApp::m_strategyMode), MakeStringChecker())
       .AddAttribute("OraclePrefix", "Discovery prefix used by the oracle baseline",
@@ -108,6 +128,10 @@ HiRouteIngressApp::GetTypeId()
       .AddAttribute("QueryLimit", "Limit the number of scheduled queries (0 means all)",
                     UintegerValue(0),
                     MakeUintegerAccessor(&HiRouteIngressApp::m_queryLimit),
+                    MakeUintegerChecker<uint32_t>())
+      .AddAttribute("RunSeed", "Deterministic run seed used for admissible random baseline choices",
+                    UintegerValue(1),
+                    MakeUintegerAccessor(&HiRouteIngressApp::m_runSeed),
                     MakeUintegerChecker<uint32_t>())
       .AddAttribute("QueryStartDelay", "Delay before scheduling the first query",
                     StringValue("100ms"),
@@ -184,6 +208,7 @@ void
 HiRouteIngressApp::loadInputs()
 {
   m_summaryStore.LoadFromCsv(m_summaryCsvPath);
+  loadTopologyMapping();
 
   std::map<std::string, uint32_t> queryEmbeddingRows;
   for (const auto& row : HiRouteDatasetReader::ReadCsvRows(m_queryEmbeddingIndexCsvPath)) {
@@ -231,6 +256,24 @@ HiRouteIngressApp::loadInputs()
     const auto object = HiRouteObjectRecord::FromCsvRow(row);
     m_canonicalByObjectId[object.objectId] = object.canonicalName;
     m_objectIdByCanonicalName[object.canonicalName] = object.objectId;
+  }
+}
+
+void
+HiRouteIngressApp::loadTopologyMapping()
+{
+  m_controllerNodeIdByPrefix.clear();
+  m_controllerHopCostCache.clear();
+  for (const auto& row : HiRouteDatasetReader::ReadCsvRows(m_topologyMappingCsvPath)) {
+    if (GetFieldOrEmpty(row, "role") != "controller") {
+      continue;
+    }
+    const auto controllerPrefix = GetFieldOrEmpty(row, "controller_prefix");
+    const auto nodeId = GetFieldOrEmpty(row, "node_id");
+    if (controllerPrefix.empty() || nodeId.empty()) {
+      continue;
+    }
+    m_controllerNodeIdByPrefix[controllerPrefix] = nodeId;
   }
 }
 
@@ -430,6 +473,42 @@ HiRouteIngressApp::buildProbePlan(const HiRouteQueryRecord& query,
   };
 
   auto predicateOnlyTargets = [&] (const std::vector<const HiRouteSummaryEntry*>& entries) {
+    std::map<std::string, ProbeTarget> bestByController;
+    for (const auto* entry : entries) {
+      if (entry == nullptr || entry->level != 0) {
+        continue;
+      }
+      ProbeTarget target{entry->domainId, entry->controllerPrefix, entry->cellId, 0.0};
+      auto existing = bestByController.find(target.controllerPrefix);
+      if (existing == bestByController.end() || target.domainId < existing->second.domainId ||
+          (target.domainId == existing->second.domainId && target.cellId < existing->second.cellId)) {
+        bestByController[target.controllerPrefix] = target;
+      }
+    }
+
+    std::vector<ProbeTarget> targets;
+    targets.reserve(bestByController.size());
+    for (const auto& item : bestByController) {
+      targets.push_back(item.second);
+    }
+    std::sort(targets.begin(), targets.end(), [&] (const ProbeTarget& left, const ProbeTarget& right) {
+      const auto leftCost = controllerHopCost(left.controllerPrefix);
+      const auto rightCost = controllerHopCost(right.controllerPrefix);
+      if (leftCost != rightCost) {
+        return leftCost < rightCost;
+      }
+      if (left.domainId == right.domainId) {
+        return left.controllerPrefix < right.controllerPrefix;
+      }
+      return left.domainId < right.domainId;
+    });
+    if (targets.size() > m_maxProbeBudget) {
+      targets.resize(m_maxProbeBudget);
+    }
+    return targets;
+  };
+
+  auto randomAdmissibleTargets = [&] (const std::vector<const HiRouteSummaryEntry*>& entries) {
     std::vector<ProbeTarget> targets;
     for (const auto* entry : entries) {
       if (entry == nullptr || entry->level != 0) {
@@ -439,10 +518,17 @@ HiRouteIngressApp::buildProbePlan(const HiRouteQueryRecord& query,
     }
     std::sort(targets.begin(), targets.end(), [] (const ProbeTarget& left, const ProbeTarget& right) {
       if (left.domainId == right.domainId) {
+        if (left.controllerPrefix == right.controllerPrefix) {
+          return left.cellId < right.cellId;
+        }
         return left.controllerPrefix < right.controllerPrefix;
       }
       return left.domainId < right.domainId;
     });
+    const auto seedMaterial =
+      query.queryId + "::" + std::to_string(m_runSeed) + "::" + m_strategyMode;
+    std::mt19937_64 rng(stableHash(seedMaterial));
+    std::shuffle(targets.begin(), targets.end(), rng);
     if (targets.size() > m_maxProbeBudget) {
       targets.resize(m_maxProbeBudget);
     }
@@ -486,6 +572,11 @@ HiRouteIngressApp::buildProbePlan(const HiRouteQueryRecord& query,
   }
   else if (m_strategyMode == "predicates_only") {
     plan.probes = predicateOnlyTargets(predicateMatches);
+    plan.level1CellCount = plan.level0CellCount;
+    plan.refinedCellCount = plan.probes.size();
+  }
+  else if (m_strategyMode == "random_admissible") {
+    plan.probes = randomAdmissibleTargets(predicateMatches);
     plan.level1CellCount = plan.level0CellCount;
     plan.refinedCellCount = plan.probes.size();
   }
@@ -584,6 +675,75 @@ HiRouteIngressApp::buildProbePlan(const HiRouteQueryRecord& query,
   logSearchStage(query.queryId, "probed_cells", plan.probeTargetCount,
                  plan.probeTargetCount, plan.probeTargetCount, startTimestamp + 5);
   return plan;
+}
+
+uint32_t
+HiRouteIngressApp::controllerHopCost(const std::string& controllerPrefix) const
+{
+  auto cached = m_controllerHopCostCache.find(controllerPrefix);
+  if (cached != m_controllerHopCostCache.end()) {
+    return cached->second;
+  }
+
+  const auto controllerIt = m_controllerNodeIdByPrefix.find(controllerPrefix);
+  if (controllerIt == m_controllerNodeIdByPrefix.end()) {
+    return std::numeric_limits<uint32_t>::max();
+  }
+
+  Ptr<Node> sourceNode = GetNode();
+  Ptr<Node> targetNode = Names::Find<Node>(controllerIt->second);
+  if (sourceNode == nullptr || targetNode == nullptr) {
+    return std::numeric_limits<uint32_t>::max();
+  }
+  if (sourceNode == targetNode) {
+    m_controllerHopCostCache[controllerPrefix] = 0;
+    return 0;
+  }
+
+  std::queue<std::pair<Ptr<Node>, uint32_t>> frontier;
+  std::set<uint32_t> visited;
+  frontier.push({sourceNode, 0});
+  visited.insert(sourceNode->GetId());
+
+  uint32_t best = std::numeric_limits<uint32_t>::max();
+  while (!frontier.empty()) {
+    auto current = frontier.front();
+    frontier.pop();
+
+    Ptr<Node> node = current.first;
+    const uint32_t depth = current.second;
+    for (uint32_t deviceIndex = 0; deviceIndex < node->GetNDevices(); ++deviceIndex) {
+      Ptr<NetDevice> device = node->GetDevice(deviceIndex);
+      if (device == nullptr) {
+        continue;
+      }
+      Ptr<Channel> channel = device->GetChannel();
+      if (channel == nullptr) {
+        continue;
+      }
+      for (uint32_t channelIndex = 0; channelIndex < channel->GetNDevices(); ++channelIndex) {
+        Ptr<NetDevice> neighborDevice = channel->GetDevice(channelIndex);
+        if (neighborDevice == nullptr) {
+          continue;
+        }
+        Ptr<Node> neighborNode = neighborDevice->GetNode();
+        if (neighborNode == nullptr || neighborNode == node) {
+          continue;
+        }
+        if (neighborNode == targetNode) {
+          best = depth + 1;
+          m_controllerHopCostCache[controllerPrefix] = best;
+          return best;
+        }
+        if (visited.insert(neighborNode->GetId()).second) {
+          frontier.push({neighborNode, depth + 1});
+        }
+      }
+    }
+  }
+
+  m_controllerHopCostCache[controllerPrefix] = best;
+  return best;
 }
 
 void
