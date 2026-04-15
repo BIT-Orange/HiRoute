@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 import sys
 from typing import Any
@@ -18,7 +19,6 @@ from tools.workflow_support import load_json_yaml, read_csv, repo_root
 COMPACT_ROUTING_REQUIRED_SCHEMES = [
     "predicates_only",
     "random_admissible",
-    "flat_iroute",
     "inf_tag_forwarding",
     "hiroute",
     "central_directory",
@@ -27,7 +27,6 @@ COMPACT_ROUTING_REQUIRED_SCHEMES = [
 COMPACT_ROUTING_EXPERIMENT_SCHEMES = [
     "predicates_only",
     "random_admissible",
-    "flat_iroute",
     "inf_tag_forwarding",
     "flood",
     "hiroute",
@@ -37,7 +36,6 @@ COMPACT_ROUTING_EXPERIMENT_SCHEMES = [
 COMPACT_ROUTING_PANEL_A_SCHEMES = [
     "predicates_only",
     "random_admissible",
-    "flat_iroute",
     "inf_tag_forwarding",
     "hiroute",
 ]
@@ -45,14 +43,12 @@ COMPACT_ROUTING_PANEL_A_SCHEMES = [
 COMPACT_ROUTING_PANEL_B_SCHEMES = [
     "predicates_only",
     "random_admissible",
-    "flat_iroute",
     "inf_tag_forwarding",
     "hiroute",
     "central_directory",
 ]
 
 COMPACT_OBJECT_MAIN_SCHEMES = [
-    "flat_iroute",
     "inf_tag_forwarding",
     "hiroute",
     "central_directory",
@@ -78,6 +74,25 @@ def _resolve(path_str: str) -> Path:
 
 def is_v3_experiment(experiment: dict[str, Any]) -> bool:
     return str(experiment.get("dataset_id", "")).endswith("_v3") or str(experiment.get("experiment_id", "")).endswith("_v3")
+
+
+def is_mainline_experiment(experiment: dict[str, Any]) -> bool:
+    return str(experiment.get("dataset_id", "")) == "smartcity" or str(experiment.get("experiment_id", "")) in {
+        "routing_main",
+        "object_main",
+        "ablation",
+        "state_scaling",
+        "robustness",
+        "sanity_appendix",
+    }
+
+
+def output_namespace(experiment: dict[str, Any]) -> str | None:
+    if is_mainline_experiment(experiment):
+        return "mainline"
+    if is_v3_experiment(experiment):
+        return "v3"
+    return None
 
 
 def _declared_output_path(experiment: dict[str, Any], filename: str) -> Path | None:
@@ -113,8 +128,9 @@ def aggregate_output_path(experiment: dict[str, Any], filename: str) -> Path:
     if declared is not None:
         return declared
     base = repo_root() / "results" / "aggregate"
-    if is_v3_experiment(experiment):
-        base = base / "v3"
+    namespace = output_namespace(experiment)
+    if namespace:
+        base = base / namespace
     return base / filename
 
 
@@ -123,8 +139,9 @@ def table_output_path(experiment: dict[str, Any], filename: str) -> Path:
     if declared is not None:
         return declared
     base = repo_root() / "results" / "tables"
-    if is_v3_experiment(experiment):
-        base = base / "v3"
+    namespace = output_namespace(experiment)
+    if namespace:
+        base = base / namespace
     return base / filename
 
 
@@ -133,8 +150,9 @@ def figure_output_path(experiment: dict[str, Any], filename: str) -> Path:
     if declared is not None:
         return declared
     base = repo_root() / "results" / "figures"
-    if is_v3_experiment(experiment):
-        base = base / "v3"
+    namespace = output_namespace(experiment)
+    if namespace:
+        base = base / namespace
     return base / filename
 
 
@@ -143,6 +161,22 @@ def _runs_index() -> dict[str, dict[str, str]]:
     if not runs_path.exists():
         return {}
     return {row["run_id"]: row for row in read_csv(runs_path)}
+
+
+def read_run_ids_file(path: Path | None) -> set[str]:
+    if path is None:
+        env_path = os.environ.get("HIROUTE_RUN_IDS_FILE", "").strip()
+        if not env_path:
+            return set()
+        path = Path(env_path)
+    resolved = path if path.is_absolute() else repo_root() / path
+    if not resolved.exists():
+        raise FileNotFoundError(f"run ids file does not exist: {resolved}")
+    return {
+        line.strip()
+        for line in resolved.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    }
 
 
 def expected_topology_ids(experiment: dict[str, Any]) -> set[str]:
@@ -164,7 +198,11 @@ def expected_scenarios(experiment: dict[str, Any]) -> set[str]:
     return scenarios
 
 
-def registry_rows(experiment: dict[str, Any] | str, source: str = "promoted") -> list[dict[str, str]]:
+def registry_rows(
+    experiment: dict[str, Any] | str,
+    source: str = "promoted",
+    run_ids: set[str] | None = None,
+) -> list[dict[str, str]]:
     filename = "promoted_runs.csv" if source == "promoted" else "runs.csv"
     registry_path = repo_root() / "runs" / "registry" / filename
     if not registry_path.exists():
@@ -189,9 +227,12 @@ def registry_rows(experiment: dict[str, Any] | str, source: str = "promoted") ->
         sweep_values = set()
         manifest_sizes = set()
 
+    run_ids = run_ids if run_ids is not None else read_run_ids_file(None)
     run_index = _runs_index()
     rows = []
     for row in read_csv(registry_path):
+        if run_ids and row["run_id"] not in run_ids:
+            continue
         if row["experiment_id"] != experiment_id:
             continue
         if expected_dataset_id and row["dataset_id"] != expected_dataset_id:
@@ -266,8 +307,12 @@ def log_frame(rows: list[dict[str, str]], filename: str, raw: bool = False) -> p
     return pd.concat(frames, ignore_index=True)
 
 
-def require_rows(experiment: dict[str, Any] | str, source: str) -> list[dict[str, str]]:
-    rows = registry_rows(experiment, source)
+def require_rows(
+    experiment: dict[str, Any] | str,
+    source: str,
+    run_ids: set[str] | None = None,
+) -> list[dict[str, str]]:
+    rows = registry_rows(experiment, source, run_ids=run_ids)
     if not rows:
         experiment_id = experiment["experiment_id"] if isinstance(experiment, dict) else experiment
         raise RuntimeError(f"no registry rows available for experiment '{experiment_id}' from source '{source}'")

@@ -58,8 +58,10 @@ def main() -> int:
     default_budget = int(experiment.get("default_budget") or 0)
     default_manifest_size = int(experiment.get("default_manifest_size") or 0)
     experiment_id = str(experiment.get("experiment_id", ""))
-    is_v3 = str(experiment.get("dataset_id", "")).endswith("_v3") or experiment_id.endswith("_v3") or experiment_id.endswith("_v3_compact")
-    is_compact = experiment_id.endswith("_v3_compact")
+    dataset_id = str(experiment.get("dataset_id", ""))
+    is_mainline = dataset_id == "smartcity" or experiment_id in {"routing_main", "object_main", "ablation", "state_scaling", "robustness"}
+    is_v3 = dataset_id.endswith("_v3") or experiment_id.endswith("_v3") or experiment_id.endswith("_v3_compact")
+    is_compact = experiment_id.endswith("_v3_compact") or is_mainline
 
     promoted_rows = []
     for row in read_csv_rows(promoted_path):
@@ -203,21 +205,25 @@ def main() -> int:
 
     if args.aggregate and args.aggregate.exists():
         aggregate_path_text = str(args.aggregate)
+        if is_mainline and "/mainline/" not in aggregate_path_text:
+            print("ERROR: mainline figures must use mainline aggregate paths")
+            return 1
         if is_v3 and "/v3/" not in aggregate_path_text:
             print("ERROR: smartcity_v3 main figures must use v3 aggregate paths")
             return 1
-        if is_compact and "/v3/compact/" not in aggregate_path_text:
+        if experiment_id.endswith("_v3_compact") and "/v3/compact/" not in aggregate_path_text:
             print("ERROR: compact v3 figures must use v3/compact aggregate paths")
             return 1
-        if is_compact and ("/v3/local/" in aggregate_path_text or "/v3/local_lite/" in aggregate_path_text):
+        if experiment_id.endswith("_v3_compact") and ("/v3/local/" in aggregate_path_text or "/v3/local_lite/" in aggregate_path_text):
             print("ERROR: compact v3 figures must not read local/local_lite aggregates")
             return 1
-        if not is_v3 and "/v3/" in aggregate_path_text:
+        if not is_v3 and not is_mainline and "/v3/" in aggregate_path_text:
             print("ERROR: non-v3 experiments must not read v3 aggregates")
             return 1
         aggregate_rows = read_csv_rows(args.aggregate)
         aggregate_schemes = {row.get("scheme", "") for row in aggregate_rows}
         if args.aggregate.name in {
+            "routing_support.csv",
             "main_success_overhead.csv",
             "failure_breakdown.csv",
             "object_main_manifest_sweep.csv",
@@ -232,20 +238,20 @@ def main() -> int:
             return 1
 
         workload_tiers = set(experiment.get("query_filters", {}).get("workload_tiers", []))
-        if args.aggregate.name in {"main_success_overhead.csv", "candidate_shrinkage.csv", "deadline_summary.csv"}:
-            expected_tier = {"routing_hard_v3"} if is_v3 else {"routing_hard"}
+        if args.aggregate.name in {"routing_support.csv", "main_success_overhead.csv", "candidate_shrinkage.csv", "deadline_summary.csv"}:
+            expected_tier = {"routing_main"} if is_mainline else {"routing_hard_v3"} if is_v3 else {"routing_hard"}
             if workload_tiers != expected_tier:
                 print("ERROR: routing aggregates must come from routing_hard workload")
                 return 1
         if args.aggregate.name in {"failure_breakdown.csv", "object_main_manifest_sweep.csv", "ablation_summary.csv"}:
-            expected_tier = {"object_hard_v3"} if is_v3 else {"object_hard"}
+            expected_tier = {"object_main"} if is_mainline else {"object_hard_v3"} if is_v3 else {"object_hard"}
             if workload_tiers != expected_tier:
                 print("ERROR: failure and ablation aggregates must come from object_hard workload")
                 return 1
 
-        if args.aggregate.name == "main_success_overhead.csv":
+        if args.aggregate.name in {"routing_support.csv", "main_success_overhead.csv"}:
             sweep_key = "manifest_size" if expected_manifest_sizes else "budget"
-            if experiment["experiment_id"] == "exp_routing_main_v3_compact":
+            if experiment["experiment_id"] in {"exp_routing_main_v3_compact", "routing_main"}:
                 missing_routing_schemes = sorted(
                     set(COMPACT_ROUTING_REQUIRED_SCHEMES) - aggregate_schemes
                 )
@@ -264,18 +270,18 @@ def main() -> int:
             expected_points = expected_manifest_sizes if expected_manifest_sizes else expected_budgets
             frontier_schemes = (
                 set(COMPACT_ROUTING_REQUIRED_SCHEMES) - {"central_directory"}
-                if experiment["experiment_id"] == "exp_routing_main_v3_compact"
-                else {"flat_iroute", "hiroute", "inf_tag_forwarding"} & set(experiment.get("schemes", []))
+                if experiment["experiment_id"] in {"exp_routing_main_v3_compact", "routing_main"}
+                else {"hiroute", "inf_tag_forwarding"} & set(experiment.get("schemes", []))
             )
             for scheme in frontier_schemes:
                 if len(budgets_by_scheme.get(scheme, set())) < len(expected_points):
                     print(f"ERROR: routing frontier is missing budget points for {scheme}")
                     return 1
-            if {"flat_iroute", "flood"}.issubset(aggregate_schemes):
+            if {"inf_tag_forwarding", "flood"}.issubset(aggregate_schemes):
                 flat_rows = {
                     int(row.get(sweep_key) or 0): row
                     for row in aggregate_rows
-                    if row.get("scheme") == "flat_iroute"
+                    if row.get("scheme") == "inf_tag_forwarding"
                 }
                 flood_rows = {
                     int(row.get(sweep_key) or 0): row
@@ -300,10 +306,10 @@ def main() -> int:
                         if not identical:
                             break
                     if identical:
-                        print("ERROR: flat_iroute and flood remain degenerate on all routing headline metrics")
+                        print("ERROR: inf_tag_forwarding and flood remain degenerate on all routing headline metrics")
                         return 1
 
-        if experiment["experiment_id"] in {"exp_main_v1", "exp_routing_main_v3", "exp_routing_main_v3_compact"} and args.aggregate.name == "candidate_shrinkage.csv":
+        if experiment["experiment_id"] in {"exp_main_v1", "exp_routing_main_v3", "exp_routing_main_v3_compact", "routing_main"} and args.aggregate.name == "candidate_shrinkage.csv":
             required_stages = {
                 "all_domains",
                 "predicate_filtered_domains",
@@ -318,12 +324,12 @@ def main() -> int:
                 print("ERROR: candidate shrinkage aggregate misses required stages: " +
                       ", ".join(missing_stages))
                 return 1
-            if experiment["experiment_id"] == "exp_routing_main_v3_compact":
+            if experiment["experiment_id"] in {"exp_routing_main_v3_compact", "routing_main"}:
                 stage_schemes = {row.get("scheme", "") for row in aggregate_rows}
-                if not {"flat_iroute", "hiroute"}.issubset(stage_schemes):
-                    print("ERROR: compact candidate shrinkage aggregate must include flat_iroute and hiroute")
+                if not {"inf_tag_forwarding", "hiroute"}.issubset(stage_schemes):
+                    print("ERROR: compact candidate shrinkage aggregate must include inf_tag_forwarding and hiroute")
                     return 1
-        if experiment["experiment_id"] in {"exp_scaling_v1", "exp_scaling_v3", "exp_scaling_v3_compact"} and args.aggregate.name == "state_scaling_summary.csv":
+        if experiment["experiment_id"] in {"exp_scaling_v1", "exp_scaling_v3", "exp_scaling_v3_compact", "state_scaling"} and args.aggregate.name == "state_scaling_summary.csv":
             axes = {row.get("scaling_axis", "") for row in aggregate_rows}
             if axes != {"objects_per_domain", "domain_count"}:
                 print("ERROR: state scaling aggregate must contain both object and domain sweeps")
@@ -332,7 +338,7 @@ def main() -> int:
             if expected_topologies and aggregate_topologies != expected_topologies:
                 print("ERROR: state scaling aggregate does not cover every comparison topology")
                 return 1
-        if experiment["experiment_id"] in {"exp_robustness_v3_compact"} and args.aggregate.name == "robustness_timeseries.csv":
+        if experiment["experiment_id"] in {"exp_robustness_v3_compact", "robustness"} and args.aggregate.name == "robustness_timeseries.csv":
             required_fields = {
                 "experiment_id",
                 "scenario_variant",
@@ -355,6 +361,9 @@ def main() -> int:
             "exp_routing_main_v3_compact",
             "exp_object_main_v3_compact",
             "exp_ablation_v3_compact",
+            "routing_main",
+            "object_main",
+            "ablation",
         }:
             query_filters = experiment.get("query_filters", {}) or {}
             for field in ["max_ingress_nodes", "max_queries_per_ingress", "max_total_queries"]:
@@ -366,13 +375,13 @@ def main() -> int:
                 print("ERROR: compact routing/object/ablation must use queryLimitPerIngress=0")
                 return 1
 
-        if experiment["experiment_id"] == "exp_object_main_v3_compact" and args.aggregate.name == "object_main_manifest_sweep.csv":
+        if experiment["experiment_id"] in {"exp_object_main_v3_compact", "object_main"} and args.aggregate.name == "object_main_manifest_sweep.csv":
             missing_object_schemes = sorted(set(COMPACT_OBJECT_MAIN_SCHEMES) - aggregate_schemes)
             if missing_object_schemes:
                 print("ERROR: compact object-main aggregate is missing schemes: " + ", ".join(missing_object_schemes))
                 return 1
 
-        if experiment["experiment_id"] == "exp_ablation_v3_compact" and args.aggregate.name == "ablation_summary.csv":
+        if experiment["experiment_id"] in {"exp_ablation_v3_compact", "ablation"} and args.aggregate.name == "ablation_summary.csv":
             missing_ablation_schemes = sorted(set(COMPACT_ABLATION_SCHEMES) - aggregate_schemes)
             if missing_ablation_schemes:
                 print("ERROR: compact ablation aggregate is missing schemes: " + ", ".join(missing_ablation_schemes))

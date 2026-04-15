@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import os
 import re
 from pathlib import Path
 import sys
@@ -15,12 +16,24 @@ if str(ROOT) not in sys.path:
 
 from tools.workflow_support import GENERATED_TRACKED_PREFIXES, git_dirty, load_json_yaml, repo_root
 
+DIAGNOSTIC_EXPERIMENT_IDS = {"routing_debug", "object_debug"}
+MAINLINE_EXPERIMENT_IDS = {"routing_main", "object_main", "ablation", "state_scaling", "robustness"}
+
 
 def _resolve(path_str: str) -> Path:
     path = Path(path_str)
     if path.is_absolute():
         return path
     return repo_root() / path
+
+
+def _allow_dirty_worktree_override() -> bool:
+    return os.environ.get("HIROUTE_ALLOW_DIRTY_WORKTREE", "").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
 
 
 def _resolve_topology(experiment: dict[str, Any], topology_id: str | None, errors: list[str]) -> None:
@@ -136,6 +149,7 @@ def _validate_query_slice(experiment: dict[str, Any], errors: list[str]) -> None
     allowed_splits = {str(value) for value in query_filters.get("splits", [])}
     allowed_tiers = {str(value) for value in query_filters.get("workload_tiers", [])}
     allowed_ambiguity = {str(value) for value in query_filters.get("ambiguity_levels", [])}
+    allowed_query_ids = {str(value) for value in query_filters.get("query_ids", [])}
     min_intended_domain_count = int(query_filters.get("min_intended_domain_count", 0) or 0)
     max_ingress_nodes = int(query_filters.get("max_ingress_nodes", 0) or 0)
     max_queries_per_ingress = int(query_filters.get("max_queries_per_ingress", 0) or 0)
@@ -153,6 +167,8 @@ def _validate_query_slice(experiment: dict[str, Any], errors: list[str]) -> None
         if allowed_tiers and row.get("workload_tier", "") not in allowed_tiers:
             continue
         if allowed_ambiguity and row.get("ambiguity_level", "") not in allowed_ambiguity:
+            continue
+        if allowed_query_ids and row["query_id"] not in allowed_query_ids:
             continue
         if min_intended_domain_count and int(row.get("intended_domain_count") or 0) < min_intended_domain_count:
             continue
@@ -220,74 +236,94 @@ def _validate_ablation_contract(experiment: dict[str, Any], errors: list[str]) -
 
 
 def _validate_v3_contract(experiment: dict[str, Any], mode: str, errors: list[str]) -> None:
-    if experiment.get("dataset_id") != "smartcity_v3":
+    dataset_id = str(experiment.get("dataset_id", ""))
+    experiment_id = str(experiment.get("experiment_id", ""))
+    if dataset_id not in {"smartcity_v3", "smartcity"}:
         return
 
     runner = experiment.get("runner", {})
     if runner.get("type") != "ndnsim":
-        errors.append("smartcity_v3 official experiments must use runner.type=ndnsim")
+        errors.append(f"{dataset_id} official experiments must use runner.type=ndnsim")
 
     query_filters = experiment.get("query_filters", {}) or {}
     workload_tiers = set(str(value) for value in query_filters.get("workload_tiers", []))
-    allowed_v3_tiers = {"routing_hard_v3", "object_hard_v3", "sanity_appendix_v3"}
-    if workload_tiers and not workload_tiers.issubset(allowed_v3_tiers):
-        errors.append("smartcity_v3 experiments must only reference v3 workload tiers")
+    if dataset_id == "smartcity":
+        allowed_tiers = {"routing_main", "object_main", "sanity_appendix"}
+        routing_experiments = {"routing_main", "state_scaling", "robustness"}
+        object_experiments = {"object_main", "ablation"}
+        mainline_experiments = MAINLINE_EXPERIMENT_IDS
+        expected_output_fragment = "/mainline/"
+        label = "mainline"
+    else:
+        allowed_tiers = {"routing_hard_v3", "object_hard_v3", "sanity_appendix_v3"}
+        routing_experiments = {"exp_routing_main_v3", "exp_routing_main_v3_compact", "exp_scaling_v3_compact", "exp_robustness_v3_compact"}
+        object_experiments = {"exp_object_main_v3", "exp_ablation_v3", "exp_object_main_v3_compact", "exp_ablation_v3_compact"}
+        mainline_experiments = {
+            "exp_routing_main_v3",
+            "exp_object_main_v3",
+            "exp_ablation_v3",
+            "exp_routing_main_v3_compact",
+            "exp_object_main_v3_compact",
+            "exp_ablation_v3_compact",
+        }
+        expected_output_fragment = "/v3/compact/" if experiment_id.endswith("_v3_compact") else "/v3/"
+        label = "v3"
+    if workload_tiers and not workload_tiers.issubset(allowed_tiers):
+        errors.append(f"{dataset_id} experiments must only reference {label} workload tiers")
 
-    if mode == "official" and experiment["experiment_id"] in {
-        "exp_routing_main_v3",
-        "exp_object_main_v3",
-        "exp_ablation_v3",
-        "exp_routing_main_v3_compact",
-        "exp_object_main_v3_compact",
-        "exp_ablation_v3_compact",
-    }:
+    if mode == "official" and experiment_id in mainline_experiments:
         if set(query_filters.get("splits", [])) != {"test"}:
-            errors.append("official v3 main/object/ablation experiments must use split=test only")
+            errors.append(f"official {label} experiments must use split=test only")
+    if experiment_id in mainline_experiments and query_filters.get("query_ids"):
+        errors.append(f"{experiment_id} must not use query_filters.query_ids")
 
-    if experiment["experiment_id"] in {"exp_routing_main_v3", "exp_routing_main_v3_compact"}:
-        if workload_tiers != {"routing_hard_v3"}:
-            errors.append(f"{experiment['experiment_id']} must use routing_hard_v3 only")
-    if experiment["experiment_id"] in {
-        "exp_object_main_v3",
-        "exp_ablation_v3",
-        "exp_object_main_v3_compact",
-        "exp_ablation_v3_compact",
-    }:
-        if workload_tiers != {"object_hard_v3"}:
-            errors.append(f"{experiment['experiment_id']} must use object_hard_v3 only")
-    if experiment["experiment_id"] == "exp_sanity_appendix_v3":
-        if workload_tiers != {"sanity_appendix_v3"}:
-            errors.append("exp_sanity_appendix_v3 must use sanity_appendix_v3 only")
+    routing_tier = "routing_main" if dataset_id == "smartcity" else "routing_hard_v3"
+    object_tier = "object_main" if dataset_id == "smartcity" else "object_hard_v3"
+    sanity_tier = "sanity_appendix" if dataset_id == "smartcity" else "sanity_appendix_v3"
 
-    if experiment["experiment_id"].endswith("_v3_compact"):
+    if experiment_id in routing_experiments and workload_tiers != {routing_tier}:
+        errors.append(f"{experiment_id} must use {routing_tier} only")
+    if experiment_id in object_experiments and workload_tiers != {object_tier}:
+        errors.append(f"{experiment_id} must use {object_tier} only")
+    if experiment_id in {"exp_sanity_appendix_v3", "sanity_appendix"} and workload_tiers != {sanity_tier}:
+        errors.append(f"{experiment_id} must use {sanity_tier} only")
+    if experiment_id == "routing_debug" and workload_tiers != {routing_tier}:
+        errors.append(f"{experiment_id} must use {routing_tier} only")
+    if experiment_id == "object_debug" and workload_tiers != {object_tier}:
+        errors.append(f"{experiment_id} must use {object_tier} only")
+    if experiment_id in DIAGNOSTIC_EXPERIMENT_IDS:
+        selected_query_ids = [str(value) for value in query_filters.get("query_ids", [])]
+        if not selected_query_ids:
+            errors.append(f"{experiment_id} must set query_filters.query_ids")
+
+    if (dataset_id == "smartcity" and experiment_id not in DIAGNOSTIC_EXPERIMENT_IDS) or experiment_id.endswith("_v3_compact"):
         topology_path = experiment.get("configs", {}).get("topology", "")
         mapping_path = experiment.get("inputs", {}).get("topology_mapping_csv", "")
         if "compact" not in str(topology_path):
-            errors.append("compact v3 experiments must use a compact topology config")
+            errors.append(f"{label} experiments must use a compact topology config")
         if "compact" not in str(mapping_path):
-            errors.append("compact v3 experiments must use a compact topology mapping")
+            errors.append(f"{label} experiments must use a compact topology mapping")
         aggregate_outputs = [str(path) for path in experiment.get("outputs", [])]
-        if not aggregate_outputs or any("/v3/compact/" not in path for path in aggregate_outputs):
-            errors.append("compact v3 experiments must write outputs under results/*/v3/compact/")
+        if not aggregate_outputs or any(expected_output_fragment not in path for path in aggregate_outputs):
+            errors.append(f"{label} experiments must write outputs under results/*{expected_output_fragment}")
 
-    if experiment["experiment_id"] in {
+    if dataset_id == "smartcity" or experiment_id in {
         "exp_routing_main_v3_compact",
         "exp_object_main_v3_compact",
         "exp_ablation_v3_compact",
     }:
         for field in ["max_ingress_nodes", "max_queries_per_ingress", "max_total_queries"]:
             if int(query_filters.get(field, 0) or 0) != 0:
-                errors.append(f"{experiment['experiment_id']} must not use query_filters.{field}")
+                errors.append(f"{experiment_id} must not use query_filters.{field}")
         params = runner.get("params", {}) if isinstance(runner, dict) else {}
         if int(params.get("queryLimitPerIngress", 0) or 0) != 0:
-            errors.append(f"{experiment['experiment_id']} must set runner.params.queryLimitPerIngress=0")
+            errors.append(f"{experiment_id} must set runner.params.queryLimitPerIngress=0")
 
-    if experiment["experiment_id"] == "exp_routing_main_v3_compact":
+    if experiment_id in {"exp_routing_main_v3_compact", "routing_main"}:
         schemes = {str(value) for value in experiment.get("schemes", [])}
         required_schemes = {
             "predicates_only",
             "random_admissible",
-            "flat_iroute",
             "inf_tag_forwarding",
             "hiroute",
             "central_directory",
@@ -295,7 +331,7 @@ def _validate_v3_contract(experiment: dict[str, Any], mode: str, errors: list[st
         missing_schemes = sorted(required_schemes - schemes)
         if missing_schemes:
             errors.append(
-                "exp_routing_main_v3_compact is missing required routing baselines: "
+                f"{experiment_id} is missing required routing baselines: "
                 + ", ".join(missing_schemes)
             )
 
@@ -366,7 +402,7 @@ def validate_context(
         elif not _resolve(annotated_topology).exists():
             errors.append(f"missing annotated topology file: {annotated_topology}")
 
-    if mode == "official" and git_dirty(GENERATED_TRACKED_PREFIXES):
+    if mode == "official" and git_dirty(GENERATED_TRACKED_PREFIXES) and not _allow_dirty_worktree_override():
         errors.append("official runs require a clean git worktree")
 
     if not errors:

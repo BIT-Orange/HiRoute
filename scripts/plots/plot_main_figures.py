@@ -1,4 +1,4 @@
-"""Render Figure 4-10 PDFs from aggregate CSVs."""
+"""Render Figure 4-10 PDF/PNG assets from aggregate CSVs."""
 
 from __future__ import annotations
 
@@ -32,6 +32,7 @@ from scripts.eval.eval_support import (
     COMPACT_ROUTING_REQUIRED_SCHEMES,
     declared_output_filenames,
     figure_output_path,
+    output_namespace,
     is_v3_experiment,
     load_experiment,
 )
@@ -41,7 +42,6 @@ from tools.workflow_support import repo_root
 COLORS = {
     "exact": "#2b2b2b",
     "flat": "#6f8396",
-    "flat_iroute": "#6f8396",
     "inf_tag_forwarding": "#d98a3a",
     "flood": "#4a4a4a",
     "hiroute": "#2451a4",
@@ -66,7 +66,6 @@ FAILURE_COLORS = {
 SCHEME_LABELS = {
     "exact": "Exact name",
     "flat": "Flat iRoute",
-    "flat_iroute": "Flat iRoute",
     "inf_tag_forwarding": "INF-style tags",
     "flood": "Flood",
     "hiroute": "HiRoute",
@@ -80,7 +79,6 @@ SCHEME_LABELS = {
 }
 
 MARKERS = {
-    "flat_iroute": "o",
     "inf_tag_forwarding": "s",
     "flood": "^",
     "hiroute": "D",
@@ -93,7 +91,6 @@ MARKERS = {
 MAIN_SCHEME_ORDER = [
     "predicates_only",
     "random_admissible",
-    "flat_iroute",
     "inf_tag_forwarding",
     "flood",
     "hiroute",
@@ -150,6 +147,7 @@ def _save(fig: plt.Figure, filename: str, rect: tuple[float, float, float, float
     else:
         fig.tight_layout(rect=rect)
     fig.savefig(output_path, format="pdf", bbox_inches="tight")
+    fig.savefig(output_path.with_suffix(".png"), format="png", dpi=220, bbox_inches="tight")
     plt.close(fig)
 
 
@@ -195,6 +193,27 @@ def _ablation_filename() -> str:
     if "fig_ablation_summary.pdf" in outputs:
         return "fig_ablation_summary.pdf"
     return "fig_ablation.pdf"
+
+
+def _routing_support_filename() -> str:
+    outputs = _output_filenames()
+    if "fig_routing_support.pdf" in outputs:
+        return "fig_routing_support.pdf"
+    return "fig_main_success_overhead.pdf"
+
+
+def _routing_support_aggregate() -> str:
+    outputs = _output_filenames()
+    if "routing_support.csv" in outputs:
+        return "routing_support.csv"
+    return "main_success_overhead.csv"
+
+
+def _object_manifest_filename() -> str:
+    outputs = _output_filenames()
+    if "fig_object_manifest_sweep.pdf" in outputs:
+        return "fig_object_manifest_sweep.pdf"
+    return "fig_failure_breakdown.pdf"
 
 
 def _selected_budget(default: int = 16) -> int:
@@ -291,10 +310,11 @@ def _line_panel(
 
 
 def _plot_compact_routing_support() -> None:
-    main_frame = _read_csv(_aggregate_path("main_success_overhead.csv"))
+    output_filename = _routing_support_filename()
+    main_frame = _read_csv(_aggregate_path(_routing_support_aggregate()))
     stage_frame = _read_csv(_aggregate_path("candidate_shrinkage.csv"))
     if main_frame.empty or stage_frame.empty:
-        _placeholder("fig_main_success_overhead.pdf", "Figure 4", "Awaiting compact routing support aggregates")
+        _placeholder(output_filename, "Figure 4", "Awaiting mainline routing-support aggregates")
         return
 
     selected_budget = _selected_budget(16)
@@ -303,9 +323,9 @@ def _plot_compact_routing_support() -> None:
     missing_required = [scheme for scheme in COMPACT_ROUTING_REQUIRED_SCHEMES if scheme not in available_schemes]
     if missing_required:
         _placeholder(
-            "fig_main_success_overhead.pdf",
+            output_filename,
             "Figure 4",
-            "Awaiting compact routing rerun with predicates_only and random_admissible baselines",
+            "Awaiting mainline routing rerun with predicates_only and random_admissible baselines",
         )
         return
 
@@ -320,11 +340,11 @@ def _plot_compact_routing_support() -> None:
 
     stage_frame = stage_frame[
         (stage_frame["budget"] == selected_budget)
-        & (stage_frame["scheme"].isin(["flat_iroute", "hiroute"]))
+        & (stage_frame["scheme"].isin(["inf_tag_forwarding", "hiroute"]))
         & (stage_frame["stage"].isin(FIG4_STAGE_ORDER))
     ].copy()
     if panel_a_frame.empty or panel_b_frame.empty or stage_frame.empty:
-        _placeholder("fig_main_success_overhead.pdf", "Figure 4", "No compact routing support slice at the default budget")
+        _placeholder(output_filename, "Figure 4", "No routing-support slice at the default budget")
         return
 
     fig, axes = plt.subplots(1, 3, figsize=(10.6, 3.35), gridspec_kw={"width_ratios": [1.0, 1.0, 1.45]})
@@ -355,7 +375,7 @@ def _plot_compact_routing_support() -> None:
     )
     _add_panel_label(axes[1], "B")
 
-    for scheme in ["flat_iroute", "hiroute"]:
+    for scheme in ["inf_tag_forwarding", "hiroute"]:
         group = stage_frame[stage_frame["scheme"] == scheme].copy()
         if group.empty:
             continue
@@ -386,22 +406,23 @@ def _plot_compact_routing_support() -> None:
     axes[2].legend(fontsize=7.8, frameon=False, loc="upper right")
     _add_panel_label(axes[2], "C")
 
-    _save(fig, "fig_main_success_overhead.pdf")
+    _save(fig, output_filename)
 
 
 def plot_main_success() -> None:
-    if _is_experiment("exp_routing_main_v3_compact"):
+    output_filename = _routing_support_filename()
+    if _is_experiment("exp_routing_main_v3_compact", "routing_main"):
         _plot_compact_routing_support()
         return
 
-    frame = _read_csv(_aggregate_path("main_success_overhead.csv"))
+    frame = _read_csv(_aggregate_path(_routing_support_aggregate()))
     if frame.empty:
-        _placeholder("fig_main_success_overhead.pdf", "Figure 4", "Awaiting aggregate data")
+        _placeholder(output_filename, "Figure 4", "Awaiting aggregate data")
         return
 
     frame = frame[frame["scheme"] != "exact"].copy()
     if frame.empty:
-        _placeholder("fig_main_success_overhead.pdf", "Figure 4", "No comparable discovery baselines found")
+        _placeholder(output_filename, "Figure 4", "No comparable discovery baselines found")
         return
 
     fig, ax = plt.subplots(figsize=(6.4, 4.0))
@@ -428,19 +449,20 @@ def plot_main_success() -> None:
     ax.set_ylabel("ServiceSuccess@1")
     ax.grid(alpha=0.25)
     ax.legend(fontsize=8, loc="lower right", frameon=False)
-    _save(fig, "fig_main_success_overhead.pdf")
+    _save(fig, output_filename)
 
 
 def _plot_object_manifest_sweep() -> None:
+    output_filename = _object_manifest_filename()
     frame = _read_csv(_aggregate_path("object_main_manifest_sweep.csv"))
     if frame.empty:
-        _placeholder("fig_failure_breakdown.pdf", "Figure 5", "Awaiting object manifest-sweep aggregate")
+        _placeholder(output_filename, "Figure 5", "Awaiting object manifest-sweep aggregate")
         return
 
     frame = frame[frame["scheme"].isin(COMPACT_OBJECT_MAIN_SCHEMES)].copy()
     frame = _ordered_rows(frame, COMPACT_OBJECT_MAIN_SCHEMES)
     if frame.empty:
-        _placeholder("fig_failure_breakdown.pdf", "Figure 5", "No manifest-sweep rows found")
+        _placeholder(output_filename, "Figure 5", "No manifest-sweep rows found")
         return
 
     fig, axes = plt.subplots(1, 2, figsize=(8.7, 3.35), sharex=True)
@@ -475,22 +497,23 @@ def _plot_object_manifest_sweep() -> None:
     axes[1].legend(fontsize=7.8, frameon=False, loc="upper right")
     _add_panel_label(axes[1], "B")
 
-    _save(fig, "fig_failure_breakdown.pdf")
+    _save(fig, output_filename)
 
 
 def plot_failure_breakdown() -> None:
-    if _is_experiment("exp_object_main_v3", "exp_object_main_v3_compact"):
+    output_filename = _object_manifest_filename()
+    if _is_experiment("exp_object_main_v3", "exp_object_main_v3_compact", "object_main"):
         _plot_object_manifest_sweep()
         return
 
     frame = _read_csv(_aggregate_path("failure_breakdown.csv"))
     if frame.empty:
-        _placeholder("fig_failure_breakdown.pdf", "Figure 5", "Awaiting aggregate data")
+        _placeholder(output_filename, "Figure 5", "Awaiting aggregate data")
         return
 
     frame = frame[frame["scheme"] != "exact"].copy()
     if frame.empty:
-        _placeholder("fig_failure_breakdown.pdf", "Figure 5", "No comparable discovery baselines found")
+        _placeholder(output_filename, "Figure 5", "No comparable discovery baselines found")
         return
     if CURRENT_EXPERIMENT and CURRENT_EXPERIMENT.get("manifest_sizes"):
         selected_manifest = _selected_manifest()
@@ -520,7 +543,7 @@ def plot_failure_breakdown() -> None:
     ax.set_ylabel("Query Fraction")
     ax.legend(fontsize=8, ncol=2, loc="upper center", bbox_to_anchor=(0.5, 1.18), frameon=False)
     ax.grid(axis="y", alpha=0.25)
-    _save(fig, "fig_failure_breakdown.pdf")
+    _save(fig, output_filename)
 
 
 def plot_candidate_shrinkage() -> None:
@@ -554,7 +577,7 @@ def plot_candidate_shrinkage() -> None:
     left.grid(axis="x", alpha=0.2)
     left.grid(axis="y", alpha=0.25)
 
-    main_frame = _read_csv(_aggregate_path("main_success_overhead.csv"))
+    main_frame = _read_csv(_aggregate_path(_routing_support_aggregate()))
     main_frame = main_frame[main_frame["scheme"] != "exact"].copy()
     if CURRENT_EXPERIMENT and CURRENT_EXPERIMENT.get("budgets"):
         selected_budget = _selected_budget()
@@ -751,7 +774,9 @@ def main() -> int:
 
     plotters = [
         ("fig_main_success_overhead.pdf", plot_main_success),
+        ("fig_routing_support.pdf", plot_main_success),
         ("fig_failure_breakdown.pdf", plot_failure_breakdown),
+        ("fig_object_manifest_sweep.pdf", plot_failure_breakdown),
         ("fig_candidate_shrinkage.pdf", plot_candidate_shrinkage),
         ("fig_deadline_summary.pdf", plot_deadlines),
         ("fig_state_scaling.pdf", plot_state_scaling),
@@ -773,8 +798,9 @@ def main() -> int:
             if filename in outputs:
                 plotter()
 
-    if CURRENT_EXPERIMENT and is_v3_experiment(CURRENT_EXPERIMENT):
-        print("results/figures/v3")
+    namespace = output_namespace(CURRENT_EXPERIMENT) if CURRENT_EXPERIMENT else None
+    if namespace:
+        print(f"results/figures/{namespace}")
     else:
         print("results/figures")
     return 0
