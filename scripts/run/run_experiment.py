@@ -91,9 +91,9 @@ QUERY_LOG_FIELDS = [
     "fetch_tx_bytes",
     "fetch_rx_bytes",
     "failure_type",
-]
-
-PROBE_LOG_FIELDS = [
+    "first_fetch_relevant",
+    "manifest_fetch_index",
+] = [
     "query_id",
     "scheme",
     "seed",
@@ -154,6 +154,14 @@ SEARCH_STAGES = [
 def _resolve(path_str: str) -> Path:
     path = Path(path_str)
     return path if path.is_absolute() else repo_root() / path
+
+
+def _is_truthy(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return bool(value)
+    return str(value).strip().lower() in {"1", "true", "yes", "on"}
 
 
 def _scheme_runtime_alias(scheme: str) -> str:
@@ -518,6 +526,8 @@ def _normalize_ndnsim_query_log(
                 "failure_type": "success"
                 if str(row.get("success_at_1", "0")) == "1"
                 else row.get("failure_type", "unknown"),
+                "first_fetch_relevant": int(row.get("first_fetch_relevant") or 0),
+                "manifest_fetch_index": int(row.get("manifest_fetch_index") or 0),
             }
         )
     write_csv(query_log_path, QUERY_LOG_FIELDS, normalized)
@@ -670,6 +680,9 @@ def _prepare_runtime_inputs(experiment: dict[str, Any], run_dir: Path) -> dict[s
         filtered_queries = [
             row for row in filtered_queries if row.get("ambiguity_level", "") in allowed_ambiguity_levels
         ]
+    allowed_query_ids = {str(query_id) for query_id in query_filters.get("query_ids", [])}
+    if allowed_query_ids:
+        filtered_queries = [row for row in filtered_queries if row["query_id"] in allowed_query_ids]
     min_intended_domain_count = int(query_filters.get("min_intended_domain_count", 0) or 0)
     if min_intended_domain_count > 0:
         filtered_queries = [
@@ -809,6 +822,10 @@ def _ndnsim_command(
     ]:
         if flag in merged_params:
             command.append(f"--{flag}={merged_params[flag]}")
+    if _is_truthy(merged_params.get("emitProbePlanDebug")):
+        command.append(f"--probePlanDebugCsv={run_dir / 'probe_plan_debug.csv'}")
+    if _is_truthy(merged_params.get("emitControllerManifestDebug")):
+        command.append(f"--controllerManifestDebugCsv={run_dir / 'controller_manifest_debug.csv'}")
     return ns3_root, command
 
 

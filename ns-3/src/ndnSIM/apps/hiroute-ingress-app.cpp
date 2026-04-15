@@ -73,6 +73,19 @@ stableHash(const std::string& value)
   return hash;
 }
 
+std::string
+joinTokens(const std::vector<std::string>& values)
+{
+  std::string joined;
+  for (size_t index = 0; index < values.size(); ++index) {
+    if (index != 0) {
+      joined.push_back(';');
+    }
+    joined += values[index];
+  }
+  return joined;
+}
+
 } // namespace
 
 TypeId
@@ -106,6 +119,10 @@ HiRouteIngressApp::GetTypeId()
       .AddAttribute("RunDirectory", "Directory where query/probe/search logs are written",
                     StringValue("../runs/pending/ingress-smoke"),
                     MakeStringAccessor(&HiRouteIngressApp::m_runDirectory), MakeStringChecker())
+      .AddAttribute("ProbePlanDebugCsvPath", "Optional csv path for probe-plan debug rows",
+                    StringValue(""),
+                    MakeStringAccessor(&HiRouteIngressApp::m_probePlanDebugCsvPath),
+                    MakeStringChecker())
       .AddAttribute("IngressNodeFilter", "Only schedule queries whose ingress_node_id matches this value",
                     StringValue(""),
                     MakeStringAccessor(&HiRouteIngressApp::m_ingressNodeFilter),
@@ -170,6 +187,9 @@ HiRouteIngressApp::StopApplication()
   }
   if (m_searchTraceLog.is_open()) {
     m_searchTraceLog.close();
+  }
+  if (m_probePlanDebugLog.is_open()) {
+    m_probePlanDebugLog.close();
   }
   App::StopApplication();
 }
@@ -283,6 +303,9 @@ HiRouteIngressApp::openLogs()
   const auto queryPath = m_runDirectory + "/query_log.csv";
   const auto probePath = m_runDirectory + "/probe_log.csv";
   const auto searchPath = m_runDirectory + "/search_trace.csv";
+  const bool probePlanDebugEnabled = !m_probePlanDebugCsvPath.empty();
+  const bool probePlanDebugNeedsHeader =
+    probePlanDebugEnabled ? fileNeedsHeader(m_probePlanDebugCsvPath) : false;
 
   const bool queryNeedsHeader = fileNeedsHeader(queryPath);
   const bool probeNeedsHeader = fileNeedsHeader(probePath);
@@ -291,8 +314,12 @@ HiRouteIngressApp::openLogs()
   m_queryLog.open(queryPath.c_str(), std::ios::out | std::ios::app);
   m_probeLog.open(probePath.c_str(), std::ios::out | std::ios::app);
   m_searchTraceLog.open(searchPath.c_str(), std::ios::out | std::ios::app);
+  if (probePlanDebugEnabled) {
+    m_probePlanDebugLog.open(m_probePlanDebugCsvPath.c_str(), std::ios::out | std::ios::app);
+  }
 
-  if (!m_queryLog.good() || !m_probeLog.good() || !m_searchTraceLog.good()) {
+  if (!m_queryLog.good() || !m_probeLog.good() || !m_searchTraceLog.good() ||
+      (probePlanDebugEnabled && !m_probePlanDebugLog.good())) {
     throw std::runtime_error("failed to open HiRoute ingress logs under " + m_runDirectory);
   }
 
@@ -300,7 +327,8 @@ HiRouteIngressApp::openLogs()
     appendRow(m_queryLog, {"query_id", "scheme", "ingress_node_id", "start_time_ms", "remote_probes",
                            "discovery_bytes", "candidate_shrinkage_ratio", "latency_ms",
                            "success_at_1", "manifest_hit_at_r", "ndcg_at_r", "failure_type",
-                           "fetched_object_id"});
+                           "fetched_object_id",
+                           "first_fetch_relevant", "manifest_fetch_index"});
   }
   if (probeNeedsHeader) {
     appendRow(m_probeLog, {"query_id", "scheme", "probe_index", "controller_prefix", "cell_id",
@@ -309,6 +337,12 @@ HiRouteIngressApp::openLogs()
   if (searchNeedsHeader) {
     appendRow(m_searchTraceLog, {"query_id", "scheme", "stage", "candidate_count",
                                  "selected_count", "frontier_size", "timestamp_ms"});
+  }
+  if (probePlanDebugEnabled && probePlanDebugNeedsHeader) {
+    appendRow(m_probePlanDebugLog,
+              {"query_id", "zone_constraint", "zone_type_constraint", "service_constraint",
+               "freshness_constraint", "all_domain_ids", "predicate_filtered_domain_ids",
+               "level0_cell_ids", "level1_cell_ids", "refined_cell_ids"});
   }
 }
 
@@ -404,6 +438,36 @@ HiRouteIngressApp::buildProbePlan(const HiRouteQueryRecord& query,
     return deduped;
   };
 
+  auto collectDomainIds = [&] (const std::vector<const HiRouteSummaryEntry*>& entries) {
+    std::set<std::string> domainIds;
+    for (const auto* entry : entries) {
+      if (entry != nullptr && !entry->domainId.empty()) {
+        domainIds.insert(entry->domainId);
+      }
+    }
+    return std::vector<std::string>(domainIds.begin(), domainIds.end());
+  };
+
+  auto collectCellIds = [&] (const std::vector<const HiRouteSummaryEntry*>& entries) {
+    std::set<std::string> cellIds;
+    for (const auto* entry : entries) {
+      if (entry != nullptr && !entry->cellId.empty()) {
+        cellIds.insert(entry->cellId);
+      }
+    }
+    return std::vector<std::string>(cellIds.begin(), cellIds.end());
+  };
+
+  auto collectProbeCellIds = [&] (const std::vector<ProbeTarget>& targets) {
+    std::set<std::string> cellIds;
+    for (const auto& target : targets) {
+      if (!target.cellId.empty()) {
+        cellIds.insert(target.cellId);
+      }
+    }
+    return std::vector<std::string>(cellIds.begin(), cellIds.end());
+  };
+
   auto maybeAppendProbe = [&] (std::vector<ProbeTarget>& probes, const ProbeTarget& target) {
     if (target.domainId.empty()) {
       return;
@@ -422,10 +486,13 @@ HiRouteIngressApp::buildProbePlan(const HiRouteQueryRecord& query,
 
   const auto allLevel0Entries = m_summaryStore.GetEntriesAtLevel(0);
   const auto predicateMatches = filterMatches(allLevel0Entries);
+  plan.allDomainIds = collectDomainIds(allLevel0Entries);
+  plan.predicateFilteredDomainIds = collectDomainIds(predicateMatches);
   plan.allDomainCount = allLevel0Entries.size();
   plan.predicateCandidateCount = predicateMatches.size();
   plan.predicateFilteredDomainCount = predicateMatches.size();
   plan.level0CellCount = predicateMatches.size();
+  plan.level0CellIds = collectCellIds(predicateMatches);
 
   auto rankedLevel0Targets = [&] (std::vector<const HiRouteSummaryEntry*> entries,
                                   bool usePredicate,
@@ -537,8 +604,10 @@ HiRouteIngressApp::buildProbePlan(const HiRouteQueryRecord& query,
 
   if (m_strategyMode == "oracle") {
     maybeAppendProbe(plan.probes, {"oracle", m_oraclePrefix, "", 1.0});
-    plan.level1CellCount = plan.level0CellCount;
-    plan.refinedCellCount = 1;
+    plan.level1CellIds = plan.level0CellIds;
+    plan.refinedCellIds = plan.level0CellIds;
+    plan.level1CellCount = plan.level1CellIds.size();
+    plan.refinedCellCount = plan.refinedCellIds.size();
   }
   else if (m_strategyMode == "flood") {
     std::vector<ProbeTarget> targets;
@@ -560,25 +629,33 @@ HiRouteIngressApp::buildProbePlan(const HiRouteQueryRecord& query,
     for (const auto& target : targets) {
       maybeAppendProbe(plan.probes, target);
     }
-    plan.level1CellCount = plan.level0CellCount;
-    plan.refinedCellCount = plan.probes.size();
+    plan.level1CellIds = plan.level0CellIds;
+    plan.refinedCellIds = collectProbeCellIds(plan.probes);
+    plan.level1CellCount = plan.level1CellIds.size();
+    plan.refinedCellCount = plan.refinedCellIds.size();
   }
   else if (m_strategyMode == "flat") {
     for (const auto& target : rankedLevel0Targets(predicateMatches, true, 0.0)) {
       maybeAppendProbe(plan.probes, target);
     }
-    plan.level1CellCount = plan.level0CellCount;
-    plan.refinedCellCount = plan.probes.size();
+    plan.level1CellIds = plan.level0CellIds;
+    plan.refinedCellIds = collectProbeCellIds(plan.probes);
+    plan.level1CellCount = plan.level1CellIds.size();
+    plan.refinedCellCount = plan.refinedCellIds.size();
   }
   else if (m_strategyMode == "predicates_only") {
     plan.probes = predicateOnlyTargets(predicateMatches);
-    plan.level1CellCount = plan.level0CellCount;
-    plan.refinedCellCount = plan.probes.size();
+    plan.level1CellIds = plan.level0CellIds;
+    plan.refinedCellIds = collectProbeCellIds(plan.probes);
+    plan.level1CellCount = plan.level1CellIds.size();
+    plan.refinedCellCount = plan.refinedCellIds.size();
   }
   else if (m_strategyMode == "random_admissible") {
     plan.probes = randomAdmissibleTargets(predicateMatches);
-    plan.level1CellCount = plan.level0CellCount;
-    plan.refinedCellCount = plan.probes.size();
+    plan.level1CellIds = plan.level0CellIds;
+    plan.refinedCellIds = collectProbeCellIds(plan.probes);
+    plan.level1CellCount = plan.level1CellIds.size();
+    plan.refinedCellCount = plan.refinedCellIds.size();
   }
   else if (m_strategyMode == "flat_semantic_only") {
     std::vector<const HiRouteSummaryEntry*> allEntries;
@@ -589,15 +666,20 @@ HiRouteIngressApp::buildProbePlan(const HiRouteQueryRecord& query,
     plan.predicateCandidateCount = allEntries.size();
     plan.predicateFilteredDomainCount = allEntries.size();
     plan.level0CellCount = allEntries.size();
+    plan.level0CellIds = collectCellIds(allEntries);
     plan.probes = rankedLevel0Targets(allEntries, false, 0.25);
-    plan.level1CellCount = plan.level0CellCount;
-    plan.refinedCellCount = plan.probes.size();
+    plan.level1CellIds = plan.level0CellIds;
+    plan.refinedCellIds = collectProbeCellIds(plan.probes);
+    plan.level1CellCount = plan.level1CellIds.size();
+    plan.refinedCellCount = plan.refinedCellIds.size();
   }
   else if (m_strategyMode == "predicates_plus_flat" || m_strategyMode == "inf_tag_forwarding") {
     const double extraTagWeight = m_strategyMode == "inf_tag_forwarding" ? 0.45 : 0.2;
     plan.probes = rankedLevel0Targets(predicateMatches, true, extraTagWeight);
-    plan.level1CellCount = plan.level0CellCount;
-    plan.refinedCellCount = plan.probes.size();
+    plan.level1CellIds = plan.level0CellIds;
+    plan.refinedCellIds = collectProbeCellIds(plan.probes);
+    plan.level1CellCount = plan.level1CellIds.size();
+    plan.refinedCellCount = plan.refinedCellIds.size();
   }
   else {
     const auto level0Ranked = m_discoveryEngine.RankCandidates(
@@ -614,7 +696,8 @@ HiRouteIngressApp::buildProbePlan(const HiRouteQueryRecord& query,
     if (level1Pool.empty()) {
       level1Pool = predicateMatches;
     }
-    plan.level1CellCount = level1Pool.size();
+    plan.level1CellIds = collectCellIds(level1Pool);
+    plan.level1CellCount = plan.level1CellIds.size();
 
     const auto level1Ranked = m_discoveryEngine.RankCandidates(
       level1Pool, request, m_reliabilityCache, 0);
@@ -638,7 +721,8 @@ HiRouteIngressApp::buildProbePlan(const HiRouteQueryRecord& query,
     if (refinedPool.empty()) {
       refinedPool = level1Pool;
     }
-    plan.refinedCellCount = refinedPool.size();
+    plan.refinedCellIds = collectCellIds(refinedPool);
+    plan.refinedCellCount = plan.refinedCellIds.size();
 
     const auto candidates =
       m_discoveryEngine.RankCandidates(refinedPool, request, m_reliabilityCache, m_maxProbeBudget);
@@ -674,6 +758,7 @@ HiRouteIngressApp::buildProbePlan(const HiRouteQueryRecord& query,
                  plan.probeTargetCount, plan.refinedCellCount, startTimestamp + 4);
   logSearchStage(query.queryId, "probed_cells", plan.probeTargetCount,
                  plan.probeTargetCount, plan.probeTargetCount, startTimestamp + 5);
+  logProbePlanDebug(query, plan);
   return plan;
 }
 
@@ -959,12 +1044,17 @@ HiRouteIngressApp::handleFetchReply(shared_ptr<const Data> data)
   const auto name = data->getName().toUri();
   auto objectIt = m_objectIdByCanonicalName.find(name);
   const auto objectId = objectIt == m_objectIdByCanonicalName.end() ? std::string() : objectIt->second;
-  if (usesAdaptiveReliability() && m_activeQuery.probeIndex < m_activeQuery.plan.probes.size()) {
-    const auto& probe = m_activeQuery.plan.probes[m_activeQuery.probeIndex];
-    m_reliabilityCache.ObserveResult(probe.domainId, probe.cellId,
-                                     isRelevantObject(m_activeQuery.query.queryId, objectId));
+  const bool relevant = isRelevantObject(m_activeQuery.query.queryId, objectId);
+  if (!m_activeQuery.firstFetchRecorded) {
+    m_activeQuery.firstFetchRelevant = relevant;
+    m_activeQuery.firstFetchRecorded = true;
   }
-  if (!isRelevantObject(m_activeQuery.query.queryId, objectId) &&
+  if (usesAdaptiveReliability() && relevant &&
+      m_activeQuery.probeIndex < m_activeQuery.plan.probes.size()) {
+    const auto& probe = m_activeQuery.plan.probes[m_activeQuery.probeIndex];
+    m_reliabilityCache.ObserveResult(probe.domainId, probe.cellId, true);
+  }
+  if (!relevant &&
       usesSequentialManifestFallback() &&
       m_activeQuery.manifestFetchIndex + 1 < m_activeQuery.manifest.size()) {
     ++m_activeQuery.manifestFetchIndex;
@@ -972,14 +1062,14 @@ HiRouteIngressApp::handleFetchReply(shared_ptr<const Data> data)
     return;
   }
 
-  if (!isRelevantObject(m_activeQuery.query.queryId, objectId) && advanceToNextProbe("wrong_object")) {
+  if (!relevant && advanceToNextProbe("wrong_object")) {
     return;
   }
-  if (!isRelevantObject(m_activeQuery.query.queryId, objectId) &&
+  if (!relevant &&
       advanceToNextStaticProbe("wrong_object")) {
     return;
   }
-  finishActiveQuery(isRelevantObject(m_activeQuery.query.queryId, objectId), objectId);
+  finishActiveQuery(relevant, objectId);
 }
 
 void
@@ -996,16 +1086,6 @@ HiRouteIngressApp::finishActiveQuery(bool success, const std::string& fetchedObj
   if (m_activeQuery.failureType.empty()) {
     m_activeQuery.failureType = success ? "none" : "wrong_object";
   }
-  if (!success && !m_activeQuery.plan.probes.empty() && usesAdaptiveReliability()) {
-    const auto& probe = m_activeQuery.plan.probes[m_activeQuery.probeIndex];
-    m_reliabilityCache.MarkNegative(probe.domainId, probe.cellId,
-                                    HiRoutePredicateHeader{m_activeQuery.query.zoneConstraint,
-                                                           m_activeQuery.query.zoneTypeConstraint,
-                                                           m_activeQuery.query.serviceConstraint,
-                                                           m_activeQuery.query.freshnessConstraint,
-                                                           m_activeQuery.query.intentFacet},
-                                    MilliSeconds(900));
-  }
 
   appendRow(m_queryLog,
             {m_activeQuery.query.queryId,
@@ -1020,7 +1100,9 @@ HiRouteIngressApp::finishActiveQuery(bool success, const std::string& fetchedObj
              m_activeQuery.manifestHit ? "1" : "0",
              std::to_string(computeNdcgAtR(m_activeQuery.query.queryId, m_activeQuery.manifest)),
              m_activeQuery.failureType,
-             fetchedObjectId});
+             fetchedObjectId,
+             m_activeQuery.firstFetchRecorded ? (m_activeQuery.firstFetchRelevant ? "1" : "0") : "",
+             std::to_string(m_activeQuery.manifestFetchIndex)});
 
   m_activeQuery = ActiveQueryState();
   scheduleNextQuery(MilliSeconds(1));
@@ -1052,6 +1134,25 @@ HiRouteIngressApp::logSearchStage(const std::string& queryId, const std::string&
              std::to_string(selectedCount),
              std::to_string(frontierSize),
              std::to_string(timestampMs)});
+}
+
+void
+HiRouteIngressApp::logProbePlanDebug(const HiRouteQueryRecord& query, const ProbePlan& plan)
+{
+  if (!m_probePlanDebugLog.is_open()) {
+    return;
+  }
+  appendRow(m_probePlanDebugLog,
+            {query.queryId,
+             query.zoneConstraint,
+             query.zoneTypeConstraint,
+             query.serviceConstraint,
+             query.freshnessConstraint,
+             joinTokens(plan.allDomainIds),
+             joinTokens(plan.predicateFilteredDomainIds),
+             joinTokens(plan.level0CellIds),
+             joinTokens(plan.level1CellIds),
+             joinTokens(plan.refinedCellIds)});
 }
 
 bool

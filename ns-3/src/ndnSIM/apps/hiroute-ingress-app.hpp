@@ -61,6 +61,11 @@ private:
 
   struct ProbePlan {
     std::vector<ProbeTarget> probes;
+    std::vector<std::string> allDomainIds;
+    std::vector<std::string> predicateFilteredDomainIds;
+    std::vector<std::string> level0CellIds;
+    std::vector<std::string> level1CellIds;
+    std::vector<std::string> refinedCellIds;
     size_t allDomainCount = 0;
     size_t predicateCandidateCount = 0;
     size_t predicateFilteredDomainCount = 0;
@@ -81,6 +86,8 @@ private:
     Phase phase = Phase::Idle;
     std::vector<HiRouteManifestEntry> manifest;
     size_t manifestFetchIndex = 0;
+    bool firstFetchRelevant = false;
+    bool firstFetchRecorded = false;
     uint32_t remoteProbes = 0;
     uint64_t discoveryBytes = 0;
     bool manifestHit = false;
@@ -144,6 +151,9 @@ private:
   logSearchStage(const std::string& queryId, const std::string& stage, size_t candidateCount,
                  size_t selectedCount, size_t frontierSize, int64_t timestampMs);
 
+  void
+  logProbePlanDebug(const HiRouteQueryRecord& query, const ProbePlan& plan);
+
   bool
   isRelevantObject(const std::string& queryId, const std::string& objectId) const;
 
@@ -173,6 +183,7 @@ private:
   std::string m_summaryCsvPath;
   std::string m_topologyMappingCsvPath;
   std::string m_runDirectory;
+  std::string m_probePlanDebugCsvPath;
   std::string m_strategyMode;
   std::string m_oraclePrefix;
   std::string m_ingressNodeFilter;
@@ -199,6 +210,7 @@ private:
   std::ofstream m_queryLog;
   std::ofstream m_probeLog;
   std::ofstream m_searchTraceLog;
+  std::ofstream m_probePlanDebugLog;
 };
 
 } // namespace hiroute
