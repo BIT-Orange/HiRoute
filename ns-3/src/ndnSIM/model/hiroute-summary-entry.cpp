@@ -3,6 +3,7 @@
 
 #include <cstdlib>
 #include <sstream>
+#include <vector>
 
 namespace ns3 {
 namespace ndn {
@@ -59,7 +60,18 @@ parseBitmap(const std::string& bitmap)
 bool
 matchesBitmap(const std::set<std::string>& values, const std::string& constraint)
 {
-  return constraint.empty() || values.empty() || values.count(constraint) > 0;
+  if (constraint.empty() || values.empty()) {
+    return true;
+  }
+
+  std::stringstream input(constraint);
+  std::string token;
+  while (std::getline(input, token, ';')) {
+    if (!token.empty() && values.count(token) > 0) {
+      return true;
+    }
+  }
+  return false;
 }
 
 } // namespace
