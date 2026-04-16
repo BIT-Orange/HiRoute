@@ -554,6 +554,95 @@ def _seed_run_assignments_from_latest(status: dict[str, Any], experiment: dict[s
         run_assignments[key] = run_id
 
 
+def _matrix_topologies(experiment: dict[str, Any]) -> list[str]:
+    comparison = [str(value) for value in experiment.get("comparison_topologies", []) if str(value)]
+    if comparison:
+        return comparison
+    topology_id = str(experiment.get("topology_id", "") or "")
+    return [topology_id] if topology_id else []
+
+
+def _matrix_seeds(experiment: dict[str, Any]) -> list[int]:
+    return [int(value) for value in experiment.get("seeds", [1])]
+
+
+def _matrix_variants(experiment: dict[str, Any]) -> list[str]:
+    variants = list((experiment.get("runner", {}) or {}).get("scenario_variants", {}).keys())
+    return variants if variants else [""]
+
+
+def _resolved_default_budget(experiment: dict[str, Any]) -> int:
+    value = int(experiment.get("default_budget") or 0)
+    if value:
+        return value
+    runner_params = (experiment.get("runner", {}) or {}).get("params", {}) or {}
+    return int(runner_params.get("exportBudget") or 0)
+
+
+def _resolved_default_manifest_size(experiment: dict[str, Any]) -> int:
+    value = int(experiment.get("default_manifest_size") or 0)
+    if value:
+        return value
+    runner_params = (experiment.get("runner", {}) or {}).get("params", {}) or {}
+    return int(runner_params.get("manifestSize") or 0)
+
+
+def _generic_requested_matrix(experiment: dict[str, Any]) -> list[dict[str, Any]]:
+    requested: list[dict[str, Any]] = []
+    reference_schemes = {str(value) for value in experiment.get("reference_schemes", [])}
+    topologies = _matrix_topologies(experiment)
+    seeds = _matrix_seeds(experiment)
+    variants = _matrix_variants(experiment)
+    schemes = [str(value) for value in experiment.get("schemes", [])]
+
+    if experiment.get("manifest_sizes"):
+        manifest_sizes = [int(value) for value in experiment.get("manifest_sizes", [])]
+        default_manifest = _resolved_default_manifest_size(experiment)
+        budget = _resolved_default_budget(experiment)
+        for topology_id in topologies:
+            for scheme in schemes:
+                selected_manifest_sizes = manifest_sizes
+                if scheme in reference_schemes and default_manifest:
+                    selected_manifest_sizes = [default_manifest]
+                for manifest_size in selected_manifest_sizes:
+                    for seed in seeds:
+                        for variant in variants:
+                            requested.append(
+                                {
+                                    "scheme": scheme,
+                                    "topology_id": topology_id,
+                                    "seed": seed,
+                                    "manifest_size": int(manifest_size),
+                                    "budget": int(budget),
+                                    "variant": variant,
+                                }
+                            )
+        return requested
+
+    budgets = [int(value) for value in experiment.get("budgets", [])]
+    default_budget = _resolved_default_budget(experiment)
+    manifest_size = _resolved_default_manifest_size(experiment)
+    for topology_id in topologies:
+        for scheme in schemes:
+            selected_budgets = budgets
+            if scheme in reference_schemes and default_budget:
+                selected_budgets = [default_budget]
+            for budget in selected_budgets:
+                for seed in seeds:
+                    for variant in variants:
+                        requested.append(
+                            {
+                                "scheme": scheme,
+                                "topology_id": topology_id,
+                                "seed": seed,
+                                "manifest_size": int(manifest_size),
+                                "budget": int(budget),
+                                "variant": variant,
+                            }
+                        )
+    return requested
+
+
 def _validate_run(experiment_path: Path, output_path: Path, dry_run: bool, extra_args: list[str]) -> None:
     _run(
         [PYTHON, str(repo_root() / "tools/validate_run.py"), "--experiment", str(experiment_path), "--mode", "dry", *extra_args],
@@ -1785,29 +1874,7 @@ def _generic_full_experiment_stage(
 
     experiment_path, experiment = _load_experiment(experiment_key)
     run_env = _run_env(allow_dirty_worktree=args.allow_dirty_worktree)
-    requested_matrix = [
-        {
-            "scheme": scheme,
-            "topology_id": experiment["topology_id"],
-            "seed": 1,
-            "manifest_size": manifest_size,
-            "budget": 0,
-            "variant": "",
-        }
-        for scheme in experiment["schemes"]
-        for manifest_size in experiment.get("manifest_sizes", [experiment.get("default_manifest_size", 0)])
-    ] if experiment.get("manifest_sizes") else [
-        {
-            "scheme": scheme,
-            "topology_id": experiment["topology_id"],
-            "seed": 1,
-            "manifest_size": 0,
-            "budget": budget,
-            "variant": "",
-        }
-        for scheme in experiment["schemes"]
-        for budget in experiment.get("budgets", [experiment.get("default_budget", 0)])
-    ]
+    requested_matrix = _generic_requested_matrix(experiment)
     experiment_fp = _experiment_fingerprint(experiment_path, experiment, requested_matrix)
     stale = stale or previous.get("experiment_fingerprint", {}).get("sha256") != experiment_fp["sha256"]
     if stale and not args.dry_run:
