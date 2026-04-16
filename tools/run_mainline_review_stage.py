@@ -10,6 +10,7 @@ import os
 import shutil
 import subprocess
 import sys
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Any
 
@@ -668,6 +669,66 @@ def _run_experiment(
     )
 
 
+def _experiment_entry_extra_args(entry: dict[str, Any]) -> list[str]:
+    extra_args = ["--scheme", str(entry["scheme"]), "--seed", str(entry["seed"])]
+    if int(entry.get("manifest_size", 0) or 0):
+        extra_args.extend(["--manifest-size", str(int(entry["manifest_size"]))])
+    if int(entry.get("budget", 0) or 0):
+        extra_args.extend(["--budget", str(int(entry["budget"]))])
+    variant = str(entry.get("variant", "") or "")
+    if variant:
+        extra_args.extend(["--variant", variant])
+    topology_id = str(entry.get("topology_id", "") or "")
+    if topology_id:
+        extra_args.extend(["--topology-id", topology_id])
+    return extra_args
+
+
+def _run_experiment_entries_parallel(
+    *,
+    stage: str,
+    experiment_path: Path,
+    pending_entries: list[dict[str, Any]],
+    validation_dir: Path,
+    dry_run: bool,
+    mode: str,
+    max_workers: int,
+    env: dict[str, str] | None,
+) -> dict[str, str]:
+    if not pending_entries:
+        return {}
+    if dry_run:
+        return {_assignment_key(entry): "DRY_RUN" for entry in pending_entries}
+
+    def _worker(entry: dict[str, Any]) -> tuple[str, str]:
+        key = _assignment_key(entry)
+        output = _run_experiment(
+            experiment_path,
+            validation_dir / f"{key.replace('|', '__').replace('=', '-')}.txt",
+            dry_run,
+            mode,
+            _experiment_entry_extra_args(entry),
+            env=env,
+        )
+        return key, _extract_run_id(output)
+
+    run_ids: dict[str, str] = {}
+    failures: list[str] = []
+    with ThreadPoolExecutor(max_workers=max(1, int(max_workers))) as executor:
+        futures = {executor.submit(_worker, entry): _assignment_key(entry) for entry in pending_entries}
+        for future in as_completed(futures):
+            key = futures[future]
+            try:
+                completed_key, run_id = future.result()
+                run_ids[completed_key] = run_id
+            except Exception as exc:
+                failures.append(f"{key}: {exc}")
+
+    if failures:
+        raise RuntimeError(f"{stage} run dispatch failed:\n" + "\n\n".join(failures))
+    return run_ids
+
+
 def _run_matrix(
     experiment_path: Path,
     output_path: Path,
@@ -1250,6 +1311,7 @@ def _object_main_full(args: argparse.Namespace) -> dict[str, Any]:
             quick_inherited_map[key] = run_id
 
     dispatch_lines = []
+    pending_entries: list[dict[str, Any]] = []
     for entry in requested_matrix:
         key = _assignment_key(entry)
         if key in quick_inherited_map:
@@ -1268,29 +1330,25 @@ def _object_main_full(args: argparse.Namespace) -> dict[str, Any]:
             dispatch_lines.append(f"skipped {key} -> {existing_run_id}")
             continue
 
-        output = _run_experiment(
-            experiment_path,
-            paths["validation"] / f"{key.replace('|', '__').replace('=', '-')}.txt",
-            args.dry_run,
-            args.mode,
-            [
-                "--scheme",
-                entry["scheme"],
-                "--seed",
-                str(entry["seed"]),
-                "--manifest-size",
-                str(entry["manifest_size"]),
-            ],
-            env=run_env,
-        )
-        if args.dry_run:
-            status["run_assignments"][key] = "DRY_RUN"
-            dispatch_lines.append(f"execute {key} -> DRY_RUN")
-            continue
-        run_id = _extract_run_id(output)
+        pending_entries.append(entry)
+
+    executed_run_ids = _run_experiment_entries_parallel(
+        stage=stage,
+        experiment_path=experiment_path,
+        pending_entries=pending_entries,
+        validation_dir=paths["validation"],
+        dry_run=args.dry_run,
+        mode=args.mode,
+        max_workers=args.max_workers,
+        env=run_env,
+    )
+    for entry in pending_entries:
+        key = _assignment_key(entry)
+        run_id = executed_run_ids[key]
         status["run_assignments"][key] = run_id
-        status["newly_executed_runs"].append(run_id)
-        _copy_run_to_stage(run_id, paths["runs"], args.dry_run)
+        if run_id != "DRY_RUN":
+            status["newly_executed_runs"].append(run_id)
+            _copy_run_to_stage(run_id, paths["runs"], args.dry_run)
         dispatch_lines.append(f"execute {key} -> {run_id}")
 
     if args.dry_run:
@@ -1667,6 +1725,7 @@ def _ablation_full(args: argparse.Namespace) -> dict[str, Any]:
             quick_inherited_map[key] = run_id
 
     dispatch_lines = []
+    pending_entries: list[dict[str, Any]] = []
     for entry in requested_matrix:
         key = _assignment_key(entry)
         if key in quick_inherited_map:
@@ -1685,29 +1744,25 @@ def _ablation_full(args: argparse.Namespace) -> dict[str, Any]:
             dispatch_lines.append(f"skipped {key} -> {existing_run_id}")
             continue
 
-        output = _run_experiment(
-            experiment_path,
-            paths["validation"] / f"{key.replace('|', '__').replace('=', '-')}.txt",
-            args.dry_run,
-            args.mode,
-            [
-                "--scheme",
-                entry["scheme"],
-                "--seed",
-                str(entry["seed"]),
-                "--manifest-size",
-                str(entry["manifest_size"]),
-            ],
-            env=run_env,
-        )
-        if args.dry_run:
-            status["run_assignments"][key] = "DRY_RUN"
-            dispatch_lines.append(f"execute {key} -> DRY_RUN")
-            continue
-        run_id = _extract_run_id(output)
+        pending_entries.append(entry)
+
+    executed_run_ids = _run_experiment_entries_parallel(
+        stage=stage,
+        experiment_path=experiment_path,
+        pending_entries=pending_entries,
+        validation_dir=paths["validation"],
+        dry_run=args.dry_run,
+        mode=args.mode,
+        max_workers=args.max_workers,
+        env=run_env,
+    )
+    for entry in pending_entries:
+        key = _assignment_key(entry)
+        run_id = executed_run_ids[key]
         status["run_assignments"][key] = run_id
-        status["newly_executed_runs"].append(run_id)
-        _copy_run_to_stage(run_id, paths["runs"], args.dry_run)
+        if run_id != "DRY_RUN":
+            status["newly_executed_runs"].append(run_id)
+            _copy_run_to_stage(run_id, paths["runs"], args.dry_run)
         dispatch_lines.append(f"execute {key} -> {run_id}")
 
     if args.dry_run:
