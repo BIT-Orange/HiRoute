@@ -1,23 +1,30 @@
 # Figure: fig_candidate_shrinkage
 
-## Purpose
+## Paper binding
 
-- Show HiRoute's staged frontier contraction and separate it from cross-method probe breadth.
+- figure number: Figure 6
+- label: `fig:shrinkage`
+- caption target: `Candidate shrinkage under hierarchical filtering and refinement.`
 
-## Built from
+## Evidence binding
 
-- `results/aggregate/candidate_shrinkage.csv`
+- aggregate csv: `results/aggregate/mainline/candidate_shrinkage.csv`
+- trace json: `results/aggregate/mainline/candidate_shrinkage.trace.json`
+- figure assets: `results/figures/mainline/fig_candidate_shrinkage.pdf` and `results/figures/mainline/fig_candidate_shrinkage.png`
+- source experiment: `routing_main`
 
-## Promoted runs
+## Validation status
 
-- `exp_routing_main_v2` promoted runs recorded in `runs/registry/promoted_runs.csv`
+- runtime slice: completed (`review_artifacts/object_ablation_routing/validation/routing_main_validate_runtime_slice.txt`)
+- aggregate traceability: completed (`review_artifacts/object_ablation_routing/validation/routing_main_validate_aggregate_traceability.txt`)
+- figure binding: blocked by routing headline failure (`review_artifacts/object_ablation_routing/validation/routing_main_validate_figures_routing_support.txt`)
 
-## Observations
+## Status
 
-- In the left panel, `hiroute` still provides the clearest mechanism signal in the v2 results. At budget `16`, the frontier shrinks from `1.0` at `all_domains` to `0.409896` by the `refined_cells/probed_cells` stage, while `flat_iroute`, `flood`, and `inf_tag_forwarding` stay around `0.603125`.
-- In the right panel, the cross-method comparison now reports discovery breadth directly through mean remote probes/query. At budget `16`, `hiroute` uses `2.325` probes/query, below `2.8625` for both `flat_iroute` and `inf_tag_forwarding`, though still above `2.1875` for `flood`.
-- This figure is therefore still a valid mechanism figure even though the main routing workload no longer separates methods on success.
+- completed on 2026-03-31 mainline rerun, but blocked as supporting-only evidence
 
-## Caveats
+## Interpretation
 
-- `oracle`, `flood`, and `flat_iroute` are intentionally not placed on the staged contraction curve because they do not share the same hierarchical refinement pipeline.
+- This is a mechanism-support figure paired with `fig_routing_support`.
+- The mainline rerun confirmed non-empty `zone_constraint` and preserved `2/3/4` domain-count support.
+- Candidate shrinkage traces are populated and traceable, but they cannot rescue Figure 4 as a paper headline while the routing-support aggregate remains fully degenerate on success and reach.

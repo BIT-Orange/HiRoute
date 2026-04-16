@@ -1,26 +1,32 @@
 # Figure: fig_ablation
 
-## Purpose
+## Paper binding
 
-- Summarize the compact object-hard ablation at `manifest_size=1`.
-- Isolate the benefit of the full hierarchy before wider fallback can wash out ranking differences.
+- figure number: Figure 10
+- label: `fig:ablation`
+- caption target: `Mainline object-main ablation at manifest size \`1\`.`
 
-## Built from
+## Evidence binding
 
-- `results/aggregate/v3/compact/ablation_summary.csv`
+- aggregate csv: `results/aggregate/mainline/ablation_summary.csv`
+- trace json: `results/aggregate/mainline/ablation_summary.trace.json`
+- figure assets: `results/figures/mainline/fig_ablation_summary.pdf` and `results/figures/mainline/fig_ablation_summary.png`
+- source experiment: `ablation`
 
-## Promoted runs
+## Validation status
 
-- `exp_ablation_v3_compact` promoted runs on commit `d335cd4` and the compact postprocess fix on commit `ce17889`.
+- runtime slice: completed (`review_artifacts/object_ablation_routing/validation/ablation_validate_runtime_slice.txt`)
+- manifest regression: completed (`review_artifacts/object_ablation_routing/validation/ablation_validate_manifest_regression_*.txt`)
+- aggregate traceability: completed (`review_artifacts/object_ablation_routing/validation/ablation_validate_aggregate_traceability.txt`)
+- figure binding: completed (`review_artifacts/object_ablation_routing/validation/ablation_validate_figures_ablation.txt`)
 
-## Observations
+## Status
 
-- At `manifest_size=1`, the compact ablation carries a real ordering: `full_hiroute (0.9375)` > `predicates_plus_flat (0.908333)` > `predicates_only (0.841667)` >> `flat_semantic_only (0.575)`.
-- Figure 10 continues to carry the compact mechanism claim after the routing baseline expansion because it isolates the hierarchy effect under tight fallback, not the routing-support comparison.
-- The same ordering appears in wrong-object rate, with `full_hiroute` at `0.0625` and `flat_semantic_only` at `0.175`.
-- The paper-facing takeaway is now mechanism evidence rather than sanity-only diagnosis: the full hierarchy is most useful when fallback is tight enough that local ranking still matters.
+- completed on 2026-03-31 mainline rerun
 
-## Caveats
+## Interpretation
 
-- Larger manifest settings remain in `ablation_summary.csv`, but the paper-facing figure intentionally fixes `manifest_size=1`.
-- Panel C should use a single cost metric consistently; the current compact paper path uses discovery bytes rather than switching between bytes and probes.
+- Figure 10 remains a mechanism figure, not an archive of legacy compact-v3 numbers.
+- The fresh rerun preserves cost ordering but not success separation: all ablation schemes are at `mean_success_at_1=0.0`, with `flat_semantic_only` highest in discovery bytes, `full_hiroute` intermediate, and `predicates_only` / `predicates_plus_flat` lowest.
+- The paper must describe this as degraded mechanism evidence until the object-main failure mode is explained or fixed.
+- `manifest_size=1` stays fixed because it is the most discriminative setting for local ranking quality, even though the current rerun still collapses the success axis.

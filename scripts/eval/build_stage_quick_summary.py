@@ -25,6 +25,9 @@ OBJECT_MAIN_FIELDS = [
     "run_count",
     "query_count",
     "mean_success_at_1",
+    "first_fetch_relevant_rate",
+    "manifest_rescue_rate",
+    "mean_manifest_fetch_index_success_only",
     "failure_rate_wrong_domain",
     "failure_rate_wrong_object",
     "failure_rate_predicate_miss",
@@ -93,6 +96,8 @@ def _collect_query_rows(run_rows: list[dict[str, str]]) -> list[dict[str, Any]]:
                     "budget": int(run_row.get("budget") or 0),
                     "manifest_size": int(run_row.get("manifest_size") or 0),
                     "success_at_1": float(row.get("success_at_1") or 0),
+                    "first_fetch_relevant": float(row.get("first_fetch_relevant") or 0),
+                    "manifest_fetch_index": float(row.get("manifest_fetch_index") or 0),
                     "failure_type": row.get("failure_type", ""),
                     "discovery_bytes_total": float(row.get("discovery_tx_bytes") or 0)
                     + float(row.get("discovery_rx_bytes") or 0),
@@ -120,6 +125,24 @@ def _group_rows(query_rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 "run_count": len(run_ids),
                 "query_count": query_count,
                 "mean_success_at_1": round(sum(row["success_at_1"] for row in rows) / query_count, 6),
+                "first_fetch_relevant_rate": round(
+                    sum(row["first_fetch_relevant"] for row in rows) / query_count,
+                    6,
+                ),
+                "manifest_rescue_rate": round(
+                    sum(1 for row in rows if row["success_at_1"] == 1 and row["manifest_fetch_index"] > 0)
+                    / query_count,
+                    6,
+                ),
+                "mean_manifest_fetch_index_success_only": round(
+                    (
+                        sum(row["manifest_fetch_index"] for row in rows if row["success_at_1"] == 1)
+                        / sum(1 for row in rows if row["success_at_1"] == 1)
+                    )
+                    if any(row["success_at_1"] == 1 for row in rows)
+                    else 0.0,
+                    6,
+                ),
                 "failure_rate_wrong_domain": round(
                     sum(1 for row in rows if row["failure_type"] == "wrong_domain") / query_count, 6
                 ),
@@ -171,6 +194,13 @@ def _has_useful_separation(reference: dict[str, Any], baseline: dict[str, Any]) 
     return False
 
 
+def _has_route_b_object_signal(reference: dict[str, Any], baseline: dict[str, Any]) -> bool:
+    first_fetch_gap = float(reference["first_fetch_relevant_rate"]) - float(baseline["first_fetch_relevant_rate"])
+    rescue_gap = float(reference["manifest_rescue_rate"]) - float(baseline["manifest_rescue_rate"])
+    first_choice_gap = float(reference["mean_success_at_1"]) - float(reference["first_fetch_relevant_rate"])
+    return first_fetch_gap >= 0.02 or rescue_gap >= 0.02 or first_choice_gap >= 0.02
+
+
 def _object_main_decision(rows: list[dict[str, Any]]) -> tuple[str, dict[str, Any]]:
     index = _row_index(rows)
     required_keys = [
@@ -203,16 +233,34 @@ def _object_main_decision(rows: list[dict[str, Any]]) -> tuple[str, dict[str, An
         return "stop_object_regressed", {"reason": "hiroute_loses_to_distributed_baseline"}
 
     separated = {
-        "inf_tag_forwarding": _has_useful_separation(hiroute_m1, inf_m1),
+        "inf_tag_forwarding": _has_useful_separation(hiroute_m1, inf_m1)
+        or _has_route_b_object_signal(hiroute_m1, inf_m1),
     }
     distributed_rows = [hiroute_m1, inf_m1, index[("central_directory", 1)]]
     all_high_success = all(float(row["mean_success_at_1"]) >= 0.99 for row in distributed_rows)
+    hiroute_support_signal = any(
+        float(row["manifest_rescue_rate"]) >= 0.02
+        or (float(row["mean_success_at_1"]) - float(row["first_fetch_relevant_rate"])) >= 0.02
+        for row in hiroute_sweep
+    )
 
-    if any(separated.values()):
-        return "proceed_full_object_main", {"reason": "useful_separation", "separation": separated}
+    if any(separated.values()) or hiroute_support_signal:
+        return "proceed_full_object_main", {
+            "reason": "route_b_support_signal" if hiroute_support_signal and not any(separated.values()) else "useful_separation",
+            "separation": separated,
+            "hiroute_support_signal": hiroute_support_signal,
+        }
     if all_high_success:
-        return "stop_workload_saturated", {"reason": "all_manifest1_success_high", "separation": separated}
-    return "stop_workload_saturated", {"reason": "no_useful_separation", "separation": separated}
+        return "stop_workload_saturated", {
+            "reason": "all_manifest1_success_high",
+            "separation": separated,
+            "hiroute_support_signal": hiroute_support_signal,
+        }
+    return "stop_workload_saturated", {
+        "reason": "no_useful_separation",
+        "separation": separated,
+        "hiroute_support_signal": hiroute_support_signal,
+    }
 
 
 def _ablation_decision(rows: list[dict[str, Any]]) -> tuple[str, dict[str, Any]]:

@@ -35,6 +35,9 @@ OUTPUT_FIELDS = [
     "query_count",
     "mean_success_at_1",
     "ci_success_at_1",
+    "first_fetch_relevant_rate",
+    "ci_first_fetch_relevant_rate",
+    "mean_manifest_fetch_index_success_only",
     "mean_manifest_hit_at_5",
     "mean_ndcg_at_5",
     "mean_num_remote_probes",
@@ -75,8 +78,18 @@ def main() -> int:
     bootstrap_replicates = int(experiment.get("statistics", {}).get("bootstrap_replicates", 1000))
     active_sweep_field = sweep_field(experiment)
     qrels_maps = qrels_maps_by_topology(experiment)
+    frame = frame.copy()
+    frame["success_at_1"] = pd.to_numeric(frame["success_at_1"], errors="coerce").fillna(0.0)
+    frame["manifest_hit_at_5"] = pd.to_numeric(frame["manifest_hit_at_5"], errors="coerce").fillna(0.0)
+    frame["ndcg_at_5"] = pd.to_numeric(frame["ndcg_at_5"], errors="coerce").fillna(0.0)
+    frame["num_remote_probes"] = pd.to_numeric(frame["num_remote_probes"], errors="coerce").fillna(0.0)
+    frame["latency_ms"] = pd.to_numeric(frame["latency_ms"], errors="coerce").fillna(0.0)
+    frame["discovery_tx_bytes"] = pd.to_numeric(frame["discovery_tx_bytes"], errors="coerce").fillna(0.0)
+    frame["discovery_rx_bytes"] = pd.to_numeric(frame["discovery_rx_bytes"], errors="coerce").fillna(0.0)
+    frame["first_fetch_relevant"] = pd.to_numeric(frame.get("first_fetch_relevant", 0), errors="coerce").fillna(0.0)
+    frame["manifest_fetch_index"] = pd.to_numeric(frame.get("manifest_fetch_index", 0), errors="coerce").fillna(0.0)
     frame["discovery_bytes_total"] = frame["discovery_tx_bytes"] + frame["discovery_rx_bytes"]
-    frame["manifest_rescue"] = ((frame["manifest_hit_at_5"] == 1) & (frame["success_at_1"] == 0)).astype(float)
+    frame["manifest_rescue"] = ((frame["success_at_1"] == 1) & (frame["manifest_fetch_index"] > 0)).astype(float)
 
     if not probe_frame.empty:
         probe_frame = probe_frame.copy()
@@ -156,6 +169,16 @@ def main() -> int:
                 "ci_success_at_1": round(
                     bootstrap_mean_ci(group["success_at_1"], bootstrap_replicates), 6
                 ),
+                "first_fetch_relevant_rate": round(group["first_fetch_relevant"].mean(), 6),
+                "ci_first_fetch_relevant_rate": round(
+                    bootstrap_mean_ci(group["first_fetch_relevant"], bootstrap_replicates, seed=6), 6
+                ),
+                "mean_manifest_fetch_index_success_only": round(
+                    group.loc[group["success_at_1"] == 1, "manifest_fetch_index"].mean()
+                    if (group["success_at_1"] == 1).any()
+                    else 0.0,
+                    6,
+                ),
                 "mean_manifest_hit_at_5": round(group["manifest_hit_at_5"].mean(), 6),
                 "mean_ndcg_at_5": round(group["ndcg_at_5"].mean(), 6),
                 "mean_num_remote_probes": round(group["num_remote_probes"].mean(), 6),
@@ -189,9 +212,12 @@ def main() -> int:
             }
         )
 
-    if experiment["experiment_id"] in {"exp_sanity_appendix_v2", "exp_sanity_appendix_v3"}:
+    if experiment["experiment_id"] in {"exp_sanity_appendix_v2", "exp_sanity_appendix_v3", "sanity_appendix"}:
         aggregate_path = table_output_path(experiment, "appendix_sanity_success_overhead.csv")
         table_path = aggregate_path
+    elif experiment["experiment_id"] == "routing_main":
+        aggregate_path = aggregate_output_path(experiment, "routing_support.csv")
+        table_path = table_output_path(experiment, "routing_support_table.csv")
     else:
         aggregate_path = aggregate_output_path(experiment, "main_success_overhead.csv")
         table_path = table_output_path(experiment, "main_success_overhead_table.csv")

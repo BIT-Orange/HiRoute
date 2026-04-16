@@ -31,11 +31,14 @@ OUTPUT_FIELDS = [
     "budget",
     "manifest_size",
     "stage",
+    "run_count",
+    "query_count",
     "mean_candidate_count",
     "mean_selected_count",
     "mean_frontier_size",
     "mean_shrinkage_ratio",
     "median_shrinkage_ratio",
+    "source_run_ids",
 ]
 
 
@@ -109,6 +112,7 @@ def main() -> int:
     for (scheme, topology_id), group in per_query_stage.groupby(
         ["registry_scheme", "registry_topology_id"], sort=False
     ):
+        run_ids = sorted(group["run_id"].astype(str).unique().tolist())
         for stage in STAGE_ORDER:
             stage_rows = group[group["stage"] == stage]
             if stage_rows.empty:
@@ -123,11 +127,14 @@ def main() -> int:
                         selected_manifest_size if active_sweep_field == "manifest_size" else int(group["manifest_size"].max())
                     ),
                     "stage": stage,
+                    "run_count": len(run_ids),
+                    "query_count": int(stage_rows["query_id"].nunique()),
                     "mean_candidate_count": round(stage_rows["candidate_count"].mean(), 6),
                     "mean_selected_count": round(stage_rows["selected_count"].mean(), 6),
                     "mean_frontier_size": round(stage_rows["frontier_size"].mean(), 6),
                     "mean_shrinkage_ratio": round(stage_rows["shrinkage_ratio"].mean(), 6),
                     "median_shrinkage_ratio": round(stage_rows["shrinkage_ratio"].median(), 6),
+                    "source_run_ids": "|".join(run_ids),
                 }
             )
 

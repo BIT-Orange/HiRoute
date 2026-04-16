@@ -3,10 +3,32 @@
 
 #include <algorithm>
 #include <cmath>
+#include <sstream>
 
 namespace ns3 {
 namespace ndn {
 namespace hiroute {
+
+namespace {
+
+bool
+matchesPredicateTokenSet(const std::set<std::string>& values, const std::string& constraint)
+{
+  if (constraint.empty() || values.empty()) {
+    return true;
+  }
+
+  std::stringstream input(constraint);
+  std::string token;
+  while (std::getline(input, token, ';')) {
+    if (!token.empty() && values.count(token) > 0) {
+      return true;
+    }
+  }
+  return false;
+}
+
+} // namespace
 
 void
 HiRouteDiscoveryEngine::SetWeights(const Weights& weights)
@@ -152,7 +174,7 @@ HiRouteDiscoveryEngine::computePredicateScore(const HiRouteSummaryEntry& entry,
 
   if (!predicate.zoneConstraint.empty()) {
     ++constrained;
-    matched += entry.zoneBitmap.count(predicate.zoneConstraint) > 0 ? 1u : 0u;
+    matched += matchesPredicateTokenSet(entry.zoneBitmap, predicate.zoneConstraint) ? 1u : 0u;
   }
   if (!predicate.zoneTypeConstraint.empty()) {
     ++constrained;

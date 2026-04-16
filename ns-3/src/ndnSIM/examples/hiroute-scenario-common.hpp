@@ -38,6 +38,8 @@ struct HiRouteScenarioConfig {
   std::string summaryCsv = "../data/processed/ndnsim/hslsa_export.csv";
   std::string controllerLocalIndexCsv = "../data/processed/ndnsim/controller_local_index.csv";
   std::string runDir = "../runs/pending/ndnsim-smoke";
+  std::string probePlanDebugCsv = "";
+  std::string controllerManifestDebugCsv = "";
   std::string topologyId = "rf_3967_exodus";
   std::string scheme = "hiroute";
   std::string oraclePrefix = "/hiroute/oracle/controller";
@@ -336,6 +338,9 @@ RunHiRouteScenario(int argc, char* argv[], HiRouteScenarioMode mode)
   cmd.AddValue("controllerLocalIndexCsv", "controller_local_index.csv path",
                config.controllerLocalIndexCsv);
   cmd.AddValue("runDir", "Output run directory", config.runDir);
+  cmd.AddValue("probePlanDebugCsv", "Optional ingress probe-plan debug csv", config.probePlanDebugCsv);
+  cmd.AddValue("controllerManifestDebugCsv", "Optional controller manifest debug csv",
+               config.controllerManifestDebugCsv);
   cmd.AddValue("topologyId", "Topology identifier", config.topologyId);
   cmd.AddValue("scheme",
                "exact, flood, flat_iroute, oracle, hiroute, inf_tag_forwarding, predicates_only, random_admissible",
@@ -405,6 +410,8 @@ RunHiRouteScenario(int argc, char* argv[], HiRouteScenarioMode mode)
       controllerHelper.SetAttribute("ObjectsCsvPath", StringValue(config.objectsCsv));
       controllerHelper.SetAttribute("ControllerLocalIndexCsvPath",
                                     StringValue(config.controllerLocalIndexCsv));
+      controllerHelper.SetAttribute("ManifestDebugCsvPath",
+                                    StringValue(config.controllerManifestDebugCsv));
       controllerHelper.SetAttribute("ManifestSize", UintegerValue(config.manifestSize));
       controllerHelper.SetAttribute("ServeDiscovery", BooleanValue(true));
       controllerHelper.SetAttribute("ServeObjects", BooleanValue(false));
@@ -454,6 +461,7 @@ RunHiRouteScenario(int argc, char* argv[], HiRouteScenarioMode mode)
   oracleHelper.SetAttribute("ObjectsCsvPath", StringValue(config.objectsCsv));
   oracleHelper.SetAttribute("ControllerLocalIndexCsvPath", StringValue(config.controllerLocalIndexCsv));
   oracleHelper.SetAttribute("QrelsObjectCsvPath", StringValue(config.qrelsObjectCsv));
+  oracleHelper.SetAttribute("ManifestDebugCsvPath", StringValue(config.controllerManifestDebugCsv));
   oracleHelper.SetAttribute("ManifestSize", UintegerValue(config.manifestSize));
   auto oracleApps = oracleHelper.Install(firstControllerNode);
   oracleApps.Start(Seconds(0.0));
@@ -473,6 +481,8 @@ RunHiRouteScenario(int argc, char* argv[], HiRouteScenarioMode mode)
       producerHelper.SetAttribute("ObjectsCsvPath", StringValue(config.objectsCsv));
       producerHelper.SetAttribute("ControllerLocalIndexCsvPath",
                                   StringValue(config.controllerLocalIndexCsv));
+      producerHelper.SetAttribute("ManifestDebugCsvPath",
+                                  StringValue(config.controllerManifestDebugCsv));
       producerHelper.SetAttribute("ManifestSize", UintegerValue(config.manifestSize));
       producerHelper.SetAttribute("ServeDiscovery", BooleanValue(false));
       producerHelper.SetAttribute("ServeObjects", BooleanValue(true));
@@ -538,6 +548,7 @@ RunHiRouteScenario(int argc, char* argv[], HiRouteScenarioMode mode)
     ingressHelper.SetAttribute("SummaryCsvPath", StringValue(config.summaryCsv));
     ingressHelper.SetAttribute("TopologyMappingCsvPath", StringValue(config.topologyMappingCsv));
     ingressHelper.SetAttribute("RunDirectory", StringValue(config.runDir));
+    ingressHelper.SetAttribute("ProbePlanDebugCsvPath", StringValue(config.probePlanDebugCsv));
     ingressHelper.SetAttribute("IngressNodeFilter", StringValue(GetFieldOrEmpty(row, "node_id")));
     ingressHelper.SetAttribute("OraclePrefix", StringValue(config.oraclePrefix));
     ingressHelper.SetAttribute("RequestedManifestSize", UintegerValue(config.manifestSize));
@@ -670,6 +681,19 @@ RunHiRouteScenario(int argc, char* argv[], HiRouteScenarioMode mode)
     ensureCsvHeader(config.runDir + "/search_trace.csv",
                     {"query_id", "scheme", "stage", "candidate_count", "selected_count",
                      "frontier_size", "timestamp_ms"});
+    if (!config.probePlanDebugCsv.empty()) {
+      ensureCsvHeader(config.probePlanDebugCsv,
+                      {"query_id", "zone_constraint", "zone_type_constraint",
+                       "service_constraint", "freshness_constraint", "all_domain_ids",
+                       "predicate_filtered_domain_ids", "level0_cell_ids", "level1_cell_ids",
+                       "refined_cell_ids"});
+    }
+    if (!config.controllerManifestDebugCsv.empty()) {
+      ensureCsvHeader(config.controllerManifestDebugCsv,
+                      {"query_id", "frontier_hint_cell_id", "exact_cell_exists",
+                       "descendant_cell_count", "candidate_object_count_pre_filter",
+                       "candidate_object_count_post_filter", "zero_reason"});
+    }
     Simulator::Destroy();
     return 0;
   }
@@ -732,6 +756,20 @@ RunHiRouteScenario(int argc, char* argv[], HiRouteScenarioMode mode)
                  {std::to_string(config.failureTime), "staleness_window", "", "",
                   targetFailureDomain.empty() ? firstControllerDomain : targetFailureDomain,
                   "target domain controller manifests drop top entry probabilistically"});
+  }
+
+  if (!config.probePlanDebugCsv.empty()) {
+    ensureCsvHeader(config.probePlanDebugCsv,
+                    {"query_id", "zone_constraint", "zone_type_constraint",
+                     "service_constraint", "freshness_constraint", "all_domain_ids",
+                     "predicate_filtered_domain_ids", "level0_cell_ids", "level1_cell_ids",
+                     "refined_cell_ids"});
+  }
+  if (!config.controllerManifestDebugCsv.empty()) {
+    ensureCsvHeader(config.controllerManifestDebugCsv,
+                    {"query_id", "frontier_hint_cell_id", "exact_cell_exists",
+                     "descendant_cell_count", "candidate_object_count_pre_filter",
+                     "candidate_object_count_post_filter", "zero_reason"});
   }
 
   GlobalRoutingHelper::CalculateRoutes();

@@ -20,12 +20,15 @@ OUTPUT_FIELDS = [
     "topology_id",
     "budget",
     "manifest_size",
+    "run_count",
+    "query_count",
     "deadline_ms",
     "success_before_deadline_rate",
     "timeout_or_failure_rate",
     "mean_latency_ms",
     "mean_success_latency_ms",
     "median_success_latency_ms",
+    "source_run_ids",
 ]
 DEFAULT_DEADLINES_MS = [50, 100, 200, 500]
 
@@ -58,6 +61,7 @@ def main() -> int:
     for (scheme, topology_id, budget), group in frame.groupby(
         ["registry_scheme", "registry_topology_id", "budget"], sort=False
     ):
+        run_ids = sorted(group["run_id"].unique().tolist())
         success_rows = group[group["success_at_1"] == 1]
         mean_success_latency = float(success_rows["latency_ms"].mean()) if not success_rows.empty else float("nan")
         median_success_latency = float(success_rows["latency_ms"].median()) if not success_rows.empty else float("nan")
@@ -71,12 +75,15 @@ def main() -> int:
                     "topology_id": topology_id,
                     "budget": int(budget),
                     "manifest_size": int(group["manifest_size"].max()),
+                    "run_count": len(run_ids),
+                    "query_count": int(len(group)),
                     "deadline_ms": deadline_ms,
                     "success_before_deadline_rate": round(success_before_deadline, 6),
                     "timeout_or_failure_rate": round(1.0 - success_before_deadline, 6),
                     "mean_latency_ms": round(group["latency_ms"].mean(), 6),
                     "mean_success_latency_ms": round(mean_success_latency, 6),
                     "median_success_latency_ms": round(median_success_latency, 6),
+                    "source_run_ids": "|".join(run_ids),
                 }
             )
 

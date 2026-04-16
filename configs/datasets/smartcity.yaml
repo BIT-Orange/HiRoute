@@ -1,0 +1,46 @@
+dataset_id: smartcity
+version: "2026-03-25-mainline"
+seed: 74
+sources:
+  smartdatamodels_manifest: data/raw/smartdatamodels/raw_manifest.json
+rules:
+  service_ontology: configs/datasets/service_ontology_rules.yaml
+  object_generation: configs/datasets/smartcity_mainline_object_generation.yaml
+  query_generation: configs/datasets/smartcity_mainline_query_generation.yaml
+  hierarchy: configs/hierarchy/hiroute_hkm.yaml
+topology:
+  topology_id: rf_3967_exodus
+  default_config: configs/topologies/rocketfuel_3967_exodus.yaml
+  supplemental_configs:
+    - configs/topologies/rocketfuel_3967_exodus_compact.yaml
+  query_bundles:
+    rf_3967_exodus:
+      topology_config: configs/topologies/rocketfuel_3967_exodus.yaml
+      queries_csv: data/processed/smartcity/rf_3967_exodus/queries_master.csv
+      qrels_object_csv: data/processed/smartcity/rf_3967_exodus/qrels_object.csv
+      qrels_domain_csv: data/processed/smartcity/rf_3967_exodus/qrels_domain.csv
+      query_embedding_index_csv: data/processed/smartcity/rf_3967_exodus/query_embedding_index.csv
+    rf_1239_sprint:
+      topology_config: configs/topologies/rocketfuel_1239_sprint.yaml
+      queries_csv: data/processed/smartcity/rf_1239_sprint/queries_master.csv
+      qrels_object_csv: data/processed/smartcity/rf_1239_sprint/qrels_object.csv
+      qrels_domain_csv: data/processed/smartcity/rf_1239_sprint/qrels_domain.csv
+      query_embedding_index_csv: data/processed/smartcity/rf_1239_sprint/query_embedding_index.csv
+outputs:
+  subject_catalog_csv: data/interim/objects/sdm_subject_catalog.csv
+  service_ontology_csv: data/interim/objects/service_ontology.csv
+  objects_csv: data/processed/smartcity/objects_master.csv
+  object_texts_jsonl: data/processed/smartcity/object_texts.jsonl
+  queries_csv: data/processed/smartcity/queries_master.csv
+  qrels_object_csv: data/processed/smartcity/qrels_object.csv
+  qrels_domain_csv: data/processed/smartcity/qrels_domain.csv
+  object_embeddings_npy: data/processed/smartcity/object_embeddings.npy
+  query_embeddings_npy: data/processed/smartcity/query_embeddings.npy
+  object_embedding_index_csv: data/processed/smartcity/object_embedding_index.csv
+  query_embedding_index_csv: data/processed/smartcity/query_embedding_index.csv
+  summary_embeddings_npy: data/processed/smartcity/summary_embeddings.npy
+  summary_embedding_index_csv: data/processed/smartcity/summary_embedding_index.csv
+  hslsa_csv: data/processed/smartcity/hslsa_export.csv
+  controller_local_index_csv: data/processed/smartcity/controller_local_index.csv
+  cell_membership_csv: data/processed/smartcity/cell_membership.csv
+  topology_mapping_csv: data/processed/ndnsim/topology_mapping_rf_3967_exodus.csv

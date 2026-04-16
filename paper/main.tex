@@ -57,9 +57,9 @@
 \begin{abstract}
 Named Data Networking is an attractive communication substrate for the Internet of Things because it retrieves data by names, supports in-network caching, and secures the data object itself. In practical smart-city and industrial deployments, however, semantically related resources are rarely exposed under a uniform namespace. A consumer often knows the service intent, the spatial scope, and the freshness requirement of the desired information, yet it may not know the exact canonical name that a remote producer uses. Pure exact-name forwarding is brittle in this setting, whereas pushing semantic inference into every forwarding node is costly and difficult to scale.
 
-This paper presents \sysname{}, a hierarchical semantic name-resolution architecture for NDN-IoT that separates constraint handling from semantic ranking. Each query is represented as a structured predicate header together with a residual semantic vector. Each domain exports a bounded set of hierarchical semantic link-state advertisements that summarize local object groups through predicate sketches, semantic centroids, covering radii, and controller reachability information. An ingress node first applies predicate filtering, then performs bounded hierarchical refinement over the remaining summaries, and finally obtains a small ranked manifest of canonical NDN names from candidate domain controllers. Data retrieval continues through standard NDN Interest and Data exchange, so the forwarding plane and in-network caching behavior remain unchanged.
+This paper presents \sysname{}, a hierarchical semantic name-resolution architecture for NDN-IoT that separates constraint handling from semantic ranking. Each query is represented as a structured predicate header together with a lightweight semantic hint. Each domain exports a bounded set of hierarchical semantic link-state advertisements that summarize local object groups through predicate sketches, semantic tag bitmaps, covering radii, and controller reachability information. An ingress node first applies predicate filtering, then performs bounded hierarchical refinement over the remaining summaries, and finally obtains a small ranked manifest of canonical NDN names from candidate domain controllers. Data retrieval continues through standard NDN Interest and Data exchange, so the forwarding plane and in-network caching behavior remain unchanged.
 
-The design is motivated by a simple systems observation: in IoT workloads, region, service type, and freshness behave as hard constraints, while the remaining intent semantics are best handled through similarity search. Building on this observation, \sysname{} reduces unnecessary remote probes, narrows the gap between domain-level discovery and object-level resolution, and bounds exported inter-domain state by an explicit summary budget rather than raw object count. The manuscript also specifies an ndnSIM realization and a complete evaluation methodology covering service success, deadline-sensitive latency, discovery overhead, routing-state growth, and robustness under stale summaries and failures.
+The design is motivated by a simple systems observation: in IoT workloads, region, service type, and freshness behave as hard constraints, while the remaining intent semantics are best handled through lightweight summary-guided heuristics. Building on this observation, \sysname{} reduces unnecessary remote probes, narrows the gap between domain-level discovery and object-level resolution, and bounds exported inter-domain state by an explicit summary budget rather than raw object count. The manuscript also specifies an ndnSIM realization and a complete evaluation methodology covering terminal service success, first-fetch correctness, deadline-sensitive latency, discovery overhead, routing-state growth, and robustness under stale summaries and failures.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -74,9 +74,9 @@ Named Data Networking, or NDN, offers an appealing foundation for these systems 
 
 The difficulty begins once the consumer does not know the exact routable name. Exact longest-prefix forwarding presumes that a consumer, an application layer, or an external catalog already knows the canonical prefix. That assumption is reasonable inside a tightly managed namespace, but it becomes brittle when independent administrative domains publish semantically equivalent data under different names. Fuzzy or semantic forwarding is a natural reaction to this problem, and prior work has shown that approximate name matching can expand the NDN design space \cite{fuzzy,semantic_distribution}. Yet a flat semantic match at forwarding time does not by itself solve the routing problem. It can be expensive to execute online, difficult to bound at scale, and often too coarse to bridge the gap between discovering a relevant domain and resolving the correct final object.
 
-The key observation of this paper is that IoT intent queries are not unstructured free text. They typically combine a small set of hard constraints with a softer semantic remainder. A query for recent PM$_{2.5}$ anomalies near downtown schools is not simply a nearest-neighbor search in embedding space. The spatial scope, the service class, and the freshness requirement sharply restrict the feasible candidate set. The remaining semantic ambiguity concerns the residual intent, such as whether the query emphasizes anomaly, threshold exceedance, or trend deviation. Treating all of these factors as one undifferentiated semantic vector wastes routing effort and makes remote probing unnecessarily broad.
+The key observation of this paper is that IoT intent queries are not unstructured free text. They typically combine a small set of hard constraints with a smaller semantic remainder. A query for recent PM$_{2.5}$ anomalies near downtown schools is not simply a nearest-neighbor search problem. The spatial scope, the service class, and the freshness requirement sharply restrict the feasible candidate set. The remaining semantic ambiguity concerns intent facets such as anomaly, threshold exceedance, or trend deviation. Treating all of these factors as one undifferentiated semantic score wastes routing effort and makes remote probing unnecessarily broad.
 
-This observation leads to a different architectural answer. Instead of asking every forwarder to reason over arbitrary semantics, \sysname{} confines semantics to a discovery plane and organizes that plane around hierarchical summaries. Each query is decomposed into a predicate header and a semantic residual vector. Each domain builds a local hierarchy over its objects and exports only a bounded set of summaries to the inter-domain control plane. Each summary reports what kinds of objects it may contain, where they are located at a coarse level, how fresh they are expected to be, and how the group is positioned in semantic space. An ingress node then performs a bounded search that first removes impossible candidates through predicate filtering and then refines only the most promising semantic cells. When the search reaches a candidate domain controller, the controller returns a small manifest of canonical names rather than a single brittle answer. Standard NDN retrieval then proceeds without modifying the forwarding plane.
+This observation leads to a different architectural answer. Instead of asking every forwarder to reason over arbitrary semantics, \sysname{} confines semantics to a discovery plane and organizes that plane around hierarchical summaries. Each query is decomposed into a predicate header and a compact semantic hint. Each domain builds a local hierarchy over its objects and exports only a bounded set of summaries to the inter-domain control plane. Each summary reports what kinds of objects it may contain, where they are located at a coarse level, how fresh they are expected to be, and which semantic tags characterize the cell. An ingress node then performs a bounded search that first removes impossible candidates through predicate filtering and then refines only the most promising cells using frontier hints, semantic tags, and lightweight tie-breaks. When the search reaches a candidate domain controller, the controller returns a small manifest of canonical names rather than a single brittle answer. Standard NDN retrieval then proceeds without modifying the forwarding plane.
 
 The contribution of the paper is therefore not a new embedding model or a new caching policy. The contribution is a routing and name-resolution architecture that is both semantically richer and experimentally more defensible than a flat domain-level semantic router. The design is technically modest in the right places. It does not alter NDN packet forwarding, it does not require semantic computation at every hop, and it does not assume that every object must be globally advertised. At the same time, it is ambitious where the current literature remains weak. It makes object-level resolution, exported state bounds, and failure behavior the central evaluation targets, because these are the points at which semantic NDN-IoT systems either become credible or collapse into an external search service with an NDN wrapper. The overall paper organization follows the introduction-to-motivation-to-design-to-evaluation progression that is common in recent NDN-IoT and IEEE-style systems papers, including SANR-CMF, INF-NDN, NLSR, and iStack \cite{sanr,inf_ndn,nlsr,istack}.
 
@@ -96,9 +96,9 @@ The NDN routing literature has treated scalability as a primary systems concern 
 
 \subsection{Problem Scope}
 
-The paper focuses on cross-domain discovery for data objects that are semantically related but not necessarily syntactically aligned. Each retrievable object has a canonical NDN name, a structured metadata record, and an embedding or semantic descriptor. Each query contains zero or more hard constraints, such as region or service type, together with a residual semantic expression. The objective is to resolve the query to one or a few canonical names with bounded control overhead, bounded disseminated state, and standard NDN data retrieval.
+The paper focuses on cross-domain discovery for data objects that are semantically related but not necessarily syntactically aligned. Each retrievable object has a canonical NDN name, a structured metadata record, and optional semantic tags or other offline descriptors. Each query contains zero or more hard constraints, such as region or service type, together with a compact semantic hint. The objective is to resolve the query to one or a few canonical names with bounded control overhead, bounded disseminated state, and standard NDN data retrieval.
 
-The scope excludes two issues that are important but orthogonal. The first is semantic understanding from raw unrestricted natural language. In the ndnSIM realization proposed here, queries are represented as structured fields and offline-generated embeddings. The second is authorization logic. Trust, access control, or privacy can be represented as additional predicate fields, but this paper does not attempt to solve full semantic access control.
+The scope excludes two issues that are important but orthogonal. The first is semantic understanding from raw unrestricted natural language. In the ndnSIM realization proposed here, queries are represented as structured fields and offline-generated semantic hints. The second is authorization logic. Trust, access control, or privacy can be represented as additional predicate fields, but this paper does not attempt to solve full semantic access control.
 
 \subsection{Design Position}
 
@@ -108,21 +108,21 @@ The design position of \sysname{} can be summarized in one sentence. Hard constr
 
 \subsection{Object Model and Query Model}
 
-Let $o$ denote a retrievable object. Each object is described by a canonical name $n(o)$, an administrative domain $d(o)$, a predicate record $p(o)$, and an embedding $\vect{e}(o)\in\mathbb{R}^{m}$. In the default realization used by this manuscript, the predicate record includes a geospatial zone identifier, a service class, and a freshness class. Additional fields such as trust scope or temporal window can be incorporated in the same form. The predicate fields are intentionally compact because they are used for elimination rather than ranking.
+Let $o$ denote a retrievable object. Each object is described by a canonical name $n(o)$, an administrative domain $d(o)$, a predicate record $p(o)$, and a lightweight semantic descriptor $h(o)$. In the default realization used by this manuscript, the predicate record includes a geospatial zone identifier, a service class, and a freshness class. The semantic descriptor is reduced during preprocessing to cell-level semantic tags and local hierarchy hints. Additional fields such as trust scope or temporal window can be incorporated in the same form. The predicate fields are intentionally compact because they are used for elimination rather than ranking.
 
 A consumer query $q$ is transformed into two parts,
 \begin{equation}
-q \mapsto \bigl(p_q,\vect{v}_q\bigr),
+q \mapsto \bigl(p_q,h_q\bigr),
 \end{equation}
-where $p_q$ is the structured predicate header and $\vect{v}_q\in\mathbb{R}^{m}$ is the residual semantic vector. The transformation may be implemented by a template-driven query generator in ndnSIM or by an external parser in a real deployment. The important point is that the routing logic consumes a compact predicate header and a vector, not raw unrestricted text.
+where $p_q$ is the structured predicate header and $h_q$ is a compact semantic hint such as an intent facet or frontier cue. The transformation may be implemented by a template-driven query generator in ndnSIM or by an external parser in a real deployment. The important point is that the routing logic consumes compact structured fields rather than raw unrestricted text.
 
 \subsection{Default Hierarchy Used in This Paper}
 
-Although the architecture permits arbitrary hierarchical clustering, the paper adopts a default three-level hierarchy because it is easier to implement faithfully in ndnSIM and easier to analyze experimentally. The root level is a domain summary. The next level partitions objects by coarse predicate cells, which in the default configuration correspond to zone and service class. The third level subdivides each predicate cell into semantic microclusters obtained from balanced $k$-means over the local object embeddings. This organization is sufficiently expressive to reveal the effect of hierarchical refinement without introducing unnecessary implementation complexity.
+Although the architecture permits arbitrary hierarchical clustering, the paper adopts a default three-level hierarchy because it is easier to implement faithfully in ndnSIM and easier to analyze experimentally. The root level is a domain summary. The next level partitions objects by coarse predicate cells, which in the default configuration correspond to zone and service class. The third level subdivides each predicate cell into smaller local cells created during preprocessing. This organization is sufficiently expressive to reveal the effect of hierarchical refinement without introducing unnecessary implementation complexity.
 
 The consequence of this choice is important. The hierarchy is not a pure semantic tree. It is a constrained semantic tree whose middle level already respects the structure of the workload. This is precisely why it is more suitable for IoT than an unconstrained nearest-neighbor directory. A large part of the search space disappears before any semantic ranking is needed.
 
-\figstarplaceholder{System overview of \sysname{}. A query arrives at an ingress node, is decomposed into structured constraints and a residual semantic vector, is matched against distributed hierarchical summaries, and is resolved to a small manifest of canonical NDN names. The subsequent fetch stage remains ordinary NDN Interest and Data exchange.}{5.6cm}{\textit{Insert system architecture figure here.}\\[0.6em]
+\figstarplaceholder{System overview of \sysname{}. A query arrives at an ingress node, is decomposed into structured constraints and a compact semantic hint, is matched against distributed hierarchical summaries, and is resolved to a small manifest of canonical NDN names. The subsequent fetch stage remains ordinary NDN Interest and Data exchange.}{5.6cm}{\textit{Insert system architecture figure here.}\\[0.6em]
 Recommended visual elements: consumer, ingress node, multiple domains, hierarchical summaries, discovery Interest, manifest reply, and final fetch path.}{fig:overview}
 
 \subsection{What Must Be Bounded}
@@ -137,7 +137,7 @@ The architecture therefore pursues four concrete objectives. It must preserve se
 
 \subsection{Hierarchical Semantic Link-State Advertisement}
 
-Each domain constructs a local constrained hierarchy and exports a bounded set of summaries called hierarchical semantic link-state advertisements, abbreviated as \hslsa{}s. A summary for cell $c$ contains five logical components. The first component identifies the advertising domain, the hierarchy level, and the parent-child relation. The second component contains a predicate sketch that indicates which zones, service classes, and freshness classes may appear under the cell. The third component contains a semantic centroid $\vect{\mu}_c$ and a covering radius $\rho_c$. The fourth component records summary statistics such as object count and optional popularity. The fifth component identifies the controller prefix that can answer discovery requests for that cell.
+Each domain constructs a local constrained hierarchy and exports a bounded set of summaries called hierarchical semantic link-state advertisements, abbreviated as \hslsa{}s. A summary for cell $c$ contains five logical components. The first component identifies the advertising domain, the hierarchy level, and the parent-child relation. The second component contains a predicate sketch that indicates which zones, service classes, and freshness classes may appear under the cell. The third component contains semantic tag hints and a covering radius $\rho_c$. The fourth component records summary statistics such as object count and optional popularity. The fifth component identifies the controller prefix that can answer discovery requests for that cell.
 
 Table~\ref{tab:hslsa} defines the logical fields used throughout the paper. The exact wire encoding can be adapted to the chosen ndnSIM implementation. The only strict requirement is that predicate admissibility and controller reachability must be recoverable without consulting raw objects.
 
@@ -153,8 +153,8 @@ DomainId & integer & Administrative domain identifier. \\
 Level & integer & Hierarchy depth of the advertised cell. \\
 CellId, ParentId & integer & Cell identifier and parent identifier. \\
 PredicateSketch & bitmap or bitset & Admissible zones, service classes, and freshness classes. \\
-Centroid & vector & Semantic centroid of the cell. \\
-Radius & scalar & Maximum or approximate semantic dispersion around the centroid. \\
+SemanticTags & bitmap or bitset & Intent-facet tags associated with the cell. \\
+Radius & scalar & Approximate local dispersion or specificity cue for tie-breaking. \\
 Count & integer & Number of objects covered by the cell. \\
 ControllerPrefix & name prefix & Routable name prefix of the controller that answers discovery for the cell. \\
 Version, Lifetime & integer & Summary freshness and replacement metadata. \\
@@ -170,7 +170,7 @@ This proposition is simple, but it is the correct state bound for the architectu
 
 \subsection{Predicate Filtering}
 
-The predicate sketch is evaluated before semantic similarity. Let $p_q$ denote the predicate header of the query and let $s(c)$ denote the predicate sketch of cell $c$. A cell is admissible only if each specified hard constraint in $p_q$ is covered by $s(c)$. If a query requests a zone that is not present in the sketch, the cell is eliminated immediately. The same logic applies to service class and freshness class.
+The predicate sketch is evaluated before heuristic semantic scoring. Let $p_q$ denote the predicate header of the query and let $s(c)$ denote the predicate sketch of cell $c$. A cell is admissible only if each specified hard constraint in $p_q$ is covered by $s(c)$. If a query requests a zone that is not present in the sketch, the cell is eliminated immediately. The same logic applies to service class and freshness class.
 
 This operation is intentionally asymmetric. A strong semantic match can never rescue a hard predicate mismatch. In IoT workloads this asymmetry is usually desirable. A query for parking availability in one district should not be routed toward air-quality sensors in another district simply because the text descriptors happen to be semantically close in embedding space.
 
@@ -179,16 +179,16 @@ This operation is intentionally asymmetric. A strong semantic match can never re
 For each admissible cell $c$, the ingress node computes
 \begin{equation}
 \label{eq:score}
-\score(c,q)=\alpha\,\simf(\vect{v}_q,\vect{\mu}_c)+\beta\,\matchf(p_q,s(c))+\gamma\,\relf(c)-\delta\,\costf(c).
+\score(c,q)=\alpha\,\semf(c,h_q)+\beta\,\matchf(p_q,s(c))+\gamma\,\relf(c)-\delta\,\costf(c).
 \end{equation}
-Here $\simf$ is cosine similarity between the query residual vector and the cell centroid, $\matchf$ equals one for a full predicate match and zero otherwise in the default design, $\relf(c)$ is an exponentially weighted success estimate for the cell, and $\costf(c)$ captures topological distance or remote probe cost. The coefficients $\alpha$, $\beta$, $\gamma$, and $\delta$ are determined empirically.
+Here $\semf$ is a bounded heuristic semantic score that combines frontier-hint agreement, intent-facet tag hits, and an inverse-radius preference; $\matchf$ measures how completely the predicate sketch covers the requested hard constraints; $\relf(c)$ is an exponentially weighted success estimate for the cell; and $\costf(c)$ captures topological distance or remote probe cost. The coefficients $\alpha$, $\beta$, $\gamma$, and $\delta$ are determined empirically.
 
-The ingress node begins with the exported cells at the coarsest level. It ranks them by \eqref{eq:score} and refines only the highest-scoring candidates. Refinement means replacing a parent summary with the child summaries retrieved from local cache or from the corresponding controller. The process continues until a stopping condition is reached. In the default configuration used for ndnSIM, refinement stops when the frontier reaches semantic microclusters, when the score margin between the best and the next-best frontier elements exceeds a confidence threshold, or when a fixed discovery budget is exhausted.
+The ingress node begins with the exported cells at the coarsest level. It ranks them by \eqref{eq:score} and refines only the highest-scoring candidates. Refinement means replacing a parent summary with the child summaries retrieved from local cache or from the corresponding controller. The process continues until a stopping condition is reached. In the default configuration used for ndnSIM, refinement stops when the frontier reaches the finest local cells, when the score margin between the best and the next-best frontier elements exceeds a confidence threshold, or when a fixed discovery budget is exhausted.
 
 This bounded refinement is the central algorithmic distinction of the paper. A flat semantic router asks which domains are closest to the query. \sysname{} asks which constrained semantic cell should be examined next. That difference is what shrinks remote search breadth.
 
-\figplaceholder{Query decomposition and hierarchical refinement in \sysname{}. The hard constraints remove impossible candidates first, and only the remaining semantic cells participate in similarity ranking.}{5.0cm}{\textit{Insert query-processing figure here.}\\[0.6em]
-Recommended visual elements: $q\rightarrow(p_q,\vect{v}_q)$, predicate screening, hierarchy frontier, refinement into child cells, and controller probe decision.}{fig:query}
+\figplaceholder{Query decomposition and hierarchical refinement in \sysname{}. The hard constraints remove impossible candidates first, and only the remaining cells participate in heuristic semantic ranking.}{5.0cm}{\textit{Insert query-processing figure here.}\\[0.6em]
+Recommended visual elements: $q\rightarrow(p_q,h_q)$, predicate screening, hierarchy frontier, refinement into child cells, and controller probe decision.}{fig:query}
 
 \subsection{Manifest-Based Local Resolution}
 
@@ -220,7 +220,7 @@ The ndnSIM realization can be implemented with two application-level exchanges. 
 \end{equation}
 while the query payload is carried in \ap{}. The second is the fetch stage. After the ingress node receives a manifest, it issues an ordinary Interest for the selected canonical name. No data-plane modification is required beyond the logic that triggers the first stage and consumes the second.
 
-The wire-level fields needed by the discovery payload are compact. The payload contains a bitmap or small integer encoding of the predicate header, the residual embedding vector, the remaining refinement budget, and optional debugging fields such as the visited-cell list. The discovery reply Data contains the manifest and lightweight score metadata. These fields are adequate for a faithful ndnSIM study and do not require kernel-level changes.
+The wire-level fields needed by the discovery payload are compact. The payload contains a bitmap or small integer encoding of the predicate header, a lightweight semantic hint field, the remaining refinement budget, and optional debugging fields such as the visited-cell list. The discovery reply Data contains the manifest and lightweight score metadata. These fields are adequate for a faithful ndnSIM study and do not require kernel-level changes.
 
 \subsection{Software Components}
 
@@ -231,9 +231,9 @@ Recommended visual elements: ingress app, summary store, discovery engine, contr
 
 \subsection{Offline Preprocessing Pipeline}
 
-The paper intentionally keeps semantic representation generation outside ndnSIM. A preprocessing script builds the object corpus, computes embeddings, constructs the constrained hierarchy inside each domain, and writes summary files and controller indexes. This offline pipeline is essential for reproducibility. It means the simulator evaluates routing and resolution decisions rather than spending simulation time on embedding generation.
+The paper intentionally keeps semantic representation generation outside ndnSIM. A preprocessing script builds the object corpus, computes any needed offline descriptors, constructs the constrained hierarchy inside each domain, and writes summary files and controller indexes. This offline pipeline is essential for reproducibility. It means the simulator evaluates routing and resolution decisions rather than spending simulation time on semantic preprocessing.
 
-A practical realization for this paper is to generate object descriptions from smart-city metadata, compute sentence embeddings offline, and write four input artifacts. The first artifact lists producer objects and their canonical names. The second lists query traces. The third lists relevance judgments or acceptable object matches. The fourth lists exported \hslsa{} summaries for each domain. This pipeline maps directly onto the ndnSIM CSV workflow that many NDN simulation studies already use.
+A practical realization for this paper is to generate object descriptions from smart-city metadata, derive semantic tags or other lightweight offline descriptors, and write four input artifacts. The first artifact lists producer objects and their canonical names. The second lists query traces. The third lists relevance judgments or acceptable object matches. The fourth lists exported \hslsa{} summaries for each domain. This pipeline maps directly onto the ndnSIM CSV workflow that many NDN simulation studies already use.
 
 \section{Experimental Methodology}
 
@@ -249,11 +249,11 @@ The topology should come from converted Rocketfuel or similarly structured ISP-l
 
 \subsection{Baselines}
 
-The main semantic-discovery comparison should use only baselines that solve the same problem under comparable information assumptions. The compact routing-support slice therefore includes a hard-filter-only baseline that applies only admissibility constraints, an admissible random negative control, a flat semantic router that advertises one level of domain summaries or centroids without hierarchical refinement, and a logically centralized semantic directory that has global object knowledge and therefore serves as a quality upper reference at the cost of decentralization. The flat semantic router remains the most important internal baseline because it isolates the value of the proposed hierarchy, while the hard-filter and random-admissible controls reveal how much the constraints and fallback already solve before semantic ranking is introduced. Exact-name NDN retrieval should still be implemented, but it should be reported only as a syntactic known-name reference that reveals the lower bound on fetch latency and control overhead once the canonical name is already known. It should not be treated as a peer semantic-discovery method on the main Pareto-style plots.
+The main semantic-discovery comparison should use only baselines that solve the same problem under comparable information assumptions. The compact routing-support slice therefore includes a hard-filter-only baseline that applies only admissibility constraints, an admissible random negative control, a flat semantic router that advertises one level of domain summaries and semantic hints without hierarchical refinement, and a logically centralized semantic directory that has global object knowledge and therefore serves as a quality upper reference at the cost of decentralization. The flat semantic router remains the most important internal baseline because it isolates the value of the proposed hierarchy, while the hard-filter and random-admissible controls reveal how much the constraints and fallback already solve before summary-guided ranking is introduced. Exact-name NDN retrieval should still be implemented, but it should be reported only as a syntactic known-name reference that reveals the lower bound on fetch latency and control overhead once the canonical name is already known. It should not be treated as a peer semantic-discovery method on the main Pareto-style plots.
 
 \subsection{Metrics}
 
-The primary metric should be ServiceSuccess@1, defined as whether the first fetched object satisfies the query. This metric reflects end-to-end application utility more directly than domain-level recall. ManifestHit@$r$ and nDCG@$r$ should be reported as secondary ranking metrics because the architecture explicitly returns a ranked manifest. Discovery overhead should be reported through remote probe count, discovery Interest traffic, and candidate shrinkage ratio, defined as the surviving candidate set after predicate filtering divided by the original candidate set. Latency should be reported both as average completion time and as deadline satisfaction ratio under application-relevant thresholds. Control-plane scalability should be reported through exported summary count and summary update traffic. Robustness should be reported through service success and completion time under stale summaries, link failures, and domain failures.
+The primary end-to-end metric in the current implementation should be terminal service success, recorded in the logs as `success\_at\_1` after any enabled sequential manifest fallback completes. To separate local ranking quality from fallback, the evaluation should also report first-fetch correctness (`first\_fetch\_relevant`) and the manifest rescue position (`manifest\_fetch\_index`, or a derived manifest-rescue rate) alongside ManifestHit@$r$ and nDCG@$r$. Discovery overhead should be reported through remote probe count, discovery Interest traffic, and candidate shrinkage ratio, defined as the surviving candidate set after predicate filtering divided by the original candidate set. Latency should be reported both as average completion time and as deadline satisfaction ratio under application-relevant thresholds. Control-plane scalability should be reported through exported summary count and summary update traffic. Robustness should be reported through terminal service success and completion time under stale summaries, link failures, and domain failures.
 
 \begin{table}[t]
 \caption{Recommended default parameter ranges for the ndnSIM study}
@@ -278,103 +278,105 @@ Deadlines & 50 ms, 100 ms, 200 ms & Captures application sensitivity to delay. \
 
 Four workload factors should be varied systematically. The first is naming heterogeneity, controlled by the number of naming templates or aliases per service class. The second is predicate selectivity, controlled by the breadth of the requested zone and service constraints. The third is semantic ambiguity, controlled by the degree of overlap among embedding clusters across domains. The fourth is control-plane staleness, controlled by delaying summary refresh or by invalidating object-to-summary assignments. In practice the workload should be organized into three tiers: a constraint-dominant tier used only as a sanity check, a mixed-ambiguity tier used for the main semantic-discovery comparisons, and a semantic-confounded tier used for stress tests and ablations. These factors directly target the central claims of the design.
 
+% BEGIN_MAINLINE_EVAL_EXCERPT
 \section{Performance Evaluation}
 
 The evaluation is organized around the dimensions that determine whether semantic name resolution is practically useful in NDN-IoT. Each subsection states the experimental objective and the interpretation that the final measurements should support. The figure positions are fixed so that the experimental campaign can proceed against a stable manuscript outline.
 
-The current paper-facing compact path uses `smartcity\_v3` on the compact topology `rf\_3967\_exodus\_compact`. Figure~\ref{fig:waterfall} uses the compact object-main manifest sweep from promoted `exp\_object\_main\_v3\_compact` runs, and Figure~\ref{fig:ablation} uses promoted `exp\_ablation\_v3\_compact` runs at tight manifest size. Figure~\ref{fig:main} remains the routing-support slice from `exp\_routing\_main\_v3\_compact`, but its next paper-facing rerun is explicitly expanded to include hard-filter and admissible-random controls in addition to the flat, INF-style, hierarchical, and centralized references. Figures~\ref{fig:shrinkage} and \ref{fig:latency} remain routing support figures from the same compact routing experiment, while Figures~\ref{fig:state} and \ref{fig:robust} remain support evidence rather than the core compact proof path.
+The active paper path in this repository is the mainline compact-medium route: dataset `smartcity`, hierarchy `hiroute\_hkm`, and topology `rf\_3967\_exodus\_compact`. Legacy `v1/v2/v3` figures remain archived provenance only. Because the mainline workload was reset to activate non-empty zone constraints, break the degenerate relevant-domain distribution, and remove manifest-size feedback coupling, pre-mainline compact promoted rows are treated as provisional legacy evidence rather than the active source of truth. Figures~\ref{fig:main}--\ref{fig:ablation} therefore bind only to `results/figures/mainline/*`. Figures~\ref{fig:state} and \ref{fig:robust} currently remain pending-rerun support figures; the repository emits placeholders until new mainline runs are promoted.
 
 \subsection{Routing Support Under Saturated End-to-End Success}
 
-Under compact-medium evaluation, shared fallback causes end-to-end routing success to saturate across all compared discovery methods. The compact paper path therefore treats routing as a support result rather than as the primary effectiveness proof. The central question is not which scheme reaches the highest final `ServiceSuccess@1`, because they all do, but which scheme reaches the first relevant domain more reliably and what discovery cost that gain requires.
+Under compact-medium evaluation, shared fallback can cause terminal routing success to saturate across multiple discovery methods. The compact paper path therefore treats routing as a support result rather than as the primary effectiveness proof. The central question is not which scheme reaches the highest final terminal success, but which scheme reaches the first relevant domain more reliably and what discovery cost that gain requires.
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=0.95\linewidth]{../results/figures/v3/compact/fig_main_success_overhead.pdf}
-\caption{Compact routing-support figure showing first relevant-domain reach, discovery cost, and staged candidate shrinkage.}
+\includegraphics[width=0.95\linewidth]{../results/figures/mainline/fig_routing_support.pdf}
+\caption{Mainline routing-support figure showing first relevant-domain reach, discovery cost, and staged candidate shrinkage under non-empty zone constraints.}
 \label{fig:main}
 \end{figure}
 
-Figure~\ref{fig:main} is therefore a routing-support figure rather than a saturated success-overhead frontier. The refreshed compact routing comparison now asks three more targeted questions at budget `16`: what the hard predicates already solve on their own, how an admissible-but-nonsemantic policy behaves, and what semantic scoring plus hierarchy add beyond both controls. Panel A compares first relevant-domain reach across `predicates\_only`, `random\_admissible`, `flat\_iroute`, `inf\_tag\_forwarding`, and \sysname{}. Panel B measures the discovery cost of the same fixed-budget slice, with the centralized directory retained only as a centralized reference. Panel C keeps the staged mechanism view, showing how \sysname{} contracts the candidate surface from `all\_domains` to `refined\_cells` and `probed\_cells`.
+Figure~\ref{fig:main} remains a routing-support figure rather than the primary end-to-end effectiveness proof. Under the new mainline contract it answers three factual questions at budget `16`: what hard predicates solve by themselves, how an admissible but nonsemantic policy behaves, and what semantic scoring plus hierarchy add beyond both controls. Panel A reports first relevant-domain reach across `predicates\_only`, `random\_admissible`, `inf\_tag\_forwarding`, and \sysname{}, with `flood` retained only as a diagnostic lower control and the centralized directory used as a reference. Panel B reports discovery cost on the same fixed-budget slice. Panel C reports staged candidate contraction. Until the refreshed mainline rerun lands, this figure is a placeholder bound to the correct mainline path rather than a legacy compact-v3 plot.
 
 \subsection{Object-Level Semantic Resolution Under Manifest Sweep}
 
-The clearest discriminative signal in the current compact results is object-level semantic resolution, not routing success. The main compact effectiveness figure therefore sweeps manifest size and measures both final success and wrong-object rate. This makes the local ranking problem explicit: once a scheme is near the correct domain, can it select the correct object before wider manifest fallback narrows the difference?
+The object-main slice is a support figure on the current Route B paper path. It sweeps manifest size to separate terminal success from first-fetch correctness and to expose when manifest fallback rescues an initially imperfect local ranking decision. This makes the local ranking problem explicit without overstating the experiment as evidence for a vector-based object scorer.
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=0.95\linewidth]{../results/figures/v3/compact/fig_failure_breakdown.pdf}
-\caption{Compact object-main manifest sweep showing end-to-end success and wrong-object rate.}
+\includegraphics[width=0.95\linewidth]{../results/figures/mainline/fig_object_manifest_sweep.pdf}
+\caption{Mainline object-main manifest sweep showing terminal success and first-fetch correctness under manifest fallback.}
 \label{fig:waterfall}
 \end{figure}
 
-Figure~\ref{fig:waterfall} is now the primary compact effectiveness figure. At `manifest\_size=1`, `flat\_iroute` and `inf\_tag\_forwarding` both reach `0.908333` success with `0.091667` wrong-object rate, whereas \sysname{} improves to `0.9375` success and reduces wrong-object errors to `0.0625`. The centralized directory remains the `1.0` upper reference. Larger manifests do not create a stronger compact separation than `manifest\_size=1`, so the current compact story is that \sysname{} is strongest at manifest-efficient semantic resolution rather than at a broad routing-success gap.
+Figure~\ref{fig:waterfall} is a support figure for the Route B narrative. Its role is explicit: it measures object-level resolution under a manifest sweep by contrasting terminal success with first-fetch correctness, while the accompanying aggregate reports manifest-rescue rate and rescue rank. The figure therefore answers whether fallback is merely masking ranking errors or providing a controlled robustness benefit after the correct domain has already been found.
 
 \subsection{Candidate Shrinkage Through Hierarchical Filtering}
 
-The third experiment should report how aggressively the search frontier contracts after predicate screening and hierarchical refinement. This figure complements the failure decomposition because it explains why \sysname{} can reduce wasted discovery effort before the final object fetch takes place.
+The third experiment reports how aggressively the search frontier contracts after predicate screening and hierarchical refinement. This figure complements the routing-support slice because it explains why \sysname{} reduces wasted discovery effort before the final object fetch takes place.
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=0.95\linewidth]{../results/figures/v3/compact/fig_candidate_shrinkage.pdf}
+\includegraphics[width=0.95\linewidth]{../results/figures/mainline/fig_candidate_shrinkage.pdf}
 \caption{Candidate shrinkage under hierarchical filtering and refinement.}
 \label{fig:shrinkage}
 \end{figure}
 
-Figure~\ref{fig:shrinkage} is now a support mechanism figure for the compact routing result. At budget `16`, the \sysname{} candidate surface contracts from `1.0` at `all\_domains` to roughly `0.196` by the `refined\_cells` and `probed\_cells` stages. This more detailed stage trace supports the compressed mechanism panel already shown in Figure~\ref{fig:main}.
+Figure~\ref{fig:shrinkage} is a support mechanism figure for the routing-main slice. It traces the reduction from `all\_domains` through predicate filtering, hierarchical refinement, and final probe targets. The active paper path uses the mainline aggregate only.
 
 \subsection{Deadline-Sensitive Latency}
 
-Average latency is often too blunt for IoT applications. The fourth experiment should therefore report deadline satisfaction under several thresholds together with completion-time distributions for successful requests. This experiment should use the same workload as the first experiment so that latency is interpreted together with service success. The main comparison should again focus on the semantic-discovery methods and the centralized oracle, while exact-name retrieval is relegated to a separate syntactic reference if it is shown at all.
+Average latency is often too blunt for IoT applications. The fourth experiment reports deadline satisfaction under several thresholds together with completion-time summaries for successful requests. It uses the same `routing\_main` workload as Figure~\ref{fig:main}, so latency is interpreted together with relevant-domain reach rather than as an isolated number.
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=0.95\linewidth]{../results/figures/v3/compact/fig_deadline_summary.pdf}
+\includegraphics[width=0.95\linewidth]{../results/figures/mainline/fig_deadline_summary.pdf}
 \caption{Deadline-sensitive latency evaluation.}
 \label{fig:latency}
 \end{figure}
 
-Figure~\ref{fig:latency} should be read as support evidence rather than as the main proof of superiority. At the default compact budget, the centralized directory has the best `100 ms` deadline-success (`0.916667`), the flat and INF-style baselines remain at `0.879167`, and \sysname{} trails at `0.75` while still preserving the stronger first relevant-domain reach seen in Figure~\ref{fig:main}. The latency result therefore reinforces the tradeoff interpretation: \sysname{} gains better first-domain targeting in compact routing, but not a universal latency advantage.
+Figure~\ref{fig:latency} is support evidence rather than the main proof of superiority. It documents the tradeoff between more selective first-domain targeting and added discovery cost under the same mainline workload.
 
 \subsection{Routing-State Scaling}
 
-The fifth experiment should validate the control-plane argument of the paper. One panel should vary the number of objects per domain under a fixed export budget. A second panel should vary the number of domains. The metric should be exported summary count or bytes, optionally paired with summary refresh traffic.
+The fifth experiment validates the control-plane argument of the paper. One panel varies the number of objects per domain under a fixed export budget. A second panel varies the number of domains. The primary metric is exported summary state.
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=0.95\linewidth]{../results/figures/fig_state_scaling.pdf}
-\caption{Routing-state scaling of \sysname{} under increasing object count and domain count.}
+\includegraphics[width=0.95\linewidth]{../results/figures/mainline/fig_state_scaling.pdf}
+\caption{Mainline routing-state scaling under increasing object count and domain count. Placeholder until promoted mainline runs land.}
 \label{fig:state}
 \end{figure}
 
-A useful result will show near-insensitivity to object growth under a fixed budget and approximately linear growth with the number of domains. That observation would confirm the architectural claim that exported state tracks the budgeted summary surface, not the full object population.
+Figure~\ref{fig:state} is reserved for the promoted mainline scaling rerun. The expected interpretation remains architectural: exported state should track the budgeted summary surface more than raw object count.
 
 \subsection{Robustness Under Stale Summaries and Failures}
 
-The sixth experiment should study two kinds of disruption. The first disruption is physical, such as a link failure or temporary controller unreachability. The second is semantic, meaning that a summary has become stale because the local object distribution changed but the export has not yet been refreshed. Both types of disruption matter in semantic NDN-IoT, and they stress different parts of the design.
+The sixth experiment studies two kinds of disruption: physical controller loss and semantic staleness caused by delayed summary refresh. Both matter in semantic NDN-IoT and stress different parts of the design.
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=0.95\linewidth]{../results/figures/fig_robustness.pdf}
-\caption{Robustness of \sysname{} under stale summaries, link failures, and domain failures.}
+\includegraphics[width=0.95\linewidth]{../results/figures/mainline/fig_robustness.pdf}
+\caption{Mainline robustness under stale summaries and controller failures. Placeholder until promoted mainline runs land.}
 \label{fig:robust}
 \end{figure}
 
-This experiment should reveal whether cell-level reliability and the negative cache help the system avoid repeated poor choices after a failure or semantic drift event. A paper on semantic name resolution becomes materially stronger if it treats stale summaries as a first-class failure mode rather than focusing only on physical failures.
+Figure~\ref{fig:robust} is reserved for the promoted mainline robustness rerun. Its interpretation is fixed: cell-level reliability and negative caching must prevent repeated poor choices after stale or failed controller events.
 
 \subsection{Ablation of the Main Mechanisms}
 
-The final experiment should isolate the contribution of query decomposition, hierarchy, and reliability-aware fallback. A practical ablation set contains a predicate-only version, a flat semantic-only version, a predicate plus flat semantic version, and the full \sysname{} design.
+The final experiment isolates the contribution of query decomposition, hierarchy, and reliability-aware fallback. The ablation set contains a predicate-only version, a flat semantic-only version, a predicate plus flat semantic version, and the full \sysname{} design.
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=0.95\linewidth]{../results/figures/v3/compact/fig_ablation_summary.pdf}
-\caption{Compact object-hard ablation at manifest size `1`.}
+\includegraphics[width=0.95\linewidth]{../results/figures/mainline/fig_ablation_summary.pdf}
+\caption{Mainline mechanism ablation at manifest size `1`.}
 \label{fig:ablation}
 \end{figure}
 
-Figure~\ref{fig:ablation} is now a paper-grade mechanism figure, fixed to `manifest\_size=1` because this setting best exposes ranking differences before wider fallback can wash them out. Under that tight setting, the ordering is stable: `full\_hiroute (0.9375)` outperforms `predicates\_plus\_flat (0.908333)`, which in turn exceeds `predicates\_only (0.841667)`, while `flat\_semantic\_only (0.575)` fails badly. The same ordering appears in wrong-object rate, so the compact ablation now supports a clear mechanism claim: the full hierarchy is most useful when object-level semantic resolution remains hard enough that fallback cannot hide local ranking errors.
+Figure~\ref{fig:ablation} is the main mechanism figure on the Route B paper path and stays fixed to `manifest\_size=1`, because that setting exposes ranking differences before wider fallback can hide them. The mainline rerun keeps that contract even though the active aggregate is not yet promoted.
 
+% END_MAINLINE_EVAL_EXCERPT
 \section{Discussion}
 
 \subsection{Why the Paper Should Be Read as Routing and Resolution Rather Than as Search}
@@ -387,11 +389,11 @@ The design should be most effective when three conditions hold together. The fir
 
 \subsection{Limitations}
 
-The design still has limitations. Query decomposition must be available in structured form, whether through an external parser or through offline workload generation. Poor embeddings or poorly balanced local clustering can still degrade local ranking quality. The summary budget may need retuning when the workload changes drastically. Finally, although coarse predicate sketches reveal far less than raw names, they may still raise privacy concerns in deployments with sensitive geographic or service metadata.
+The design still has limitations. Query decomposition must be available in structured form, whether through an external parser or through offline workload generation. Poor semantic hints or poorly balanced local clustering can still degrade local ranking quality. The summary budget may need retuning when the workload changes drastically. Finally, although coarse predicate sketches reveal far less than raw names, they may still raise privacy concerns in deployments with sensitive geographic or service metadata.
 
 \section{Conclusion}
 
-This paper has presented \sysname{}, a hierarchical constraint-guided name-resolution architecture for NDN-IoT. The design begins from a precise systems claim: IoT queries contain hard constraints and soft semantics, and these two components should not be routed in the same way. The resulting architecture uses bounded hierarchical summaries, predicate-first elimination, semantic refinement over admissible cells, manifest-based local resolution, and lightweight reliability feedback. It keeps the forwarding plane unchanged and confines semantic logic to ingress nodes and domain controllers, which makes it suitable for ndnSIM realization and for incremental deployment arguments. The evaluation framework of the paper is organized around end-to-end service success, discovery breadth, latency under deadlines, exported-state growth, and robustness under staleness and failures, because these are the dimensions on which a semantic NDN-IoT routing paper must ultimately stand or fail.
+This paper has presented \sysname{}, a hierarchical constraint-guided name-resolution architecture for NDN-IoT. The design begins from a precise systems claim: IoT queries contain hard constraints and soft semantics, and these two components should not be routed in the same way. The resulting architecture uses bounded hierarchical summaries, predicate-first elimination, heuristic semantic refinement over admissible cells, manifest-based local resolution, and lightweight reliability feedback. It keeps the forwarding plane unchanged and confines semantic logic to ingress nodes and domain controllers, which makes it suitable for ndnSIM realization and for incremental deployment arguments. The evaluation framework of the paper is organized around terminal service success, first-fetch correctness, discovery breadth, latency under deadlines, exported-state growth, and robustness under staleness and failures, because these are the dimensions on which a semantic NDN-IoT routing paper must ultimately stand or fail.
 
 \balance
 \begin{thebibliography}{99}

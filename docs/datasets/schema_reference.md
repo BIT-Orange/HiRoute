@@ -106,6 +106,12 @@
 - `cell_id`
 - `object_id`
 - `local_rank_hint`
+- `ancestor_frontier_ids`
+
+`ancestor_frontier_ids` is an explicit ancestor closure for the concrete `cell_id`, encoded as
+semicolon-delimited frontier IDs ordered from the highest supported frontier to the concrete leaf
+cell. Mainline builds emit this column; older artifacts may omit it and fall back to runtime
+descendant lookup.
 
 ## `data/processed/ndnsim/cell_membership.csv`
 

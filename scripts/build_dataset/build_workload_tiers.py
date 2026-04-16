@@ -1,8 +1,12 @@
-"""Shared helpers for smartcity_v3 workload generation."""
+"""Shared helpers for smartcity workload generation."""
 
 from __future__ import annotations
 
+import re
 from typing import Iterable
+
+
+ZONE_SLOT_RE = re.compile(r"(zone-\d+)$")
 
 
 def humanize_token(value: str) -> str:
@@ -16,8 +20,30 @@ def join_ids(values: Iterable[str]) -> str:
 
 def parse_joined_ids(value: str) -> list[str]:
     if not value:
-      return []
+        return []
     return [item for item in value.split(";") if item]
+
+
+def stable_rotate(values: Iterable[str], slot: int) -> list[str]:
+    ordered = sorted({value for value in values if value})
+    if not ordered:
+        return []
+    offset = slot % len(ordered)
+    return ordered[offset:] + ordered[:offset]
+
+
+def zone_slot_token(zone_id: str) -> str:
+    match = ZONE_SLOT_RE.search(zone_id or "")
+    return match.group(1) if match else (zone_id or "")
+
+
+def zone_constraint_value(tokens: Iterable[str]) -> str:
+    ordered = stable_rotate(tokens, 0)
+    return ";".join(ordered)
+
+
+def parse_zone_constraint(value: str) -> list[str]:
+    return [token for token in value.split(";") if token]
 
 
 def pick_style(style_weights: dict[str, float], index: int) -> str:
@@ -38,17 +64,17 @@ def render_query_text(
     tier: str,
 ) -> str:
     if style == "semantic_brief":
-        if tier == "routing_hard_v3":
+        if tier in {"routing_hard_v3", "routing_main"}:
             return f"{freshness_phrase} {intent_phrase} {service_phrase} near {zone_type_phrase}"
-        if tier == "object_hard_v3":
+        if tier in {"object_hard_v3", "object_main"}:
             return f"{freshness_phrase} {intent_phrase} {service_phrase} for {zone_type_phrase}"
         return f"{freshness_phrase} {service_phrase} in {zone_type_phrase}"
-    if tier == "routing_hard_v3":
+    if tier in {"routing_hard_v3", "routing_main"}:
         return (
             f"need {service_phrase} updates for {intent_phrase} conditions around "
             f"{zone_type_phrase} with {freshness_phrase} freshness"
         )
-    if tier == "object_hard_v3":
+    if tier in {"object_hard_v3", "object_main"}:
         return (
             f"need the most relevant {service_phrase} readings for {intent_phrase} around "
             f"{zone_type_phrase} with {freshness_phrase} freshness"

@@ -31,6 +31,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--include-reference-sweep", action="store_true")
     parser.add_argument("--postprocess", action="store_true")
     parser.add_argument("--validate", action="store_true")
+    parser.add_argument("--force-rerun", action="store_true")
     return parser.parse_args()
 
 
@@ -219,7 +220,7 @@ def main() -> int:
     seeds = _expected_seeds(experiment, args.seeds)
     variants = _expected_variants(experiment, args.variants)
     sweep_field = "manifest_size" if experiment.get("manifest_sizes") else "budget"
-    completed = _completed_keys(experiment, sweep_field)
+    completed = set() if args.force_rerun else _completed_keys(experiment, sweep_field)
 
     work_items: list[tuple[str, list[str]]] = []
     for topology_id in topologies:
@@ -286,4 +287,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

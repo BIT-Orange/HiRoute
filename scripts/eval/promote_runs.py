@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import os
 import sys
 from collections import Counter
 from pathlib import Path
@@ -12,6 +13,7 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from scripts.eval.eval_support import read_run_ids_file
 from tools.workflow_support import ensure_csv, isoformat_z, load_json_yaml, read_csv, repo_root
 
 
@@ -64,12 +66,23 @@ def expected_scenarios(experiment: dict[str, object]) -> set[str]:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--experiment", required=True, type=Path)
+    parser.add_argument("--run-ids-file", type=Path)
     return parser.parse_args()
+
+
+def _allow_dirty_worktree_override() -> bool:
+    return os.environ.get("HIROUTE_ALLOW_DIRTY_WORKTREE", "").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
 
 
 def main() -> int:
     args = parse_args()
     experiment = load_json_yaml(ROOT / args.experiment)
+    requested_run_ids = read_run_ids_file(args.run_ids_file)
     runs_path = repo_root() / "runs" / "registry" / "runs.csv"
     promoted_path = repo_root() / "runs" / "registry" / "promoted_runs.csv"
     ensure_csv(promoted_path, FIELDS)
@@ -91,12 +104,14 @@ def main() -> int:
     default_manifest_size = int(experiment.get("default_manifest_size") or 0)
     allowed_scenarios = expected_scenarios(experiment)
 
-    if experiment.get("dataset_id") == "smartcity_v3" and experiment.get("runner", {}).get("type") != "ndnsim":
-        print("ERROR: smartcity_v3 promoted runs must come from runner.type=ndnsim")
+    if experiment.get("dataset_id") in {"smartcity_v3", "smartcity"} and experiment.get("runner", {}).get("type") != "ndnsim":
+        print(f"ERROR: {experiment.get('dataset_id')} promoted runs must come from runner.type=ndnsim")
         return 1
 
     run_rows = []
     for row in read_csv(runs_path):
+        if requested_run_ids and row["run_id"] not in requested_run_ids:
+            continue
         if row["experiment_id"] != experiment["experiment_id"]:
             continue
         if expected_dataset_id and row["dataset_id"] != expected_dataset_id:
@@ -167,6 +182,10 @@ def main() -> int:
         print("ERROR: completed runs do not match configured topology set")
         return 1
 
+    promotion_reason = "meets promotion thresholds and artifact completeness"
+    if _allow_dirty_worktree_override():
+        promotion_reason += " (dirty worktree override)"
+
     promoted_rows = []
     query_counts: Counter[tuple[str, str, int]] = Counter()
     for row in run_rows:
@@ -177,10 +196,10 @@ def main() -> int:
             return 1
         if experiment.get("promotion_rule", {}).get("require_clean_git"):
             manifest = load_json_yaml(run_dir / "manifest.yaml")
-            if manifest.get("code", {}).get("git_dirty", True):
+            if manifest.get("code", {}).get("git_dirty", True) and not _allow_dirty_worktree_override():
                 print(f"ERROR: {row['run_id']} was produced from a dirty git tree")
                 return 1
-            if experiment.get("dataset_id") == "smartcity_v3" and manifest.get("runner_type") != "ndnsim":
+            if experiment.get("dataset_id") in {"smartcity_v3", "smartcity"} and manifest.get("runner_type") != "ndnsim":
                 print(f"ERROR: {row['run_id']} was not produced by ndnsim")
                 return 1
         query_rows = list(csv.DictReader((run_dir / "query_log.csv").open("r", newline="", encoding="utf-8")))
@@ -197,7 +216,7 @@ def main() -> int:
                 "manifest_size": int(row.get("manifest_size") or 0),
                 "seed": row["seed"],
                 "git_commit": row["git_commit"],
-                "promotion_reason": "meets promotion thresholds and artifact completeness",
+                "promotion_reason": promotion_reason,
                 "promoted_at": isoformat_z(),
             }
         )

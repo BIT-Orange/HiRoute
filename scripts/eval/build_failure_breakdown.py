@@ -20,9 +20,11 @@ OUTPUT_FIELDS = [
     "topology_id",
     "budget",
     "manifest_size",
+    "query_count",
     "failure_type",
     "count",
     "rate",
+    "source_run_ids",
 ]
 
 FAILURE_ORDER = [
@@ -65,6 +67,7 @@ def main() -> int:
         ["registry_scheme", "registry_topology_id", active_sweep_field], sort=False
     ):
         scheme, topology_id, sweep_value = keys
+        run_ids = sorted(group["run_id"].unique().tolist())
         budget = int(sweep_value) if active_sweep_field == "budget" else int(group["budget"].max())
         manifest_size = int(sweep_value) if active_sweep_field == "manifest_size" else int(group["manifest_size"].max())
         counts = group["normalized_failure_type"].value_counts()
@@ -78,9 +81,11 @@ def main() -> int:
                     "topology_id": topology_id,
                     "budget": budget,
                     "manifest_size": manifest_size,
+                    "query_count": int(total),
                     "failure_type": failure_type,
                     "count": count,
                     "rate": round(float(count) / float(total), 6),
+                    "source_run_ids": "|".join(run_ids),
                 }
             )
 

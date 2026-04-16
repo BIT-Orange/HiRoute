@@ -2,22 +2,22 @@
 
 ## Text
 
-HiRoute keeps its exported discovery state bounded by the configured summary budget while the large Rocketfuel topology now scales to sixteen active data domains, and the repaired reliability-aware fallback materially improves robustness under stale summaries, link failures, and domain failures.
+HiRoute keeps exported discovery state bounded by the configured summary budget, and the active mainline rerun reserves Figure 8 and Figure 9 to verify that bounded-state scaling and reliability-aware recovery still hold after the workload reset.
 
 ## Supported by
 
-- `results/figures/fig_state_scaling.pdf`
-- `results/figures/fig_robustness.pdf`
+- `results/figures/mainline/fig_state_scaling.pdf`
+- `results/figures/mainline/fig_robustness.pdf`
 
 ## Aggregates
 
-- `results/aggregate/state_scaling_summary.csv`
-- `results/aggregate/robustness_summary.csv`
+- `results/aggregate/mainline/state_scaling_summary.csv`
+- `results/aggregate/mainline/robustness_summary.csv`
 
 ## Source runs
 
-- `exp_scaling_v1`, `exp_staleness_v1`, and `exp_failures_v1`
+- `state_scaling` and `robustness`
 
 ## Status
 
-ready
+pending mainline rerun

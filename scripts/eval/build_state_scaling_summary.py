@@ -21,6 +21,8 @@ OUTPUT_FIELDS = [
     "scaling_axis",
     "scaling_value",
     "budget",
+    "run_count",
+    "query_count",
     "mean_total_exported_summaries",
     "mean_total_exported_summary_bytes",
     "mean_total_summary_updates_sent",
@@ -29,6 +31,7 @@ OUTPUT_FIELDS = [
     "mean_success_at_1",
     "mean_latency_ms",
     "mean_discovery_bytes",
+    "source_run_ids",
 ]
 
 
@@ -72,6 +75,7 @@ def main() -> int:
         query_frame["discovery_bytes_total"] = (
             query_frame["discovery_tx_bytes"] + query_frame["discovery_rx_bytes"]
         )
+        query_count_by_run = query_frame.groupby("run_id").size().to_dict()
         per_run_query = (
             query_frame.groupby("run_id", as_index=False)
             .agg(
@@ -81,6 +85,7 @@ def main() -> int:
             )
         )
     else:
+        query_count_by_run = {}
         per_run_query = None
 
     per_run_state = (
@@ -109,6 +114,7 @@ def main() -> int:
         ["registry_scheme", "registry_topology_id", "scaling_axis"], sort=False
     ):
         for scaling_value, point_rows in group.groupby("scaling_value", sort=True):
+            run_ids = sorted(point_rows["run_id"].astype(str).unique().tolist())
             output_rows.append(
                 {
                     "experiment_id": experiment["experiment_id"],
@@ -117,6 +123,8 @@ def main() -> int:
                     "scaling_axis": scaling_axis,
                     "scaling_value": round(float(scaling_value), 6),
                     "budget": int(point_rows["budget"].max()),
+                    "run_count": len(run_ids),
+                    "query_count": int(sum(int(query_count_by_run.get(run_id, 0)) for run_id in run_ids)),
                     "mean_total_exported_summaries": round(
                         point_rows["total_exported_summaries"].mean(), 6
                     ),
@@ -131,6 +139,7 @@ def main() -> int:
                     "mean_success_at_1": round(point_rows["mean_success_at_1"].mean(), 6),
                     "mean_latency_ms": round(point_rows["mean_latency_ms"].mean(), 6),
                     "mean_discovery_bytes": round(point_rows["mean_discovery_bytes"].mean(), 6),
+                    "source_run_ids": "|".join(run_ids),
                 }
             )
 

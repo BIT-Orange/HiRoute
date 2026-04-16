@@ -1,0 +1,81 @@
+seed: 74
+text_styles:
+  paraphrase_controlled: 0.55
+  semantic_brief: 0.45
+workload_tiers:
+  routing_main:
+    dev: 40
+    test: 240
+    relevant_domains_range: [2, 4]
+    confuser_domains_range: [2, 5]
+    explicit_domain_mention: false
+    explicit_zone_mention: false
+    require_zone_constraint: true
+    require_freshness_constraint: true
+  object_main:
+    dev: 40
+    test: 240
+    relevant_domains_range: [1, 2]
+    confuser_domains_range: [0, 1]
+    confuser_objects_per_query_min: 4
+    manifest_difficulty_mix:
+      easy: 0.2
+      medium: 0.4
+      hard: 0.4
+    explicit_domain_mention: false
+    explicit_zone_mention: false
+    require_zone_constraint: true
+    require_freshness_constraint: true
+  sanity_appendix:
+    dev: 40
+    test: 240
+    relevant_domains_range: [1, 2]
+    confuser_domains_range: [0, 1]
+    explicit_domain_mention: false
+    explicit_zone_mention: false
+    require_zone_constraint: false
+    require_freshness_constraint: true
+service_synonyms:
+  temperature:
+    - temperature
+    - thermal reading
+    - ambient heat
+  humidity:
+    - humidity
+    - moisture level
+    - ambient humidity
+  rainfall:
+    - rainfall
+    - rain intensity
+    - precipitation level
+  air_quality_pm25:
+    - pm25
+    - particulate pollution
+    - fine dust level
+  air_quality_co2:
+    - co2
+    - carbon dioxide
+    - carbon level
+  traffic_speed:
+    - traffic speed
+    - vehicle flow speed
+    - road speed
+  parking_availability:
+    - parking availability
+    - open parking spots
+    - vacant parking
+  bus_arrival:
+    - bus arrival
+    - next bus
+    - bus waiting time
+  street_light_state:
+    - street light state
+    - lamp status
+    - lighting state
+  noise_level:
+    - noise level
+    - sound level
+    - ambient noise
+manifest_sizes_for_eval: [1, 2, 3, 5]
+routing_margin_threshold: 0.08
+object_margin_threshold: 0.04

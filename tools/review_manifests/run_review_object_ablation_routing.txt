@@ -1,0 +1,35 @@
+runs/registry/promoted_runs.csv
+runs/registry/experiment_lineage.csv
+docs/experiments/figure_registry.md
+paper/main.tex
+@evaluation_excerpt paper/main.tex
+paper/notes/fig_routing_support.md
+paper/notes/fig_candidate_shrinkage.md
+paper/notes/fig_deadline_summary.md
+paper/notes/fig_object_manifest_sweep.md
+paper/notes/fig_ablation.md
+results/aggregate/mainline/routing_support.csv
+results/aggregate/mainline/routing_support.trace.json
+results/aggregate/mainline/candidate_shrinkage.csv
+results/aggregate/mainline/candidate_shrinkage.trace.json
+results/aggregate/mainline/deadline_summary.csv
+results/aggregate/mainline/deadline_summary.trace.json
+results/aggregate/mainline/object_main_manifest_sweep.csv
+results/aggregate/mainline/object_main_manifest_sweep.trace.json
+results/aggregate/mainline/failure_breakdown.csv
+results/aggregate/mainline/failure_breakdown.trace.json
+results/aggregate/mainline/ablation_summary.csv
+results/aggregate/mainline/ablation_summary.trace.json
+results/figures/mainline/fig_routing_support.pdf
+results/figures/mainline/fig_routing_support.png
+results/figures/mainline/fig_candidate_shrinkage.pdf
+results/figures/mainline/fig_candidate_shrinkage.png
+results/figures/mainline/fig_deadline_summary.pdf
+results/figures/mainline/fig_deadline_summary.png
+results/figures/mainline/fig_object_manifest_sweep.pdf
+results/figures/mainline/fig_object_manifest_sweep.png
+results/figures/mainline/fig_ablation_summary.pdf
+results/figures/mainline/fig_ablation_summary.png
+@promoted_runs object_main
+@promoted_runs ablation
+@promoted_runs routing_main

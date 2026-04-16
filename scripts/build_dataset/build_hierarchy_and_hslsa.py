@@ -80,6 +80,28 @@ def _centroid_and_radius(vectors: np.ndarray) -> tuple[np.ndarray, float]:
     return centroid, radius
 
 
+def _zone_bitmap_tokens(rows: list[dict[str, str]]) -> list[str]:
+    tokens = set()
+    for row in rows:
+        zone_id = row["zone_id"]
+        tokens.add(zone_id)
+        if "-zone-" in zone_id:
+            tokens.add(zone_id.split(f"{row['domain_id']}-", 1)[-1])
+    return sorted(tokens)
+
+
+def _ancestor_frontier_ids(cell_id: str, parent_by_cell: dict[str, str]) -> list[str]:
+    ancestors: list[str] = []
+    seen: set[str] = set()
+    current = cell_id
+    while current and current not in seen:
+        ancestors.append(current)
+        seen.add(current)
+        current = parent_by_cell.get(current, "")
+    ancestors.reverse()
+    return ancestors
+
+
 def main() -> int:
     args = parse_args()
     logging.basicConfig(level=getattr(logging, args.log_level.upper(), logging.INFO))
@@ -96,6 +118,7 @@ def main() -> int:
     hslsa_rows = []
     controller_rows = []
     membership_rows = []
+    parent_by_cell: dict[str, str] = {}
     version = f"{manifest['dataset_id']}::{hierarchy['hierarchy_id']}"
     export_budget = max(int(value) for value in hierarchy["export_budgets"])
     level1_partition_keys = list(hierarchy.get("level1_partition_keys", ["zone_id", "service_class"]))
@@ -108,6 +131,7 @@ def main() -> int:
         level1_groups[(row["domain_id"], *(row[key] for key in level1_partition_keys))].append(row)
 
     def add_summary(level: int, domain_id: str, cell_id: str, parent_id: str, rows: list[dict[str, str]]) -> None:
+        parent_by_cell[cell_id] = parent_id
         vectors = np.vstack([vectors_by_object[row["object_id"]] for row in rows])
         centroid, radius = _centroid_and_radius(vectors)
         centroid_row = len(summary_embeddings)
@@ -126,7 +150,7 @@ def main() -> int:
                 "level": level,
                 "cell_id": cell_id,
                 "parent_id": parent_id,
-                "zone_bitmap": "|".join(sorted({row["zone_id"] for row in rows})),
+                "zone_bitmap": "|".join(_zone_bitmap_tokens(rows)),
                 "zone_type_bitmap": "|".join(sorted({row["zone_type"] for row in rows})),
                 "service_bitmap": "|".join(sorted({row["service_class"] for row in rows})),
                 "freshness_bitmap": "|".join(sorted({row["freshness_class"] for row in rows})),
@@ -178,12 +202,14 @@ def main() -> int:
                 key=lambda row: float(np.linalg.norm(vectors_by_object[row["object_id"]] - centroid)),
             )
             for rank_hint, row in enumerate(ranked_rows, start=1):
+                ancestor_frontier_ids = ";".join(_ancestor_frontier_ids(cell_id, parent_by_cell))
                 controller_rows.append(
                     {
                         "domain_id": domain_id,
                         "cell_id": cell_id,
                         "object_id": row["object_id"],
                         "local_rank_hint": rank_hint,
+                        "ancestor_frontier_ids": ancestor_frontier_ids,
                     }
                 )
                 membership_rows.append(
@@ -220,7 +246,11 @@ def main() -> int:
         ],
         hslsa_rows,
     )
-    write_csv(output_path(manifest, "controller_local_index_csv"), ["domain_id", "cell_id", "object_id", "local_rank_hint"], controller_rows)
+    write_csv(
+        output_path(manifest, "controller_local_index_csv"),
+        ["domain_id", "cell_id", "object_id", "local_rank_hint", "ancestor_frontier_ids"],
+        controller_rows,
+    )
     write_csv(output_path(manifest, "cell_membership_csv"), ["object_id", "domain_id", "level0_cell", "level1_cell", "level2_cell"], membership_rows)
     LOGGER.info("generated %s HS-LSA summaries", len(hslsa_rows))
     return 0

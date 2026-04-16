@@ -1,11 +1,20 @@
 # Figure Registry
 
-| Figure | Paper Section | Aggregate CSV | Source Experiment | Source Runs | Status |
-| --- | --- | --- | --- | --- | --- |
-| `fig_main_success_overhead` | `Evaluation-A` | `results/aggregate/v3/compact/main_success_overhead.csv` and `results/aggregate/v3/compact/candidate_shrinkage.csv` | `exp_routing_main_v3_compact` | `runs/registry/promoted_runs.csv` filtered by `exp_routing_main_v3_compact` | rerun required with expanded routing-support baselines (`predicates_only`, `random_admissible`) |
-| `fig_failure_breakdown` | `Evaluation-B` | `results/aggregate/v3/compact/object_main_manifest_sweep.csv` | `exp_object_main_v3_compact` | `runs/registry/promoted_runs.csv` filtered by `exp_object_main_v3_compact` | promoted compact primary effectiveness figure |
-| `fig_candidate_shrinkage` | `Evaluation-C` | `results/aggregate/v3/compact/candidate_shrinkage.csv` | `exp_routing_main_v3_compact` | `runs/registry/promoted_runs.csv` filtered by `exp_routing_main_v3_compact` | rerun required with expanded compact routing baseline set |
-| `fig_deadline_summary` | `Evaluation-D` | `results/aggregate/v3/compact/deadline_summary.csv` | `exp_routing_main_v3_compact` | `runs/registry/promoted_runs.csv` filtered by `exp_routing_main_v3_compact` | rerun required with expanded compact routing baseline set |
-| `fig_state_scaling` | `Evaluation-E` | `results/aggregate/v3/compact/state_scaling_summary.csv` | `exp_scaling_v3_compact` | `runs/registry/promoted_runs.csv` filtered by `exp_scaling_v3_compact` | pending compact rerun |
-| `fig_robustness` | `Evaluation-F` | `results/aggregate/v3/compact/robustness_timeseries.csv` | `exp_robustness_v3_compact` | `runs/registry/promoted_runs.csv` filtered by `exp_robustness_v3_compact` | pending compact rerun |
-| `fig_ablation` | `Evaluation-G` | `results/aggregate/v3/compact/ablation_summary.csv` | `exp_ablation_v3_compact` | `runs/registry/promoted_runs.csv` filtered by `exp_ablation_v3_compact` | promoted compact manifest=1 mechanism figure |
+The active paper path is the mainline compact-medium route:
+
+- dataset: `smartcity`
+- hierarchy: `hiroute_hkm`
+- topology: `rf_3967_exodus_compact`
+- outputs: `results/{aggregate,figures,tables}/mainline/`
+
+Legacy `v1/v2/v3*` figures remain archived evidence only. Their lineage is tracked in `runs/registry/experiment_lineage.csv`.
+
+| Figure | Paper Section | Aggregate CSV | Trace JSON | Source Experiment | Validation Gates | Status |
+| --- | --- | --- | --- | --- | --- | --- |
+| `fig_routing_support` | `Evaluation-A` | `results/aggregate/mainline/routing_support.csv` and `results/aggregate/mainline/candidate_shrinkage.csv` | `results/aggregate/mainline/routing_support.trace.json` and `results/aggregate/mainline/candidate_shrinkage.trace.json` | `routing_main` | `validate_runtime_slice.py`, `validate_aggregate_traceability.py`, `validate_figures.py` | completed on 2026-03-31; blocked because routing headline metrics remain degenerate and `validate_figures.py` fails |
+| `fig_object_manifest_sweep` | `Evaluation-B` | `results/aggregate/mainline/object_main_manifest_sweep.csv` | `results/aggregate/mainline/object_main_manifest_sweep.trace.json` | `object_main` | `validate_runtime_slice.py`, `validate_manifest_regression.py`, `validate_aggregate_traceability.py`, `validate_figures.py` | completed on 2026-03-31; current rerun contradicts the intended HiRoute object-resolution claim |
+| `fig_candidate_shrinkage` | `Evaluation-C` | `results/aggregate/mainline/candidate_shrinkage.csv` | `results/aggregate/mainline/candidate_shrinkage.trace.json` | `routing_main` | `validate_runtime_slice.py`, `validate_aggregate_traceability.py`, `validate_figures.py` | completed on 2026-03-31; traceable, but blocked as supporting-only evidence until routing headline metrics recover |
+| `fig_deadline_summary` | `Evaluation-D` | `results/aggregate/mainline/deadline_summary.csv` | `results/aggregate/mainline/deadline_summary.trace.json` | `routing_main` | `validate_runtime_slice.py`, `validate_aggregate_traceability.py`, `validate_figures.py` | completed on 2026-03-31; traceable, but currently diagnostic because all deadline rows collapse to failure |
+| `fig_state_scaling` | `Evaluation-E` | `results/aggregate/mainline/state_scaling_summary.csv` | `results/aggregate/mainline/state_scaling_summary.trace.json` | `state_scaling` | `validate_runtime_slice.py`, `validate_aggregate_traceability.py`, `validate_figures.py` | pending rerun; placeholder permitted until new runs land |
+| `fig_robustness` | `Evaluation-F` | `results/aggregate/mainline/robustness_summary.csv` and `results/aggregate/mainline/robustness_timeseries.csv` | `results/aggregate/mainline/robustness_summary.trace.json` and `results/aggregate/mainline/robustness_timeseries.trace.json` | `robustness` | `validate_runtime_slice.py`, `validate_aggregate_traceability.py`, `validate_figures.py` | pending rerun; placeholder permitted until new runs land |
+| `fig_ablation` | `Evaluation-G` | `results/aggregate/mainline/ablation_summary.csv` | `results/aggregate/mainline/ablation_summary.trace.json` | `ablation` | `validate_runtime_slice.py`, `validate_manifest_regression.py`, `validate_aggregate_traceability.py`, `validate_figures.py` | completed on 2026-03-31; signal currently degraded because all schemes remain at zero success |

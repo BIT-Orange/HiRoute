@@ -1,0 +1,67 @@
+{
+  "experiment_id": "object_debug",
+  "dataset_id": "smartcity",
+  "topology_id": "rf_3967_exodus_compact",
+  "scenario": "hiroute-main",
+  "schemes": [
+    "hiroute",
+    "central_directory"
+  ],
+  "seeds": [
+    1
+  ],
+  "manifest_sizes": [
+    1
+  ],
+  "default_manifest_size": 1,
+  "outputs": [],
+  "promotion_rule": {
+    "min_runs_per_scheme": 1,
+    "min_test_queries_per_scheme_budget_tier": 1,
+    "max_missing_logs": 0,
+    "require_clean_git": false
+  },
+  "configs": {
+    "dataset": "configs/datasets/smartcity.yaml",
+    "hierarchy": "configs/hierarchy/hiroute_hkm.yaml",
+    "topology": "configs/topologies/rocketfuel_3967_exodus_compact.yaml",
+    "baselines": {
+      "hiroute": "configs/baselines/hiroute.yaml",
+      "central_directory": "configs/baselines/central_directory.yaml"
+    }
+  },
+  "inputs": {
+    "objects_csv": "data/processed/smartcity/objects_master.csv",
+    "queries_csv": "data/processed/smartcity/rf_3967_exodus/queries_master.csv",
+    "query_embedding_index_csv": "data/processed/smartcity/rf_3967_exodus/query_embedding_index.csv",
+    "qrels_object_csv": "data/processed/smartcity/rf_3967_exodus/qrels_object.csv",
+    "qrels_domain_csv": "data/processed/smartcity/rf_3967_exodus/qrels_domain.csv",
+    "hslsa_csv": "data/processed/smartcity/hslsa_export.csv",
+    "controller_local_index_csv": "data/processed/smartcity/controller_local_index.csv",
+    "topology_mapping_csv": "data/processed/ndnsim/topology_mapping_rf_3967_exodus_compact.csv"
+  },
+  "query_filters": {
+    "splits": [
+      "test"
+    ],
+    "workload_tiers": [
+      "object_main"
+    ],
+    "query_ids": [
+      "q-rf_3967_exodus-object_main-0325"
+    ]
+  },
+  "runner": {
+    "type": "ndnsim",
+    "ns3_root": "ns-3",
+    "build_before_run": true,
+    "params": {
+      "stopSeconds": 8,
+      "manifestSize": 1,
+      "probeBudget": 5,
+      "queryLimitPerIngress": 0,
+      "emitProbePlanDebug": true,
+      "emitControllerManifestDebug": true
+    }
+  }
+}

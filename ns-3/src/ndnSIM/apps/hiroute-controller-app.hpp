@@ -14,6 +14,7 @@
 #include "ns3/ndnSIM/model/hiroute-tlv.hpp"
 
 #include <map>
+#include <set>
 #include <string>
 #include <utility>
 #include <vector>
@@ -52,6 +53,21 @@ private:
     double score = 0.0;
   };
 
+  struct CandidateLookup {
+    std::vector<std::string> objectIds;
+    std::vector<std::string> localCandidateObjectIds;
+    std::map<std::string, uint32_t> bestRankByObjectId;
+    bool exactCellExists = false;
+    size_t descendantCellCount = 0;
+  };
+
+  struct CandidateEvaluation {
+    std::vector<RankedObject> ranked;
+    size_t candidateObjectCountPreFilter = 0;
+    size_t candidateObjectCountPostFilter = 0;
+    std::string zeroReason;
+  };
+
   void
   loadInputs();
 
@@ -64,6 +80,17 @@ private:
   double
   localRankScore(const std::string& objectId,
                  const std::map<std::string, uint32_t>& bestRankByObjectId) const;
+
+  CandidateLookup
+  resolveCandidateLookup(const std::string& frontierHintCellId) const;
+
+  CandidateEvaluation
+  evaluateCandidates(const HiRouteDiscoveryRequest& request, const std::string& frontierHintCellId,
+                     const CandidateLookup& lookup) const;
+
+  void
+  appendManifestDebugRow(const HiRouteDiscoveryRequest& request, const std::string& frontierHintCellId,
+                         const CandidateLookup& lookup, const CandidateEvaluation& evaluation) const;
 
   std::vector<HiRouteManifestEntry>
   buildManifest(const HiRouteDiscoveryRequest& request) const;
@@ -83,6 +110,7 @@ private:
   std::string m_objectsCsvPath;
   std::string m_controllerLocalIndexCsvPath;
   std::string m_qrelsObjectCsvPath;
+  std::string m_manifestDebugCsvPath;
   uint32_t m_manifestSize = 4;
   bool m_oracleMode = false;
   bool m_serveDiscovery = true;
@@ -97,8 +125,12 @@ private:
   std::map<std::string, HiRouteObjectRecord> m_objectsById;
   std::map<std::string, HiRouteObjectRecord> m_objectsByName;
   std::map<std::string, std::vector<std::string>> m_objectsByCell;
+  std::map<std::string, std::vector<std::string>> m_objectsByFrontierHint;
+  std::map<std::string, std::set<std::string>> m_concreteCellsByFrontierHint;
   std::map<std::string, std::vector<std::pair<std::string, uint32_t>>> m_oracleRankedQrels;
   std::map<std::string, uint32_t> m_rankByCellObject;
+  std::map<std::string, uint32_t> m_rankByFrontierObject;
+  bool m_hasExplicitAncestorFrontierIndex = false;
 };
 
 } // namespace hiroute

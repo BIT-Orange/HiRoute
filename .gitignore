@@ -112,3 +112,12 @@ dist/
 
 # Local review bundles for external auditing
 /review_bundles/
+/review_artifacts/
+
+# Claude Code local-only paths (memory, cron, local settings)
+.claude/
+CLAUDE.md
+PLAN.md
+.claude/settings.local.json
+.claude/scheduled_tasks.json
+.claude/projects/

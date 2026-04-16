@@ -69,6 +69,8 @@ def _collect_query_rows(run_rows: list[dict[str, str]]) -> list[dict[str, Any]]:
                     "scheme": run_row["scheme"],
                     "manifest_size": int(run_row.get("manifest_size") or 0),
                     "success_at_1": float(row.get("success_at_1") or 0),
+                    "first_fetch_relevant": float(row.get("first_fetch_relevant") or 0),
+                    "manifest_fetch_index": float(row.get("manifest_fetch_index") or 0),
                     "failure_type": row.get("failure_type", ""),
                     "discovery_bytes_total": float(row.get("discovery_tx_bytes") or 0)
                     + float(row.get("discovery_rx_bytes") or 0),
@@ -94,6 +96,24 @@ def _group_rows(query_rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 "run_count": len(run_ids),
                 "query_count": query_count,
                 "mean_success_at_1": round(sum(row["success_at_1"] for row in rows) / query_count, 6),
+                "first_fetch_relevant_rate": round(
+                    sum(row["first_fetch_relevant"] for row in rows) / query_count,
+                    6,
+                ),
+                "manifest_rescue_rate": round(
+                    sum(1 for row in rows if row["success_at_1"] == 1 and row["manifest_fetch_index"] > 0)
+                    / query_count,
+                    6,
+                ),
+                "mean_manifest_fetch_index_success_only": round(
+                    (
+                        sum(row["manifest_fetch_index"] for row in rows if row["success_at_1"] == 1)
+                        / sum(1 for row in rows if row["success_at_1"] == 1)
+                    )
+                    if any(row["success_at_1"] == 1 for row in rows)
+                    else 0.0,
+                    6,
+                ),
                 "failure_rate_wrong_domain": round(
                     sum(1 for row in rows if row["failure_type"] == "wrong_domain") / query_count,
                     6,
@@ -190,6 +210,10 @@ def _strictly_non_increasing(values: list[float]) -> bool:
     return all(values[i] >= values[i + 1] - EPSILON for i in range(len(values) - 1))
 
 
+def _first_choice_gap(row: dict[str, Any]) -> float:
+    return float(row["mean_success_at_1"]) - float(row["first_fetch_relevant_rate"])
+
+
 def _object_main_decision(rows: list[dict[str, Any]], wiring_report: dict[str, Any]) -> dict[str, Any]:
     index = _row_index(rows)
     required = [
@@ -277,12 +301,29 @@ def _object_main_decision(rows: list[dict[str, Any]], wiring_report: dict[str, A
             "residual_cost_gap": residual_cost_gap,
             "bytes_advantage_vs_hiroute_manifest1": round(bytes_advantage, 6),
             "probe_advantage_vs_hiroute_manifest1": round(probe_advantage, 6),
+            "first_fetch_gap_vs_hiroute_manifest1": round(
+                float(hiroute_ref["first_fetch_relevant_rate"]) - float(scheme_rows[0]["first_fetch_relevant_rate"]),
+                6,
+            ),
+            "rescue_gap_vs_hiroute_manifest1": round(
+                float(hiroute_ref["manifest_rescue_rate"]) - float(scheme_rows[0]["manifest_rescue_rate"]),
+                6,
+            ),
         }
 
     oracle_lower_byte_upper_bound = (
         float(central_row["mean_success_at_1"]) >= 0.99
         and float(central_row["mean_discovery_bytes"]) <= float(hiroute_ref["mean_discovery_bytes"]) + EPSILON
         and float(central_row["mean_probe_count"]) <= float(hiroute_ref["mean_probe_count"]) + EPSILON
+    )
+    first_fetch_advantage = any(
+        float(hiroute_ref["first_fetch_relevant_rate"]) - float(row["first_fetch_relevant_rate"]) >= SUCCESS_TOLERANCE
+        for row in inf_rows
+    )
+    hiroute_support_gap = any(_first_choice_gap(index[("hiroute", manifest)]) >= SUCCESS_TOLERANCE for manifest in (1, 2, 3))
+    hiroute_manifest_rescue_signal = any(
+        float(index[("hiroute", manifest)]["manifest_rescue_rate"]) >= SUCCESS_TOLERANCE
+        for manifest in (1, 2, 3)
     )
 
     figure_guidance: list[str] = []
@@ -298,10 +339,19 @@ def _object_main_decision(rows: list[dict[str, Any]], wiring_report: dict[str, A
         figure_guidance.append("distributed_methods_saturated")
     if oracle_lower_byte_upper_bound:
         figure_guidance.append("oracle_remains_lower_byte_upper_bound")
+    if first_fetch_advantage:
+        figure_guidance.append("first_fetch_advantage_persists")
+    if hiroute_support_gap:
+        figure_guidance.append("terminal_vs_first_fetch_gap_visible")
+    if hiroute_manifest_rescue_signal:
+        figure_guidance.append("manifest_rescue_signal_visible")
 
     if any_accuracy_gap_persists:
         decision = "ready_for_main_figure"
         figure_title_guidance = "accuracy separation"
+    elif first_fetch_advantage or hiroute_support_gap or hiroute_manifest_rescue_signal:
+        decision = "support_only_figure"
+        figure_title_guidance = "first-choice vs terminal support"
     elif all_catch_up and any_catch_up_requires_larger_manifest and any_residual_cost_gap:
         decision = "cost_only_figure"
         figure_title_guidance = "manifest efficiency / cost separation"
@@ -329,6 +379,9 @@ def _object_main_decision(rows: list[dict[str, Any]], wiring_report: dict[str, A
         "detail": {
             "hiroute_reaches_ceiling_at_manifest1": hiroute_ceiling,
             "oracle_lower_byte_upper_bound": oracle_lower_byte_upper_bound,
+            "first_fetch_advantage": first_fetch_advantage,
+            "hiroute_terminal_vs_first_fetch_gap": hiroute_support_gap,
+            "hiroute_manifest_rescue_signal": hiroute_manifest_rescue_signal,
             "wiring_report_status": wiring_status,
             "baseline_details": baseline_details,
         },

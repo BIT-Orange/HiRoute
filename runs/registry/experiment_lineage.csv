@@ -1,0 +1,19 @@
+legacy_experiment_id,mainline_family,status,notes
+exp_main_v1,routing_main,archived,legacy mixed routing/object baseline bundle
+exp_routing_main_v2,routing_main,archived,legacy flat-vs-hierarchical routing comparison
+exp_routing_main_v3,routing_main,archived,pre-mainline semantic routing bundle
+exp_routing_main_v3_compact,routing_main,legacy_provisional,compact promoted rows predate mainline workload reset
+exp_object_main_v2,object_main,archived,legacy object-hard comparison
+exp_object_main_v3,object_main,archived,pre-mainline object-manifest comparison
+exp_object_main_v3_compact,object_main,legacy_provisional,compact promoted rows predate mainline workload reset
+exp_ablation_v1,ablation,archived,legacy mechanism study
+exp_ablation_v2,ablation,archived,legacy mechanism study
+exp_ablation_v3,ablation,archived,pre-mainline semantic ablation
+exp_ablation_v3_compact,ablation,legacy_provisional,compact promoted rows predate mainline workload reset
+exp_scaling_v1,state_scaling,archived,legacy full-topology scaling evidence
+exp_scaling_v3,state_scaling,archived,pre-mainline scaling entrypoint
+exp_scaling_v3_compact,state_scaling,archived,pending rerun before mainline promotion
+exp_staleness_v1,robustness,archived,legacy stale-summary experiment
+exp_failures_v1,robustness,archived,legacy failure experiment
+exp_robustness_v3,robustness,archived,pre-mainline robustness entrypoint
+exp_robustness_v3_compact,robustness,archived,pending rerun before mainline promotion

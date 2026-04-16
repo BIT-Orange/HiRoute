@@ -1,0 +1,18 @@
+{
+  "hierarchy_id": "hiroute_hkm",
+  "seed": 44,
+  "level0": "domain",
+  "level1_partition_keys": [
+    "zone_id",
+    "service_class"
+  ],
+  "semantic_microclusters_per_predicate_cell": 2,
+  "minimum_objects_per_microcluster": 2,
+  "export_budgets": [
+    8,
+    16,
+    32,
+    64
+  ],
+  "ttl_ms": 60000
+}

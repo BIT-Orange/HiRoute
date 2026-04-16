@@ -1,0 +1,15 @@
+configs/experiments/routing_debug.yaml
+configs/experiments/object_debug.yaml
+scripts/build_dataset/build_hierarchy_and_hslsa.py
+scripts/build_dataset/audit_level0_predicate_coverage.py
+scripts/build_dataset/audit_controller_manifest_coverage.py
+docs/datasets/schema_reference.md
+tools/run_mainline_review_stage.sh
+tools/package_review_bundle.sh
+tools/validate_root_frontier_regression.py
+tools/review_manifests/diagnostic_object_routing.txt
+ns-3/src/ndnSIM/apps/hiroute-ingress-app.cpp
+ns-3/src/ndnSIM/apps/hiroute-controller-app.cpp
+ns-3/src/ndnSIM/examples/hiroute-scenario-common.hpp
+@stage_subtree audits
+@stage_subtree runs

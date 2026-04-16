@@ -446,7 +446,7 @@ def plot_main_success() -> None:
         )
 
     ax.set_xlabel("Mean Discovery Bytes / Query")
-    ax.set_ylabel("ServiceSuccess@1")
+    ax.set_ylabel("Terminal success")
     ax.grid(alpha=0.25)
     ax.legend(fontsize=8, loc="lower right", frameon=False)
     _save(fig, output_filename)
@@ -475,7 +475,7 @@ def _plot_object_manifest_sweep() -> None:
         "manifest_size",
         "mean_success_at_1",
         "ci_success_at_1",
-        "ServiceSuccess@1",
+        "Terminal success",
         "Manifest size",
     )
     axes[0].set_xticks(sorted(frame["manifest_size"].unique().tolist()))
@@ -487,13 +487,13 @@ def _plot_object_manifest_sweep() -> None:
         frame,
         schemes,
         "manifest_size",
-        "wrong_object_rate",
-        "ci_wrong_object_rate",
-        "Wrong-object rate",
+        "first_fetch_relevant_rate",
+        "ci_first_fetch_relevant_rate",
+        "First-fetch relevant rate",
         "Manifest size",
     )
     axes[1].set_xticks(sorted(frame["manifest_size"].unique().tolist()))
-    axes[1].set_ylim(0.0, max(0.22, float(frame["wrong_object_rate"].max()) + 0.03))
+    axes[1].set_ylim(0.0, 1.03)
     axes[1].legend(fontsize=7.8, frameon=False, loc="upper right")
     _add_panel_label(axes[1], "B")
 
@@ -708,7 +708,7 @@ def plot_robustness() -> None:
             )
         axis.set_xlabel("Time (s)")
         axis.grid(alpha=0.25)
-    axes[0].set_ylabel("ServiceSuccess@1")
+    axes[0].set_ylabel("Terminal success")
     axes[0].legend(fontsize=8, loc="lower right", frameon=False)
     _save(fig, "fig_robustness.pdf")
 
@@ -740,7 +740,7 @@ def plot_ablation() -> None:
     colors = [_scheme_color(scheme) for scheme in frame["scheme"]]
 
     panels = [
-        ("mean_success_at_1", "ServiceSuccess@1", (0.0, 1.02)),
+        ("mean_success_at_1", "Terminal success", (0.0, 1.02)),
         ("wrong_object_rate", "Wrong-object rate", (0.0, max(0.22, float(frame["wrong_object_rate"].max()) + 0.03))),
         ("mean_discovery_bytes", "Discovery bytes / query", None),
     ]

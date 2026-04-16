@@ -1,0 +1,11 @@
+configs/experiments/ablation.yaml
+scripts/eval/build_stage_quick_summary.py
+scripts/eval/build_stage_decision.py
+tools/validate_manifest_wiring.py
+tools/run_mainline_review_stage.sh
+tools/package_review_bundle.sh
+tools/validate_bundle_freshness.py
+results/aggregate/mainline/ablation_summary.csv
+results/aggregate/mainline/ablation_summary.trace.json
+@stage_subtree aggregate
+@stage_subtree runs

@@ -1,0 +1,164 @@
+seed: 73
+domains_total: 16
+zones_per_domain: 4
+base_objects_per_service_per_zone: 2
+max_objects_per_service_per_zone: 3
+variants_per_family: 3
+zone_types:
+  - school_area
+  - residential
+  - downtown
+  - industrial
+  - transport_hub
+  - stadium_area
+freshness_classes:
+  realtime: 5000
+  recent: 60000
+  archival: 600000
+time_buckets:
+  - morning
+  - afternoon
+  - evening
+naming_templates:
+  - "/{domain_id}/{zone_id}/{service_class}/{object_id}"
+  - "/city/{domain_id}/services/{service_class}/zones/{zone_id}/objects/{object_id}"
+  - "/org/{domain_id}/zone/{zone_id}/telemetry/{service_class}/{object_id}"
+  - "/iot/{service_class}/{domain_id}/{zone_id}/{object_id}"
+semantic_intent_families:
+  temperature:
+    - heat_island
+    - microclimate_shift
+    - pedestrian_comfort
+    - cooling_gap
+    - facade_reflection
+  humidity:
+    - morning_dampness
+    - comfort_moisture
+    - indoor_outdoor_drift
+    - irrigation_buildup
+    - stagnant_air_pocket
+  rainfall:
+    - shower_burst
+    - drainage_overflow
+    - commuter_downpour
+    - storm_runoff
+    - venue_queue_rain
+  air_quality_pm25:
+    - industrial_plume
+    - commuter_particulate
+    - construction_dust
+    - school_alert
+    - overnight_inversion
+  air_quality_co2:
+    - indoor_ventilation_strain
+    - traffic_corridor_emission
+    - transit_queue_buildup
+    - stadium_post_event_co2
+    - freight_terminal_emission
+  traffic_speed:
+    - school_zone_slowdown
+    - congestion_spillback
+    - bus_lane_delay
+    - event_dispersal
+    - freight_corridor_slowdown
+  parking_availability:
+    - curbside_short_stay
+    - event_overflow
+    - commuter_transit_hub
+    - resident_night
+    - stadium_guidance
+  bus_arrival:
+    - hub_transfer_delay
+    - event_shuttle_queue
+    - school_dismissal_bunching
+    - commuter_peak_headway
+    - corridor_incident_diversion
+  street_light_state:
+    - outage_cluster
+    - dimming_schedule
+    - stadium_egress_lighting
+    - school_perimeter_fault
+    - maintenance_flicker
+  noise_level:
+    - nightlife_spike
+    - freight_corridor_noise
+    - school_pickup_disturbance
+    - stadium_dispersal_noise
+    - construction_residual_noise
+confuser_policy:
+  semantic_near_miss_per_target: 3
+  constraint_near_miss_per_target: 1
+  naming_confuser_per_target: 1
+difficulty_mixture:
+  routing_hard: 0.4
+  object_hard: 0.4
+  sanity: 0.2
+domain_profiles:
+  environment:
+    service_weights:
+      temperature: 1.4
+      humidity: 1.3
+      rainfall: 1.2
+      air_quality_pm25: 1.2
+      air_quality_co2: 1.2
+      traffic_speed: 0.7
+      parking_availability: 0.7
+      bus_arrival: 0.7
+      street_light_state: 0.8
+      noise_level: 1.0
+  mobility:
+    service_weights:
+      temperature: 0.8
+      humidity: 0.8
+      rainfall: 0.8
+      air_quality_pm25: 1.0
+      air_quality_co2: 1.0
+      traffic_speed: 1.5
+      parking_availability: 1.5
+      bus_arrival: 1.5
+      street_light_state: 1.0
+      noise_level: 1.0
+  public_space:
+    service_weights:
+      temperature: 1.0
+      humidity: 1.0
+      rainfall: 0.9
+      air_quality_pm25: 1.1
+      air_quality_co2: 1.1
+      traffic_speed: 1.0
+      parking_availability: 1.0
+      bus_arrival: 1.0
+      street_light_state: 1.4
+      noise_level: 1.3
+domain_profile_order:
+  - environment
+  - mobility
+  - public_space
+zone_type_service_bias:
+  school_area:
+    traffic_speed: 1.2
+    noise_level: 1.2
+    air_quality_pm25: 1.1
+  residential:
+    parking_availability: 1.1
+    air_quality_co2: 1.1
+    street_light_state: 1.1
+  downtown:
+    bus_arrival: 1.3
+    traffic_speed: 1.2
+    parking_availability: 1.2
+  industrial:
+    air_quality_pm25: 1.3
+    air_quality_co2: 1.3
+    noise_level: 1.2
+  transport_hub:
+    bus_arrival: 1.4
+    traffic_speed: 1.3
+    parking_availability: 1.2
+  stadium_area:
+    parking_availability: 1.3
+    noise_level: 1.4
+    street_light_state: 1.2
+payload_size_bytes:
+  min: 128
+  max: 384

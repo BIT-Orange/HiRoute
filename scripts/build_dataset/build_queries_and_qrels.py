@@ -9,6 +9,7 @@ import random
 import re
 import sys
 from collections import Counter, defaultdict
+from itertools import combinations
 from pathlib import Path
 from typing import Any
 
@@ -21,8 +22,12 @@ import numpy as np
 from scripts.build_dataset.build_workload_tiers import (
     humanize_token,
     join_ids,
+    parse_zone_constraint,
     pick_style,
     render_query_text,
+    stable_rotate,
+    zone_constraint_value,
+    zone_slot_token,
 )
 from tools.dataset_support import load_dataset_manifest, load_rule_config, output_path, read_jsonl
 from tools.workflow_support import load_json_yaml, read_csv, write_csv
@@ -107,6 +112,9 @@ TIER_TO_LABEL_V3 = {
     "routing_hard_v3": ("high", "hard"),
     "object_hard_v3": ("high", "hard"),
     "sanity_appendix_v3": ("low", "easy"),
+    "routing_main": ("high", "hard"),
+    "object_main": ("high", "hard"),
+    "sanity_appendix": ("low", "easy"),
 }
 
 QRELS_DOMAIN_FIELDS_V3 = [
@@ -365,6 +373,30 @@ def _stable_pick(rows: list[dict[str, str]], limit: int) -> list[dict[str, str]]
     return sorted(rows, key=lambda row: row["object_id"])[:limit]
 
 
+def _stable_sample(values: list[str], count: int, slot: int) -> list[str]:
+    if count <= 0:
+        return []
+    rotated = stable_rotate(values, slot)
+    return rotated[: min(count, len(rotated))]
+
+
+def _stable_row_sample(rows: list[dict[str, str]], count: int, slot: int) -> list[dict[str, str]]:
+    if count <= 0:
+        return []
+    ordered = sorted(rows, key=lambda row: row["object_id"])
+    if not ordered:
+        return []
+    offset = slot % len(ordered)
+    rotated = ordered[offset:] + ordered[:offset]
+    return rotated[: min(count, len(rotated))]
+
+
+def _semantic_dataset_tiers(manifest: dict[str, Any]) -> tuple[str, str, str]:
+    if manifest.get("dataset_id") == "smartcity":
+        return ("routing_main", "object_main", "sanity_appendix")
+    return ("routing_hard_v3", "object_hard_v3", "sanity_appendix_v3")
+
+
 def _relevant_domain_rows(selected_domains: list[str], confuser_domains: list[str]) -> list[dict[str, str]]:
     rows = []
     for domain_id in selected_domains:
@@ -394,6 +426,7 @@ def _generate_v3_queries(manifest: dict[str, Any], rules: dict[str, Any]) -> int
     if not topology_bundles:
         raise ValueError("smartcity_v3 requires topology.query_bundles")
 
+    routing_tier, object_tier, sanity_tier = _semantic_dataset_tiers(manifest)
     service_synonyms = rules["service_synonyms"]
     style_weights = rules["text_styles"]
     rng = random.Random(rules["seed"])
@@ -415,8 +448,15 @@ def _generate_v3_queries(manifest: dict[str, Any], rules: dict[str, Any]) -> int
         if not active_objects:
             raise ValueError(f"{bundle_id} has no active objects")
 
-        by_routing_key: dict[tuple[str, str, str, str], dict[str, list[dict[str, str]]]] = defaultdict(lambda: defaultdict(list))
-        by_service_zone_freshness: dict[tuple[str, str, str], dict[str, list[dict[str, str]]]] = defaultdict(lambda: defaultdict(list))
+        by_route_base_slot_target: dict[tuple[str, str, str], dict[str, dict[str, list[dict[str, str]]]]] = defaultdict(
+            lambda: defaultdict(lambda: defaultdict(list))
+        )
+        by_route_base_slot_all: dict[tuple[str, str, str], dict[str, dict[str, list[dict[str, str]]]]] = defaultdict(
+            lambda: defaultdict(lambda: defaultdict(list))
+        )
+        by_route_service_domain: dict[str, dict[str, list[dict[str, str]]]] = defaultdict(
+            lambda: defaultdict(list)
+        )
         by_object_key: dict[tuple[str, str, str, str], dict[str, list[dict[str, str]]]] = defaultdict(lambda: defaultdict(list))
         by_domain_service_zone_fresh: dict[tuple[str, str, str, str], list[dict[str, str]]] = defaultdict(list)
         by_domain_service_zone: dict[tuple[str, str, str], list[dict[str, str]]] = defaultdict(list)
@@ -427,10 +467,12 @@ def _generate_v3_queries(manifest: dict[str, Any], rules: dict[str, Any]) -> int
             row = dict(row)
             row["_role"] = role
             family = row.get("semantic_intent_family", row.get("semantic_facet", row["service_class"]))
+            zone_token = zone_slot_token(row["zone_id"])
             if row.get("difficulty_tag") == "routing_hard" and role == "target":
-                by_routing_key[(row["service_class"], row["zone_type"], row["freshness_class"], family)][row["domain_id"]].append(row)
+                by_route_base_slot_target[(row["service_class"], row["zone_type"], row["freshness_class"])][zone_token][row["domain_id"]].append(row)
             if row.get("difficulty_tag") == "routing_hard":
-                by_service_zone_freshness[(row["service_class"], row["zone_type"], row["freshness_class"])][row["domain_id"]].append(row)
+                by_route_base_slot_all[(row["service_class"], row["zone_type"], row["freshness_class"])][zone_token][row["domain_id"]].append(row)
+                by_route_service_domain[row["service_class"]][row["domain_id"]].append(row)
             if row.get("difficulty_tag") == "object_hard":
                 by_domain_service_zone_fresh[(row["domain_id"], row["service_class"], row["zone_type"], row["freshness_class"])].append(row)
                 by_domain_service_zone[(row["domain_id"], row["service_class"], row["zone_type"])].append(row)
@@ -439,17 +481,63 @@ def _generate_v3_queries(manifest: dict[str, Any], rules: dict[str, Any]) -> int
                     by_object_key[(row["service_class"], row["zone_type"], row["freshness_class"], family)][row["domain_id"]].append(row)
 
         routing_candidates = []
-        for key, strong_by_domain in sorted(by_routing_key.items()):
-            service_class, zone_type, freshness_class, family = key
-            confuser_domains = {
-                domain_id
-                for domain_id, rows in by_service_zone_freshness[(service_class, zone_type, freshness_class)].items()
-                if domain_id not in strong_by_domain and any(
-                    row.get("semantic_intent_family", row.get("semantic_facet", "")) != family for row in rows
-                )
+        for base_key, target_slots in sorted(by_route_base_slot_target.items()):
+            slot_pool = sorted(target_slots)
+            if not slot_pool:
+                continue
+            all_slots = by_route_base_slot_all[base_key]
+            broad_by_domain: dict[str, list[dict[str, str]]] = defaultdict(list)
+            for zone_rows in all_slots.values():
+                for domain_id, rows in zone_rows.items():
+                    broad_by_domain[domain_id].extend(rows)
+            service_broad_by_domain = {
+                domain_id: sorted(rows, key=lambda row: row["object_id"])
+                for domain_id, rows in by_route_service_domain[base_key[0]].items()
             }
-            if len(strong_by_domain) >= 2 and len(confuser_domains) >= 2:
-                routing_candidates.append((key, strong_by_domain, sorted(confuser_domains)))
+            for token_count in range(1, min(4, len(slot_pool)) + 1):
+                for zone_tokens in combinations(slot_pool, token_count):
+                    strong_by_domain: dict[str, list[dict[str, str]]] = defaultdict(list)
+                    strong_by_token_domain: dict[str, dict[str, list[dict[str, str]]]] = defaultdict(
+                        lambda: defaultdict(list)
+                    )
+                    for zone_token in zone_tokens:
+                        for domain_id, rows in target_slots[zone_token].items():
+                            strong_by_token_domain[zone_token][domain_id].extend(rows)
+                            strong_by_domain[domain_id].extend(rows)
+                    strong_domains = sorted(strong_by_domain)
+                    confuser_domains = sorted(set(service_broad_by_domain) - set(strong_domains))
+                    if not 2 <= len(strong_domains) <= 4 or len(confuser_domains) < 2:
+                        continue
+                    anchor_rows = [row for domain_id in strong_domains for row in strong_by_domain[domain_id]]
+                    anchor_rows = sorted(anchor_rows, key=lambda row: row["object_id"])
+                    anchor_family = (
+                        anchor_rows[0].get("semantic_intent_family", anchor_rows[0].get("semantic_facet", ""))
+                        if anchor_rows else ""
+                    )
+                    routing_candidates.append(
+                        {
+                            "base_key": base_key,
+                            "zone_tokens": list(zone_tokens),
+                            "strong_by_domain": {
+                                domain_id: sorted(rows, key=lambda row: row["object_id"])
+                                for domain_id, rows in strong_by_domain.items()
+                            },
+                            "strong_by_token_domain": {
+                                zone_token: {
+                                    domain_id: sorted(rows, key=lambda row: row["object_id"])
+                                    for domain_id, rows in domain_payload.items()
+                                }
+                                for zone_token, domain_payload in strong_by_token_domain.items()
+                            },
+                            "broad_by_domain": {
+                                domain_id: sorted(rows, key=lambda row: row["object_id"])
+                                for domain_id, rows in broad_by_domain.items()
+                            },
+                            "service_broad_by_domain": service_broad_by_domain,
+                            "confuser_domains": confuser_domains,
+                            "anchor_family": anchor_family,
+                        }
+                    )
 
         object_candidates = []
         for key, strong_by_domain in sorted(by_object_key.items()):
@@ -492,11 +580,29 @@ def _generate_v3_queries(manifest: dict[str, Any], rules: dict[str, Any]) -> int
                 object_candidates.append((key, eligible_domains))
 
         sanity_candidates = []
-        for key, strong_by_domain in sorted(by_routing_key.items()):
-            if 1 <= len(strong_by_domain) <= 2:
-                sanity_candidates.append((key, strong_by_domain))
+        for base_key, target_slots in sorted(by_route_base_slot_target.items()):
+            for zone_token, strong_by_domain in sorted(target_slots.items()):
+                if not 1 <= len(strong_by_domain) <= 2:
+                    continue
+                anchor_rows = [
+                    row for domain_id in sorted(strong_by_domain) for row in sorted(strong_by_domain[domain_id], key=lambda row: row["object_id"])
+                ]
+                family = (
+                    anchor_rows[0].get("semantic_intent_family", anchor_rows[0].get("semantic_facet", ""))
+                    if anchor_rows else ""
+                )
+                sanity_candidates.append(((*base_key, family), strong_by_domain))
 
-        if not routing_candidates or not object_candidates or not sanity_candidates:
+        routing_candidates_by_count: dict[int, list[dict[str, Any]]] = defaultdict(list)
+        for candidate in routing_candidates:
+            routing_candidates_by_count[len(candidate["strong_by_domain"])].append(candidate)
+
+        if (
+            not routing_candidates
+            or not object_candidates
+            or not sanity_candidates
+            or any(not routing_candidates_by_count[count] for count in (2, 3, 4))
+        ):
             raise ValueError(f"{bundle_id} does not have enough v3 candidates for all workload tiers")
 
         bundle_queries: list[dict[str, Any]] = []
@@ -513,43 +619,54 @@ def _generate_v3_queries(manifest: dict[str, Any], rules: dict[str, Any]) -> int
                 split = "dev" if tier_index < int(tier_rules["dev"]) else "test"
                 style = pick_style(style_weights, tier_index)
                 ambiguity_level, base_difficulty = TIER_TO_LABEL_V3[tier]
+                selected_zone_tokens: list[str] = []
 
-                if tier == "routing_hard_v3":
-                    key, strong_by_domain, confuser_domains = routing_candidates[tier_index % len(routing_candidates)]
-                    service_class, zone_type, freshness_class, family = key
+                if tier == routing_tier:
                     strong_count = _choose_count(
                         int(tier_rules["relevant_domains_range"][0]),
                         int(tier_rules["relevant_domains_range"][1]),
                         tier_index,
                     )
+                    candidate_pool = routing_candidates_by_count[strong_count]
+                    candidate = candidate_pool[(tier_index // max(1, len(routing_candidates_by_count))) % len(candidate_pool)]
+                    service_class, zone_type, freshness_class = candidate["base_key"]
+                    family = candidate["anchor_family"]
                     weak_count = _choose_count(
                         int(tier_rules["confuser_domains_range"][0]),
                         int(tier_rules["confuser_domains_range"][1]),
                         tier_index,
                     )
-                    selected_domains = sorted(strong_by_domain)[:strong_count]
-                    selected_confusers = confuser_domains[:weak_count]
+                    selected_domains = sorted(candidate["strong_by_domain"])
+                    selected_confusers = _stable_sample(candidate["confuser_domains"], weak_count, tier_index + 3)
                     relevant_objects = []
                     weak_objects = []
-                    for domain_id in selected_domains:
-                        relevant_objects.extend(_stable_pick(strong_by_domain[domain_id], 1))
-                        domain_pool = by_service_zone_freshness[(service_class, zone_type, freshness_class)][domain_id]
+                    selected_zone_tokens = list(candidate["zone_tokens"])
+                    relevant_object_ids: set[str] = set()
+                    for token_slot, zone_token in enumerate(selected_zone_tokens):
+                        token_payload = candidate["strong_by_token_domain"][zone_token]
+                        for domain_slot, domain_id in enumerate(selected_domains):
+                            if domain_id not in token_payload:
+                                continue
+                            chosen = _stable_row_sample(token_payload[domain_id], 1, tier_index + token_slot + domain_slot)
+                            relevant_objects.extend(chosen)
+                            relevant_object_ids.update(row["object_id"] for row in chosen)
+                    for domain_slot, domain_id in enumerate(selected_domains):
+                        same_domain_pool = [
+                            row
+                            for row in candidate["broad_by_domain"][domain_id]
+                            if row["object_id"] not in relevant_object_ids
+                        ]
+                        weak_objects.extend(_stable_row_sample(same_domain_pool, 1, tier_index + domain_slot + 1))
+                    for domain_slot, domain_id in enumerate(selected_confusers):
                         weak_objects.extend(
-                            _stable_pick(
-                                [
-                                    row
-                                    for row in domain_pool
-                                    if row.get("semantic_intent_family", row.get("semantic_facet", "")) != family
-                                ],
+                            _stable_row_sample(
+                                candidate["service_broad_by_domain"][domain_id],
                                 1,
+                                tier_index + len(selected_domains) + domain_slot,
                             )
                         )
-                    for domain_id in selected_confusers:
-                        weak_objects.extend(
-                            _stable_pick(by_service_zone_freshness[(service_class, zone_type, freshness_class)][domain_id], 1)
-                        )
                     manifest_difficulty = "hard" if len(selected_confusers) >= 4 or len(selected_domains) >= 3 else "medium"
-                elif tier == "object_hard_v3":
+                elif tier == object_tier:
                     key, eligible_domains = object_candidates[tier_index % len(object_candidates)]
                     service_class, zone_type, freshness_class, family = key
                     relevant_count = _choose_count(
@@ -557,8 +674,17 @@ def _generate_v3_queries(manifest: dict[str, Any], rules: dict[str, Any]) -> int
                         int(tier_rules["relevant_domains_range"][1]),
                         tier_index,
                     )
-                    selected_domains = sorted(eligible_domains)[:relevant_count]
-                    selected_confusers: list[str] = []
+                    confuser_domain_count = _choose_count(
+                        int(tier_rules["confuser_domains_range"][0]),
+                        int(tier_rules["confuser_domains_range"][1]),
+                        tier_index,
+                    )
+                    selected_domains = _stable_sample(list(eligible_domains), relevant_count, tier_index)
+                    selected_confusers = _stable_sample(
+                        [domain_id for domain_id in eligible_domains if domain_id not in set(selected_domains)],
+                        confuser_domain_count,
+                        tier_index + 5,
+                    )
                     relevant_objects = []
                     weak_objects = []
                     for domain_slot, domain_id in enumerate(selected_domains):
@@ -566,10 +692,12 @@ def _generate_v3_queries(manifest: dict[str, Any], rules: dict[str, Any]) -> int
                         group_ids = sorted(payload["groups"])
                         group_id = group_ids[(tier_index + domain_slot) % len(group_ids)]
                         group_payload = payload["groups"][group_id]
-                        relevant_objects.extend(_stable_pick(group_payload["targets"], 1))
-                        weak_objects.extend(_stable_pick(group_payload["semantic_confusers"], 3))
-                        weak_objects.extend(_stable_pick(group_payload["constraint_confusers"], 1))
-                        weak_objects.extend(_stable_pick(group_payload["naming_confusers"], 1))
+                        chosen_target = _stable_row_sample(group_payload["targets"], 1, tier_index + domain_slot)
+                        relevant_objects.extend(chosen_target)
+                        selected_zone_tokens.extend(zone_slot_token(row["zone_id"]) for row in chosen_target)
+                        weak_objects.extend(_stable_row_sample(group_payload["semantic_confusers"], 3, tier_index + domain_slot))
+                        weak_objects.extend(_stable_row_sample(group_payload["constraint_confusers"], 1, tier_index + domain_slot))
+                        weak_objects.extend(_stable_row_sample(group_payload["naming_confusers"], 1, tier_index + domain_slot))
                         extra_candidates = [
                             row
                             for row in payload["candidate_pool"]
@@ -580,7 +708,16 @@ def _generate_v3_queries(manifest: dict[str, Any], rules: dict[str, Any]) -> int
                             for row in extra_candidates
                             if row.get("semantic_intent_family", row.get("semantic_facet", "")) == family
                         ]
-                        weak_objects.extend(_stable_pick(same_family_extras or extra_candidates, 2))
+                        extra_limit = int(tier_rules.get("confuser_objects_per_query_min", 4)) - 4 + (tier_index % 3)
+                        weak_objects.extend(_stable_row_sample(same_family_extras or extra_candidates, max(0, extra_limit), tier_index + domain_slot + 2))
+                    for domain_slot, domain_id in enumerate(selected_confusers):
+                        payload = eligible_domains[domain_id]
+                        fallback_pool = [
+                            row
+                            for row in payload["candidate_pool"]
+                            if row.get("semantic_intent_family", row.get("semantic_facet", "")) != family or row["_role"] != "target"
+                        ]
+                        weak_objects.extend(_stable_row_sample(fallback_pool or payload["candidate_pool"], 1, tier_index + domain_slot + 7))
                     mix = tier_rules["manifest_difficulty_mix"]
                     manifest_difficulty = pick_style(mix, tier_index)
                 else:
@@ -602,6 +739,26 @@ def _generate_v3_queries(manifest: dict[str, Any], rules: dict[str, Any]) -> int
                 if not relevant_objects:
                     continue
 
+                ranked_by_object: dict[str, tuple[int, dict[str, str]]] = {}
+                for record in weak_objects:
+                    ranked_by_object[record["object_id"]] = (1, record)
+                for record in relevant_objects:
+                    ranked_by_object[record["object_id"]] = (2, record)
+                relevant_objects = [
+                    record
+                    for relevance, record in (
+                        ranked_by_object[object_id] for object_id in sorted(ranked_by_object)
+                    )
+                    if relevance == 2
+                ]
+                weak_objects = [
+                    record
+                    for relevance, record in (
+                        ranked_by_object[object_id] for object_id in sorted(ranked_by_object)
+                    )
+                    if relevance == 1
+                ]
+
                 query_id = next_query_id(tier)
                 query_text_id = f"qt-{query_id}"
                 service_phrase = rng.choice(service_synonyms[service_class])
@@ -621,17 +778,19 @@ def _generate_v3_queries(manifest: dict[str, Any], rules: dict[str, Any]) -> int
                     "ingress_node_id": ingress_nodes[(len(bundle_queries)) % len(ingress_nodes)],
                     "start_time_ms": start_time_ms,
                     "query_text": query_text,
-                    "zone_constraint": "",
+                    "zone_constraint": (
+                        zone_constraint_value(selected_zone_tokens) if tier_rules["require_zone_constraint"] else ""
+                    ),
                     "zone_type_constraint": zone_type,
                     "service_constraint": service_class,
                     "freshness_constraint": freshness_class if tier_rules["require_freshness_constraint"] else "",
                     "ambiguity_level": ambiguity_level,
-                    "difficulty": manifest_difficulty if tier == "object_hard_v3" else base_difficulty,
+                    "difficulty": manifest_difficulty if tier == object_tier else base_difficulty,
                     "intended_domain_count": len(selected_domains),
                     "ground_truth_count": len(relevant_objects),
                     "query_family": style,
                     "workload_tier": tier,
-                    "intent_facet": family,
+                    "intent_facet": "" if tier == routing_tier else family,
                     "query_text_id": query_text_id,
                     "manifest_difficulty": manifest_difficulty,
                     "target_relevant_domains": join_ids(selected_domains),
@@ -711,7 +870,7 @@ def _generate_v3_queries(manifest: dict[str, Any], rules: dict[str, Any]) -> int
         },
     }
     _write_stats(output_path(manifest, "qrels_domain_csv").parent / "query_stats.json", stats)
-    LOGGER.info("generated %s v3 queries", len(global_queries))
+    LOGGER.info("generated %s semantic queries", len(global_queries))
     return 0
 
 
@@ -927,7 +1086,7 @@ def main() -> int:
     manifest = load_dataset_manifest(args.config)
     rules = load_rule_config(manifest, "query_generation")
     topology_mapping_path = args.topology_mapping or output_path(manifest, "topology_mapping_csv")
-    if manifest["dataset_id"] == "smartcity_v3":
+    if manifest["dataset_id"] in {"smartcity_v3", "smartcity"}:
         return _generate_v3_queries(manifest, rules)
     if manifest["dataset_id"] == "smartcity_v2" or manifest.get("topology", {}).get("query_bundles"):
         return _generate_v2_queries(manifest, rules)

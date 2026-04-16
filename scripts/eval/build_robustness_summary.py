@@ -27,11 +27,14 @@ SUMMARY_FIELDS = [
     "scenario_variant",
     "scheme",
     "topology_id",
+    "run_count",
+    "query_count",
     "pre_event_success",
     "min_success_after_event",
     "t95_recovery_sec",
     "extra_probes_during_recovery",
     "area_under_degradation_curve",
+    "source_run_ids",
 ]
 
 TIMESERIES_FIELDS = [
@@ -40,10 +43,12 @@ TIMESERIES_FIELDS = [
     "scheme",
     "topology_id",
     "time_bin_s",
+    "run_count",
     "query_count",
     "success_at_1_rate",
     "mean_remote_probes",
     "mean_discovery_bytes",
+    "source_run_ids",
 ]
 
 ROBUSTNESS_EXPERIMENTS = {
@@ -51,6 +56,7 @@ ROBUSTNESS_EXPERIMENTS = {
     "exp_failures_v1": ["exp_staleness_v1", "exp_failures_v1"],
     "exp_robustness_v3": ["exp_robustness_v3"],
     "exp_robustness_v3_compact": ["exp_robustness_v3_compact"],
+    "robustness": ["robustness"],
 }
 
 
@@ -107,6 +113,7 @@ def main() -> int:
 
     grouped = query_frame.groupby(["scenario_variant", "registry_scheme", "registry_topology_id"], sort=False)
     for (scenario_variant, scheme, topology_id), group in grouped:
+        run_ids = sorted(group["run_id"].astype(str).unique().tolist())
         bins = (
             group.groupby(["run_id", "time_bin_s"], as_index=False)
             .agg(
@@ -134,10 +141,12 @@ def main() -> int:
                     "scheme": scheme,
                     "topology_id": topology_id,
                     "time_bin_s": int(row["time_bin_s"]),
+                    "run_count": len(run_ids),
                     "query_count": int(row["query_count"]),
                     "success_at_1_rate": round(float(row["success_at_1_rate"]), 6),
                     "mean_remote_probes": round(float(row["mean_remote_probes"]), 6),
                     "mean_discovery_bytes": round(float(row["mean_discovery_bytes"]), 6),
+                    "source_run_ids": "|".join(run_ids),
                 }
             )
 
@@ -176,11 +185,14 @@ def main() -> int:
                 "scenario_variant": scenario_variant,
                 "scheme": scheme,
                 "topology_id": topology_id,
+                "run_count": len(run_ids),
+                "query_count": int(len(group)),
                 "pre_event_success": round(pre_event_success, 6),
                 "min_success_after_event": round(min_success_after_event, 6),
                 "t95_recovery_sec": round(t95_recovery_sec, 6),
                 "extra_probes_during_recovery": round(extra_probes_during_recovery, 6),
                 "area_under_degradation_curve": round(area_under_degradation_curve, 6),
+                "source_run_ids": "|".join(run_ids),
             }
         )
 

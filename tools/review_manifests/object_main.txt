@@ -1,0 +1,13 @@
+configs/experiments/object_main.yaml
+scripts/eval/build_stage_quick_summary.py
+scripts/eval/build_stage_decision.py
+tools/validate_manifest_wiring.py
+tools/run_mainline_review_stage.sh
+tools/package_review_bundle.sh
+tools/validate_bundle_freshness.py
+results/aggregate/mainline/object_main_manifest_sweep.csv
+results/aggregate/mainline/failure_breakdown.csv
+results/aggregate/mainline/object_main_manifest_sweep.trace.json
+results/aggregate/mainline/failure_breakdown.trace.json
+@stage_subtree aggregate
+@stage_subtree runs

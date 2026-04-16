@@ -93,7 +93,9 @@ QUERY_LOG_FIELDS = [
     "failure_type",
     "first_fetch_relevant",
     "manifest_fetch_index",
-] = [
+]
+
+PROBE_LOG_FIELDS = [
     "query_id",
     "scheme",
     "seed",
@@ -295,6 +297,7 @@ def _generate_mock_outputs(
     dataset_id = experiment["dataset_id"]
     domain_total = len({row["domain_id"] for row in dataset_context["objects"]})
     max_budget = int(experiment.get("_selected_budget") or 0) or max(experiment.get("budgets", [16]))
+    selected_manifest_size = int(experiment.get("_selected_manifest_size") or 0) or max(experiment.get("manifest_sizes", [1]))
 
     query_rows = []
     probe_rows = []
@@ -349,6 +352,13 @@ def _generate_mock_outputs(
         end_time_ms = round(start_time_ms + latency_ms, 3)
         manifest_hit_5 = 1 if success or (relevant_objects and rng.random() < profile["manifest_bias"]) else 0
         manifest_hit_3 = 1 if manifest_hit_5 and rng.random() < 0.7 else 0
+        first_fetch_relevant = 0
+        manifest_fetch_index = 0
+        if success and manifest_hit_5:
+            if selected_manifest_size == 1 or rng.random() < 0.72:
+                first_fetch_relevant = 1
+            else:
+                manifest_fetch_index = rng.randint(1, max(1, min(2, selected_manifest_size - 1)))
         ndcg_at_5 = round(min(1.0, profile["ndcg_bias"] + rng.uniform(-0.12, 0.12)), 3) if manifest_hit_5 else 0.0
         num_remote_probes = max(0, int(round(profile["probe_bias"] + rng.uniform(-1.0, 2.0))))
         discovery_tx_bytes = int(profile["discovery_byte_bias"] + num_remote_probes * 48 + rng.uniform(0, 96))
@@ -379,6 +389,8 @@ def _generate_mock_outputs(
                 "fetch_tx_bytes": fetch_tx_bytes,
                 "fetch_rx_bytes": fetch_rx_bytes,
                 "failure_type": failure_type,
+                "first_fetch_relevant": first_fetch_relevant,
+                "manifest_fetch_index": manifest_fetch_index,
             }
         )
 

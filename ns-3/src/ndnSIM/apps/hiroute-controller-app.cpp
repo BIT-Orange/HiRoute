@@ -13,9 +13,12 @@
 #include <algorithm>
 #include <cstdlib>
 #include <cstdint>
+#include <fstream>
 #include <limits>
 #include <map>
+#include <sstream>
 #include <set>
+#include <stdexcept>
 
 NS_LOG_COMPONENT_DEFINE("ndn.HiRouteControllerApp");
 
@@ -37,6 +40,123 @@ StableSlotForToken(const std::string& token, uint32_t modulo)
     hash *= 16777619u;
   }
   return hash % modulo;
+}
+
+std::string
+CanonicalZoneToken(const std::string& zoneId)
+{
+  const auto marker = zoneId.rfind("-zone-");
+  if (marker == std::string::npos) {
+    return zoneId;
+  }
+  return zoneId.substr(marker + 1);
+}
+
+bool
+MatchesZoneConstraint(const std::string& objectZoneId, const std::string& constraint)
+{
+  if (constraint.empty()) {
+    return true;
+  }
+
+  const auto canonical = CanonicalZoneToken(objectZoneId);
+  std::stringstream input(constraint);
+  std::string token;
+  while (std::getline(input, token, ';')) {
+    if (!token.empty() && (token == objectZoneId || token == canonical)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool
+FileNeedsHeader(const std::string& path)
+{
+  std::ifstream input(path.c_str());
+  return !input.good() || input.peek() == std::ifstream::traits_type::eof();
+}
+
+std::string
+EscapeCsv(std::string value)
+{
+  bool needsQuotes = false;
+  for (char ch : value) {
+    if (ch == ',' || ch == '"' || ch == '\n' || ch == '\r') {
+      needsQuotes = true;
+      break;
+    }
+  }
+  if (!needsQuotes) {
+    return value;
+  }
+
+  std::string escaped;
+  escaped.reserve(value.size() + 4);
+  escaped.push_back('"');
+  for (char ch : value) {
+    if (ch == '"') {
+      escaped.push_back('"');
+    }
+    escaped.push_back(ch);
+  }
+  escaped.push_back('"');
+  return escaped;
+}
+
+void
+AppendCsvRow(const std::string& path, const std::vector<std::string>& header,
+             const std::vector<std::string>& values)
+{
+  const bool writeHeader = FileNeedsHeader(path);
+  std::ofstream output(path.c_str(), std::ios::out | std::ios::app);
+  if (!output.good()) {
+    throw std::runtime_error("failed to open controller debug csv: " + path);
+  }
+  if (writeHeader) {
+    for (size_t index = 0; index < header.size(); ++index) {
+      if (index != 0) {
+        output << ',';
+      }
+      output << header[index];
+    }
+    output << '\n';
+  }
+  for (size_t index = 0; index < values.size(); ++index) {
+    if (index != 0) {
+      output << ',';
+    }
+    output << EscapeCsv(values[index]);
+  }
+  output << '\n';
+}
+
+std::vector<std::string>
+SplitSemicolonTokens(const std::string& value)
+{
+  std::vector<std::string> tokens;
+  std::stringstream input(value);
+  std::string token;
+  while (std::getline(input, token, ';')) {
+    if (!token.empty()) {
+      tokens.push_back(token);
+    }
+  }
+  return tokens;
+}
+
+std::string
+DomainRootForCellId(const std::string& cellId)
+{
+  const auto firstDash = cellId.find('-');
+  if (firstDash == std::string::npos) {
+    return std::string();
+  }
+  const auto secondDash = cellId.find('-', firstDash + 1);
+  if (secondDash == std::string::npos) {
+    return std::string();
+  }
+  return cellId.substr(0, secondDash) + "-root";
 }
 
 } // namespace
@@ -67,6 +187,10 @@ HiRouteControllerApp::GetTypeId()
       .AddAttribute("QrelsObjectCsvPath", "Path to qrels_object.csv used by the centralized oracle",
                     StringValue("../data/processed/eval/qrels_object.csv"),
                     MakeStringAccessor(&HiRouteControllerApp::m_qrelsObjectCsvPath),
+                    MakeStringChecker())
+      .AddAttribute("ManifestDebugCsvPath", "Optional csv path for controller manifest debug rows",
+                    StringValue(""),
+                    MakeStringAccessor(&HiRouteControllerApp::m_manifestDebugCsvPath),
                     MakeStringChecker())
       .AddAttribute("ManifestSize", "Maximum number of canonical names returned per discovery",
                     UintegerValue(4),
@@ -177,8 +301,12 @@ HiRouteControllerApp::loadInputs()
   m_objectsById.clear();
   m_objectsByName.clear();
   m_objectsByCell.clear();
+  m_objectsByFrontierHint.clear();
+  m_concreteCellsByFrontierHint.clear();
   m_oracleRankedQrels.clear();
   m_rankByCellObject.clear();
+  m_rankByFrontierObject.clear();
+  m_hasExplicitAncestorFrontierIndex = false;
 
   for (const auto& row : HiRouteDatasetReader::ReadCsvRows(m_objectsCsvPath)) {
     const auto object = HiRouteObjectRecord::FromCsvRow(row);
@@ -193,6 +321,7 @@ HiRouteControllerApp::loadInputs()
     m_objectsByName[object.canonicalName] = object;
   }
 
+  std::map<std::string, std::set<std::string>> seenObjectsByFrontierHint;
   for (const auto& row : HiRouteDatasetReader::ReadCsvRows(m_controllerLocalIndexCsvPath)) {
     if (!oracleController && GetFieldOrEmpty(row, "domain_id") != m_domainId) {
       continue;
@@ -203,9 +332,26 @@ HiRouteControllerApp::loadInputs()
     }
     const auto cellId = GetFieldOrEmpty(row, "cell_id");
     m_objectsByCell[cellId].push_back(objectId);
-    const auto key = cellId + "::" + objectId;
-    m_rankByCellObject[key] =
+    const auto localRankHint =
       static_cast<uint32_t>(std::strtoul(GetFieldOrEmpty(row, "local_rank_hint").c_str(), nullptr, 10));
+    const auto key = cellId + "::" + objectId;
+    m_rankByCellObject[key] = localRankHint;
+
+    const auto ancestorFrontierIds = SplitSemicolonTokens(GetFieldOrEmpty(row, "ancestor_frontier_ids"));
+    if (!ancestorFrontierIds.empty()) {
+      m_hasExplicitAncestorFrontierIndex = true;
+      for (const auto& frontierHintCellId : ancestorFrontierIds) {
+        m_concreteCellsByFrontierHint[frontierHintCellId].insert(cellId);
+        if (seenObjectsByFrontierHint[frontierHintCellId].insert(objectId).second) {
+          m_objectsByFrontierHint[frontierHintCellId].push_back(objectId);
+        }
+        const auto frontierKey = frontierHintCellId + "::" + objectId;
+        auto bestRankIt = m_rankByFrontierObject.find(frontierKey);
+        if (bestRankIt == m_rankByFrontierObject.end() || localRankHint < bestRankIt->second) {
+          m_rankByFrontierObject[frontierKey] = localRankHint;
+        }
+      }
+    }
   }
 
   if (!oracleController) {
@@ -235,7 +381,7 @@ bool
 HiRouteControllerApp::matchesPredicate(const HiRouteObjectRecord& object,
                                        const HiRoutePredicateHeader& predicate) const
 {
-  return (predicate.zoneConstraint.empty() || object.zoneId == predicate.zoneConstraint) &&
+  return MatchesZoneConstraint(object.zoneId, predicate.zoneConstraint) &&
          (predicate.zoneTypeConstraint.empty() || object.zoneType == predicate.zoneTypeConstraint) &&
          (predicate.serviceConstraint.empty() || object.serviceClass == predicate.serviceConstraint) &&
          (predicate.freshnessConstraint.empty() ||
@@ -270,63 +416,96 @@ HiRouteControllerApp::localRankScore(
   return 1.0 / (1.0 + static_cast<double>(rankIt->second));
 }
 
-std::vector<HiRouteManifestEntry>
-HiRouteControllerApp::buildManifest(const HiRouteDiscoveryRequest& request) const
+HiRouteControllerApp::CandidateLookup
+HiRouteControllerApp::resolveCandidateLookup(const std::string& frontierHintCellId) const
 {
-  if (m_oracleMode || m_prefix.find("/oracle/") != std::string::npos) {
-    return buildOracleManifest(request);
+  CandidateLookup lookup;
+  if (frontierHintCellId.empty()) {
+    lookup.objectIds.reserve(m_objectsById.size());
+    for (const auto& item : m_objectsById) {
+      lookup.objectIds.push_back(item.first);
+    }
+    lookup.localCandidateObjectIds = lookup.objectIds;
+    return lookup;
   }
 
-  std::vector<RankedObject> ranked;
-  std::vector<std::string> objectIds;
-  std::map<std::string, uint32_t> bestRankByObjectId;
+  auto exactCellIt = m_objectsByCell.find(frontierHintCellId);
+  lookup.exactCellExists = exactCellIt != m_objectsByCell.end();
 
-  auto cellIt = m_objectsByCell.find(request.frontierHintCellId);
-  if (!request.frontierHintCellId.empty() && cellIt != m_objectsByCell.end()) {
-    objectIds = cellIt->second;
-    for (const auto& objectId : objectIds) {
-      auto rankIt = m_rankByCellObject.find(request.frontierHintCellId + "::" + objectId);
-      if (rankIt != m_rankByCellObject.end()) {
-        bestRankByObjectId[objectId] = rankIt->second;
+  if (m_hasExplicitAncestorFrontierIndex) {
+    auto frontierIt = m_objectsByFrontierHint.find(frontierHintCellId);
+    if (frontierIt != m_objectsByFrontierHint.end()) {
+      lookup.objectIds = frontierIt->second;
+      lookup.localCandidateObjectIds = frontierIt->second;
+    }
+    auto concreteCellsIt = m_concreteCellsByFrontierHint.find(frontierHintCellId);
+    if (concreteCellsIt != m_concreteCellsByFrontierHint.end()) {
+      lookup.descendantCellCount = concreteCellsIt->second.size();
+      if (lookup.exactCellExists && concreteCellsIt->second.count(frontierHintCellId) != 0 &&
+          lookup.descendantCellCount > 0) {
+        --lookup.descendantCellCount;
       }
     }
+    for (const auto& objectId : lookup.objectIds) {
+      auto rankIt = m_rankByFrontierObject.find(frontierHintCellId + "::" + objectId);
+      if (rankIt != m_rankByFrontierObject.end()) {
+        lookup.bestRankByObjectId[objectId] = rankIt->second;
+      }
+    }
+    return lookup;
   }
-  else if (!request.frontierHintCellId.empty()) {
-    const auto descendantPrefix = request.frontierHintCellId + "-";
-    std::set<std::string> dedup;
-    for (const auto& item : m_objectsByCell) {
-      if (item.first != request.frontierHintCellId &&
-          item.first.rfind(descendantPrefix, 0) != 0) {
+
+  if (lookup.exactCellExists) {
+    lookup.objectIds = exactCellIt->second;
+    lookup.localCandidateObjectIds = lookup.objectIds;
+    for (const auto& objectId : lookup.objectIds) {
+      auto rankIt = m_rankByCellObject.find(frontierHintCellId + "::" + objectId);
+      if (rankIt != m_rankByCellObject.end()) {
+        lookup.bestRankByObjectId[objectId] = rankIt->second;
+      }
+    }
+    return lookup;
+  }
+
+  const auto descendantPrefix = frontierHintCellId + "-";
+  std::set<std::string> dedup;
+  for (const auto& item : m_objectsByCell) {
+    if (item.first != frontierHintCellId && item.first.rfind(descendantPrefix, 0) != 0) {
+      continue;
+    }
+    if (item.first != frontierHintCellId) {
+      ++lookup.descendantCellCount;
+    }
+    for (const auto& objectId : item.second) {
+      dedup.insert(objectId);
+      auto rankIt = m_rankByCellObject.find(item.first + "::" + objectId);
+      if (rankIt == m_rankByCellObject.end()) {
         continue;
       }
-      for (const auto& objectId : item.second) {
-        dedup.insert(objectId);
-        auto rankIt = m_rankByCellObject.find(item.first + "::" + objectId);
-        if (rankIt == m_rankByCellObject.end()) {
-          continue;
-        }
-        auto bestIt = bestRankByObjectId.find(objectId);
-        if (bestIt == bestRankByObjectId.end() || rankIt->second < bestIt->second) {
-          bestRankByObjectId[objectId] = rankIt->second;
-        }
-      }
-    }
-    objectIds.assign(dedup.begin(), dedup.end());
-    if (objectIds.empty()) {
-      objectIds.reserve(m_objectsById.size());
-      for (const auto& item : m_objectsById) {
-        objectIds.push_back(item.first);
+      auto bestIt = lookup.bestRankByObjectId.find(objectId);
+      if (bestIt == lookup.bestRankByObjectId.end() || rankIt->second < bestIt->second) {
+        lookup.bestRankByObjectId[objectId] = rankIt->second;
       }
     }
   }
-  else {
-    objectIds.reserve(m_objectsById.size());
+  lookup.localCandidateObjectIds.assign(dedup.begin(), dedup.end());
+  lookup.objectIds = lookup.localCandidateObjectIds;
+  if (lookup.objectIds.empty()) {
+    lookup.objectIds.reserve(m_objectsById.size());
     for (const auto& item : m_objectsById) {
-      objectIds.push_back(item.first);
+      lookup.objectIds.push_back(item.first);
     }
   }
+  return lookup;
+}
 
-  for (const auto& objectId : objectIds) {
+HiRouteControllerApp::CandidateEvaluation
+HiRouteControllerApp::evaluateCandidates(const HiRouteDiscoveryRequest& request,
+                                         const std::string& frontierHintCellId,
+                                         const CandidateLookup& lookup) const
+{
+  CandidateEvaluation evaluation;
+  for (const auto& objectId : lookup.objectIds) {
     auto objectIt = m_objectsById.find(objectId);
     if (objectIt == m_objectsById.end()) {
       continue;
@@ -337,7 +516,7 @@ HiRouteControllerApp::buildManifest(const HiRouteDiscoveryRequest& request) cons
     }
 
     double score = 0.75;
-    score += localRankScore(objectId, bestRankByObjectId);
+    score += localRankScore(objectId, lookup.bestRankByObjectId);
     score += 0.9 * semanticFacetScore(object, request);
     if (!request.predicate.serviceConstraint.empty() &&
         object.serviceClass == request.predicate.serviceConstraint) {
@@ -351,12 +530,125 @@ HiRouteControllerApp::buildManifest(const HiRouteDiscoveryRequest& request) cons
         object.zoneType == request.predicate.zoneTypeConstraint) {
       score += 0.2;
     }
-    if (!request.predicate.zoneConstraint.empty() &&
-        object.zoneId == request.predicate.zoneConstraint) {
+    if (MatchesZoneConstraint(object.zoneId, request.predicate.zoneConstraint)) {
       score += 0.3;
     }
-    ranked.push_back({object, score});
+    evaluation.ranked.push_back({object, score});
   }
+
+  std::vector<const HiRouteObjectRecord*> debugCandidateObjects;
+  debugCandidateObjects.reserve(lookup.localCandidateObjectIds.size());
+  for (const auto& objectId : lookup.localCandidateObjectIds) {
+    auto objectIt = m_objectsById.find(objectId);
+    if (objectIt != m_objectsById.end()) {
+      debugCandidateObjects.push_back(&objectIt->second);
+    }
+  }
+  evaluation.candidateObjectCountPreFilter = debugCandidateObjects.size();
+  evaluation.candidateObjectCountPostFilter = evaluation.ranked.size();
+  if (evaluation.candidateObjectCountPostFilter != 0) {
+    return evaluation;
+  }
+
+  if (!frontierHintCellId.empty() && evaluation.candidateObjectCountPreFilter == 0) {
+    if (!lookup.exactCellExists && frontierHintCellId.find("-mc-") != std::string::npos) {
+      evaluation.zeroReason = "cell_missing";
+    }
+    else if (!lookup.exactCellExists) {
+      evaluation.zeroReason = "descendant_miss";
+    }
+  }
+  if (!evaluation.zeroReason.empty() || debugCandidateObjects.empty()) {
+    return evaluation;
+  }
+
+  std::vector<const HiRouteObjectRecord*> filtered = debugCandidateObjects;
+  if (!request.predicate.zoneConstraint.empty()) {
+    std::vector<const HiRouteObjectRecord*> zoneMatched;
+    for (const auto* object : filtered) {
+      if (MatchesZoneConstraint(object->zoneId, request.predicate.zoneConstraint)) {
+        zoneMatched.push_back(object);
+      }
+    }
+    if (zoneMatched.empty()) {
+      evaluation.zeroReason = "zone_mismatch";
+      return evaluation;
+    }
+    filtered = zoneMatched;
+  }
+  if (!request.predicate.zoneTypeConstraint.empty()) {
+    std::vector<const HiRouteObjectRecord*> zoneTypeMatched;
+    for (const auto* object : filtered) {
+      if (object->zoneType == request.predicate.zoneTypeConstraint) {
+        zoneTypeMatched.push_back(object);
+      }
+    }
+    if (zoneTypeMatched.empty()) {
+      evaluation.zeroReason = "zone_type_mismatch";
+      return evaluation;
+    }
+    filtered = zoneTypeMatched;
+  }
+  if (!request.predicate.serviceConstraint.empty()) {
+    std::vector<const HiRouteObjectRecord*> serviceMatched;
+    for (const auto* object : filtered) {
+      if (object->serviceClass == request.predicate.serviceConstraint) {
+        serviceMatched.push_back(object);
+      }
+    }
+    if (serviceMatched.empty()) {
+      evaluation.zeroReason = "service_mismatch";
+      return evaluation;
+    }
+    filtered = serviceMatched;
+  }
+  if (!request.predicate.freshnessConstraint.empty()) {
+    std::vector<const HiRouteObjectRecord*> freshnessMatched;
+    for (const auto* object : filtered) {
+      if (object->freshnessClass == request.predicate.freshnessConstraint) {
+        freshnessMatched.push_back(object);
+      }
+    }
+    if (freshnessMatched.empty()) {
+      evaluation.zeroReason = "freshness_mismatch";
+    }
+  }
+  return evaluation;
+}
+
+void
+HiRouteControllerApp::appendManifestDebugRow(const HiRouteDiscoveryRequest& request,
+                                             const std::string& frontierHintCellId,
+                                             const CandidateLookup& lookup,
+                                             const CandidateEvaluation& evaluation) const
+{
+  if (m_manifestDebugCsvPath.empty()) {
+    return;
+  }
+
+  AppendCsvRow(
+    m_manifestDebugCsvPath,
+    {"query_id", "frontier_hint_cell_id", "exact_cell_exists", "descendant_cell_count",
+     "candidate_object_count_pre_filter", "candidate_object_count_post_filter", "zero_reason"},
+    {request.queryId,
+     frontierHintCellId,
+     lookup.exactCellExists ? "1" : "0",
+     std::to_string(lookup.descendantCellCount),
+     std::to_string(evaluation.candidateObjectCountPreFilter),
+     std::to_string(evaluation.candidateObjectCountPostFilter),
+     evaluation.zeroReason});
+}
+
+std::vector<HiRouteManifestEntry>
+HiRouteControllerApp::buildManifest(const HiRouteDiscoveryRequest& request) const
+{
+  if (m_oracleMode || m_prefix.find("/oracle/") != std::string::npos) {
+    return buildOracleManifest(request);
+  }
+
+  const auto lookup = resolveCandidateLookup(request.frontierHintCellId);
+  auto evaluation = evaluateCandidates(request, request.frontierHintCellId, lookup);
+  auto ranked = evaluation.ranked;
 
   std::sort(ranked.begin(), ranked.end(), [&] (const RankedObject& left, const RankedObject& right) {
     if (left.score != right.score) {
@@ -382,6 +674,16 @@ HiRouteControllerApp::buildManifest(const HiRouteDiscoveryRequest& request) cons
     entry.cellId = request.frontierHintCellId;
     entry.objectId = item.object.objectId;
     manifest.push_back(entry);
+  }
+
+  if (!m_manifestDebugCsvPath.empty()) {
+    appendManifestDebugRow(request, request.frontierHintCellId, lookup, evaluation);
+    const auto rootFrontierHint = DomainRootForCellId(request.frontierHintCellId);
+    if (!rootFrontierHint.empty() && rootFrontierHint != request.frontierHintCellId) {
+      const auto rootLookup = resolveCandidateLookup(rootFrontierHint);
+      const auto rootEvaluation = evaluateCandidates(request, rootFrontierHint, rootLookup);
+      appendManifestDebugRow(request, rootFrontierHint, rootLookup, rootEvaluation);
+    }
   }
 
   if (m_staleAfter > Seconds(0) && Simulator::Now() >= m_staleAfter && !manifest.empty() &&

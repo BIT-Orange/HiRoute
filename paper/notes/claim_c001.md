@@ -2,23 +2,25 @@
 
 ## Text
 
-On `smartcity_v2` `routing_hard`, the corrected v2 implementation no longer shows a large
-success-gap between distributed methods. The strongest remaining signal is that HiRoute preserves
-near-perfect success across budgets while reducing discovery cost relative to the flat semantic
-and INF-style tag-forwarding baselines; the centralized oracle remains the latency upper
-reference and flood remains the broad-search reference point.
+On the active `smartcity` `routing_main` workload, HiRoute is interpreted as a routing-support
+method rather than as a saturated end-to-end success claim. The mainline reading is that HiRoute
+reaches relevant domains with lower discovery waste than the flat semantic and admissible-control
+baselines, while the centralized directory remains the quality upper reference.
 
 ## Supported by
 
-- `results/figures/fig_main_success_overhead.pdf`
+- `results/figures/mainline/fig_routing_support.pdf`
 
 ## Aggregates
 
-- `results/aggregate/main_success_overhead.csv`
+- `results/aggregate/mainline/routing_support.csv`
+- `results/aggregate/mainline/candidate_shrinkage.csv`
 
 ## Source runs
 
-- Promoted runs for `exp_routing_main_v2` recorded in `runs/registry/promoted_runs.csv`
+- Promoted runs for `routing_main` recorded in `runs/registry/promoted_runs.csv`
+- Legacy `exp_routing_main_v2` and `exp_routing_main_v3_compact` provenance is mapped through
+  `runs/registry/experiment_lineage.csv`
 
 ## Status
 

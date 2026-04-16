@@ -30,6 +30,8 @@ STAGES = {
     "ablation_quick",
     "ablation",
     "routing_main",
+    "state_scaling",
+    "robustness",
     "diagnostic_object_routing",
     "object_ablation_routing",
     "full_mainline",
@@ -49,6 +51,7 @@ OBJECT_MAIN_ALLOWED_ABLATION_DECISIONS = {
     "ready_for_main_figure",
     "proceed_ablation_quick",
     "cost_only_figure",
+    "support_only_figure",
 }
 
 QUICK_REQUIRED_VALIDATIONS = (
@@ -110,6 +113,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--mode", choices=["official", "dry"], default="official")
     parser.add_argument("--max-workers", type=int, default=1)
+    parser.add_argument("--allow-dirty-worktree", action="store_true")
     parser.add_argument("--skip-package", action="store_true")
     parser.add_argument("--package", action="store_true")
     parser.add_argument("--force-rerun", action="store_true")
@@ -161,6 +165,12 @@ def _run(
     if result.returncode != 0:
         raise RuntimeError(f"command failed: {' '.join(cmd)}\n{stdout}{stderr}")
     return stdout.strip()
+
+
+def _run_env(*, allow_dirty_worktree: bool) -> dict[str, str] | None:
+    if not allow_dirty_worktree:
+        return None
+    return {**os.environ, "HIROUTE_ALLOW_DIRTY_WORKTREE": "1"}
 
 
 def _write_json(path: Path, payload: dict[str, Any]) -> None:
@@ -625,7 +635,13 @@ def _validate_manifest_regression(experiment_id: str, scheme: str | None, output
     _run(cmd, output_path=output_path, dry_run=dry_run)
 
 
-def _promote_runs(experiment_path: Path, output_path: Path, run_ids_file: Path, dry_run: bool, env: dict[str, str]) -> None:
+def _promote_runs(
+    experiment_path: Path,
+    output_path: Path,
+    run_ids_file: Path,
+    dry_run: bool,
+    env: dict[str, str] | None,
+) -> None:
     _run(
         [
             PYTHON,
@@ -683,6 +699,62 @@ def _validate_traceability(
 def _plot_experiment(experiment_path: Path, output_path: Path, dry_run: bool) -> None:
     _run(
         [PYTHON, str(repo_root() / "scripts/plots/plot_experiment.py"), "--experiment", str(experiment_path)],
+        output_path=output_path,
+        dry_run=dry_run,
+    )
+
+
+def _validate_figures(experiment_path: Path, experiment: dict[str, Any], output_path: Path, dry_run: bool) -> None:
+    csv_outputs = [str(path) for path in experiment.get("outputs", []) if str(path).endswith(".csv")]
+    if dry_run:
+        for output in csv_outputs:
+            _print_cmd(
+                [
+                    PYTHON,
+                    str(repo_root() / "tools/validate_figures.py"),
+                    "--experiment",
+                    str(experiment_path),
+                    "--aggregate",
+                    str(_resolve(output)),
+                ]
+            )
+        print(f"  -> {output_path}")
+        return
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    chunks: list[str] = []
+    for output in csv_outputs:
+        cmd = [
+            PYTHON,
+            str(repo_root() / "tools/validate_figures.py"),
+            "--experiment",
+            str(experiment_path),
+            "--aggregate",
+            str(_resolve(output)),
+        ]
+        result = subprocess.run(
+            cmd,
+            cwd=repo_root(),
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        stdout = result.stdout or ""
+        stderr = result.stderr or ""
+        chunks.append("+ " + " ".join(cmd))
+        if stdout:
+            chunks.append(stdout.rstrip())
+        if stderr:
+            chunks.append(stderr.rstrip())
+        if result.returncode != 0:
+            output_path.write_text("\n".join(chunks).rstrip() + "\n", encoding="utf-8")
+            raise RuntimeError(f"command failed: {' '.join(cmd)}\n{stdout}{stderr}")
+    output_path.write_text("\n".join(chunks).rstrip() + ("\n" if chunks else ""), encoding="utf-8")
+
+
+def _plot_mainline_figures(output_path: Path, dry_run: bool) -> None:
+    _run(
+        [PYTHON, str(repo_root() / "scripts/plots/plot_main_figures.py")],
         output_path=output_path,
         dry_run=dry_run,
     )
@@ -866,7 +938,7 @@ def _object_main_quick(args: argparse.Namespace) -> dict[str, Any]:
     for key in ("root", "validation", "runs", "aggregate"):
         paths[key].mkdir(parents=True, exist_ok=True)
 
-    run_env = {**os.environ, "HIROUTE_ALLOW_DIRTY_WORKTREE": "1"}
+    run_env = _run_env(allow_dirty_worktree=args.allow_dirty_worktree)
     status = _current_stage_status(stage, requested_matrix, dataset_fp, binary_fp, experiment_fp, {} if stale else previous)
     checks = [
         "completed_experiments: object_main_quick",
@@ -1055,7 +1127,7 @@ def _object_main_full(args: argparse.Namespace) -> dict[str, Any]:
         if not _compatibility_files_match(quick_experiment_fp, current_quick_fp):
             raise RuntimeError("fingerprint mismatch: object_main_quick baseline config set differs from current full stage")
 
-    run_env = {**os.environ, "HIROUTE_ALLOW_DIRTY_WORKTREE": "1"}
+    run_env = _run_env(allow_dirty_worktree=args.allow_dirty_worktree)
     status = _current_stage_status(stage, requested_matrix, dataset_fp, binary_fp, experiment_fp, {} if stale else previous)
     if not args.force_rerun:
         _seed_run_assignments_from_latest(status, experiment, requested_matrix)
@@ -1171,7 +1243,7 @@ def _object_main_full(args: argparse.Namespace) -> dict[str, Any]:
     status["validation_status"]["validate_manifest_regression"] = "PASS"
     checks.append("object_main.validate_manifest_regression.py PASS")
 
-    env = {**os.environ, "HIROUTE_ALLOW_DIRTY_WORKTREE": "1"}
+    env = _run_env(allow_dirty_worktree=args.allow_dirty_worktree)
     _promote_runs(experiment_path, paths["validation"] / "object_main_promote_runs.txt", run_ids_file, args.dry_run, env)
     status["validation_status"]["promote_runs"] = "PASS"
     checks.append("object_main.promote_runs.py PASS")
@@ -1202,8 +1274,13 @@ def _object_main_full(args: argparse.Namespace) -> dict[str, Any]:
     status["validation_status"]["validate_manifest_wiring"] = "PASS"
     checks.append("object_main.validate_manifest_wiring.py PASS")
 
-    status["validation_status"]["plot_experiment"] = "SKIPPED"
-    checks.append("object_main.plot_experiment.py SKIPPED")
+    _plot_experiment(experiment_path, paths["validation"] / "object_main_plot_experiment.txt", args.dry_run)
+    status["validation_status"]["plot_experiment"] = "PASS"
+    checks.append("object_main.plot_experiment.py PASS")
+
+    _validate_figures(experiment_path, experiment, paths["validation"] / "object_main_validate_figures.txt", args.dry_run)
+    status["validation_status"]["validate_figures"] = "PASS"
+    checks.append("object_main.validate_figures.py PASS")
 
     decision_json = paths["aggregate"] / "object_main_decision.json"
     _build_stage_decision_with_wiring(experiment_path, stage, run_ids_file, decision_json, wiring_report, args.dry_run)
@@ -1280,7 +1357,7 @@ def _ablation_quick(args: argparse.Namespace) -> dict[str, Any]:
     for key in ("root", "validation", "runs", "aggregate"):
         paths[key].mkdir(parents=True, exist_ok=True)
 
-    run_env = {**os.environ, "HIROUTE_ALLOW_DIRTY_WORKTREE": "1"}
+    run_env = _run_env(allow_dirty_worktree=args.allow_dirty_worktree)
     status = _current_stage_status(stage, requested_matrix, dataset_fp, binary_fp, experiment_fp, {} if stale else previous)
     if not args.force_rerun:
         _seed_run_assignments_from_latest(status, experiment, requested_matrix)
@@ -1467,7 +1544,7 @@ def _ablation_full(args: argparse.Namespace) -> dict[str, Any]:
         if not _compatibility_files_match(quick_experiment_fp, current_quick_fp):
             raise RuntimeError("fingerprint mismatch: ablation_quick baseline config set differs from current full stage")
 
-    run_env = {**os.environ, "HIROUTE_ALLOW_DIRTY_WORKTREE": "1"}
+    run_env = _run_env(allow_dirty_worktree=args.allow_dirty_worktree)
     status = _current_stage_status(stage, requested_matrix, dataset_fp, binary_fp, experiment_fp, {} if stale else previous)
     if not args.force_rerun:
         _seed_run_assignments_from_latest(status, experiment, requested_matrix)
@@ -1594,7 +1671,7 @@ def _ablation_full(args: argparse.Namespace) -> dict[str, Any]:
     status["validation_status"]["validate_manifest_regression"] = "PASS"
     checks.append("ablation.validate_manifest_regression.py PASS")
 
-    env = {**os.environ, "HIROUTE_ALLOW_DIRTY_WORKTREE": "1"}
+    env = _run_env(allow_dirty_worktree=args.allow_dirty_worktree)
     _promote_runs(experiment_path, paths["validation"] / "ablation_promote_runs.txt", run_ids_file, args.dry_run, env)
     status["validation_status"]["promote_runs"] = "PASS"
     checks.append("ablation.promote_runs.py PASS")
@@ -1625,8 +1702,13 @@ def _ablation_full(args: argparse.Namespace) -> dict[str, Any]:
     status["validation_status"]["validate_manifest_wiring"] = "PASS"
     checks.append("ablation.validate_manifest_wiring.py PASS")
 
-    status["validation_status"]["plot_experiment"] = "SKIPPED"
-    checks.append("ablation.plot_experiment.py SKIPPED")
+    _plot_experiment(experiment_path, paths["validation"] / "ablation_plot_experiment.txt", args.dry_run)
+    status["validation_status"]["plot_experiment"] = "PASS"
+    checks.append("ablation.plot_experiment.py PASS")
+
+    _validate_figures(experiment_path, experiment, paths["validation"] / "ablation_validate_figures.txt", args.dry_run)
+    status["validation_status"]["validate_figures"] = "PASS"
+    checks.append("ablation.validate_figures.py PASS")
 
     decision_json = paths["aggregate"] / "ablation_decision.json"
     _build_stage_decision_with_wiring(experiment_path, stage, run_ids_file, decision_json, wiring_report, args.dry_run)
@@ -1702,7 +1784,7 @@ def _generic_full_experiment_stage(
     )
 
     experiment_path, experiment = _load_experiment(experiment_key)
-    run_env = {**os.environ, "HIROUTE_ALLOW_DIRTY_WORKTREE": "1"}
+    run_env = _run_env(allow_dirty_worktree=args.allow_dirty_worktree)
     requested_matrix = [
         {
             "scheme": scheme,
@@ -1791,7 +1873,7 @@ def _generic_full_experiment_stage(
     else:
         checks.append(f"{stage}.validate_manifest_regression.py SKIPPED")
 
-    env = {**os.environ, "HIROUTE_ALLOW_DIRTY_WORKTREE": "1"}
+    env = _run_env(allow_dirty_worktree=args.allow_dirty_worktree)
     _promote_runs(experiment_path, paths["validation"] / f"{stage}_promote_runs.txt", run_ids_file, args.dry_run, env)
     status["validation_status"]["promote_runs"] = "PASS"
     checks.append(f"{stage}.promote_runs.py PASS")
@@ -1810,6 +1892,10 @@ def _generic_full_experiment_stage(
         checks.append(f"{stage}.plot_experiment.py PASS")
     else:
         checks.append(f"{stage}.plot_experiment.py SKIPPED")
+
+    _validate_figures(experiment_path, experiment, paths["validation"] / f"{stage}_validate_figures.txt", args.dry_run)
+    status["validation_status"]["validate_figures"] = "PASS"
+    checks.append(f"{stage}.validate_figures.py PASS")
 
     if status["completed_run_ids"]:
         status["representative_run"] = status["completed_run_ids"][0]
@@ -1948,6 +2034,39 @@ def _diagnostic_object_routing(args: argparse.Namespace) -> dict[str, Any]:
     return status
 
 
+def _run_full_mainline_tail(args: argparse.Namespace, *, known_incomplete_items: str) -> None:
+    _generic_full_experiment_stage(
+        args,
+        stage="routing_main",
+        experiment_key="routing_main",
+        change_scope="Manual routing_main stage after object/ablation recovery.",
+        known_incomplete_items=known_incomplete_items,
+        plot=True,
+    )
+    _generic_full_experiment_stage(
+        args,
+        stage="state_scaling",
+        experiment_key="state_scaling",
+        change_scope="Mainline state_scaling stage after routing recovery.",
+        known_incomplete_items="robustness, paper_freeze" if "paper_freeze" in known_incomplete_items else "robustness",
+        plot=True,
+    )
+    _generic_full_experiment_stage(
+        args,
+        stage="robustness",
+        experiment_key="robustness",
+        change_scope="Mainline robustness stage after scaling promotion.",
+        known_incomplete_items="paper_freeze" if "paper_freeze" in known_incomplete_items else "",
+        plot=True,
+    )
+
+
+def _finalize_full_mainline_figures(stage: str, dry_run: bool) -> None:
+    paths = _stage_paths(stage)
+    paths["validation"].mkdir(parents=True, exist_ok=True)
+    _plot_mainline_figures(paths["validation"] / f"{stage}_plot_main_figures.txt", dry_run)
+
+
 def main() -> int:
     args = parse_args()
     if args.stage not in STAGES:
@@ -1972,7 +2091,25 @@ def main() -> int:
                 experiment_key="routing_main",
                 change_scope="Manual routing_main stage after object/ablation recovery.",
                 known_incomplete_items="state_scaling, robustness, paper_freeze",
-                plot=False,
+                plot=True,
+            )
+        elif args.stage == "state_scaling":
+            _generic_full_experiment_stage(
+                args,
+                stage="state_scaling",
+                experiment_key="state_scaling",
+                change_scope="Mainline state_scaling stage after routing recovery.",
+                known_incomplete_items="robustness, paper_freeze",
+                plot=True,
+            )
+        elif args.stage == "robustness":
+            _generic_full_experiment_stage(
+                args,
+                stage="robustness",
+                experiment_key="robustness",
+                change_scope="Mainline robustness stage after scaling promotion.",
+                known_incomplete_items="paper_freeze",
+                plot=True,
             )
         elif args.stage == "diagnostic_object_routing":
             _diagnostic_object_routing(args)
@@ -1992,14 +2129,8 @@ def main() -> int:
                 _ablation_quick(args)
             if _load_stage_status("ablation_quick").get("decision") == "proceed_full_ablation":
                 _ablation_full(args)
-            _generic_full_experiment_stage(
-                args,
-                stage="routing_main",
-                experiment_key="routing_main",
-                change_scope="Manual routing_main stage after object/ablation recovery.",
-                known_incomplete_items="state_scaling, robustness, paper_freeze",
-                plot=False,
-            )
+            _run_full_mainline_tail(args, known_incomplete_items="paper_freeze")
+            _finalize_full_mainline_figures("full_mainline", args.dry_run)
         elif args.stage == "paper_freeze":
             _stage_paths("paper_freeze")["validation"].mkdir(parents=True, exist_ok=True)
             _run(
@@ -2014,14 +2145,8 @@ def main() -> int:
                 _ablation_quick(args)
             if _load_stage_status("ablation_quick").get("decision") == "proceed_full_ablation":
                 _ablation_full(args)
-            _generic_full_experiment_stage(
-                args,
-                stage="routing_main",
-                experiment_key="routing_main",
-                change_scope="Manual routing_main stage after object/ablation recovery.",
-                known_incomplete_items="state_scaling, robustness",
-                plot=False,
-            )
+            _run_full_mainline_tail(args, known_incomplete_items="")
+            _finalize_full_mainline_figures("paper_freeze", args.dry_run)
 
         if (not args.skip_package or args.package) and args.stage in PACKAGEABLE_STAGES:
             _package_stage(args.stage, args.dry_run)

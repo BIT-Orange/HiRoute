@@ -49,6 +49,35 @@ def _validate_csv(path: Path, columns: list[str]) -> None:
             raise ValueError(f"{path} has no data rows")
 
 
+def _validate_controller_local_index(path: Path) -> None:
+    with path.open("r", newline="", encoding="utf-8") as handle:
+        reader = csv.DictReader(handle)
+        fieldnames = reader.fieldnames or []
+        missing = [
+            column for column in REQUIRED_COLUMNS["controller_local_index_csv"] if column not in fieldnames
+        ]
+        if missing:
+            raise ValueError(f"{path} missing columns: {', '.join(missing)}")
+        rows = list(reader)
+        if not rows:
+            raise ValueError(f"{path} has no data rows")
+        if "ancestor_frontier_ids" not in fieldnames:
+            return
+        for index, row in enumerate(rows, start=2):
+            value = row.get("ancestor_frontier_ids", "")
+            if not value:
+                raise ValueError(f"{path}:{index} has empty ancestor_frontier_ids")
+            tokens = [token for token in value.split(";") if token]
+            if not tokens:
+                raise ValueError(f"{path}:{index} has invalid ancestor_frontier_ids")
+            if tokens[-1] != row.get("cell_id", ""):
+                raise ValueError(
+                    f"{path}:{index} ancestor_frontier_ids must end with the concrete cell_id"
+                )
+            if len(tokens) != len(set(tokens)):
+                raise ValueError(f"{path}:{index} ancestor_frontier_ids contains duplicates")
+
+
 def _resolve(path_str: str) -> Path:
     path = Path(path_str)
     return path if path.is_absolute() else repo_root() / path
@@ -60,6 +89,9 @@ def main() -> int:
     topology = load_json_yaml(repo_root() / args.topology_config)
 
     for key, columns in REQUIRED_COLUMNS.items():
+        if key == "controller_local_index_csv":
+            _validate_controller_local_index(output_path(manifest, key))
+            continue
         _validate_csv(output_path(manifest, key), columns)
     if manifest["dataset_id"] == "smartcity_v2":
         _validate_csv(
@@ -72,7 +104,7 @@ def main() -> int:
         )
         _validate_csv(output_path(manifest, "qrels_object_csv"), ["domain_id"])
         _validate_csv(output_path(manifest, "hslsa_csv"), ["semantic_tag_bitmap"])
-    if manifest["dataset_id"] == "smartcity_v3":
+    if manifest["dataset_id"] in {"smartcity_v3", "smartcity"}:
         _validate_csv(
             output_path(manifest, "objects_csv"),
             [
@@ -121,7 +153,7 @@ def main() -> int:
         _validate_csv(_resolve(bundle["queries_csv"]), ["query_id", "split", "workload_tier", "intent_facet"])
         _validate_csv(_resolve(bundle["qrels_object_csv"]), ["query_id", "object_id", "domain_id", "relevance"])
         qrels_domain_fields = ["query_id", "domain_id", "is_relevant_domain"]
-        if manifest["dataset_id"] == "smartcity_v3":
+        if manifest["dataset_id"] in {"smartcity_v3", "smartcity"}:
             qrels_domain_fields.extend(["relevance_strength", "dominant_intent_match"])
         _validate_csv(_resolve(bundle["qrels_domain_csv"]), qrels_domain_fields)
         _validate_csv(_resolve(bundle["query_embedding_index_csv"]), ["query_id", "query_text_id", "embedding_row"])
@@ -136,10 +168,11 @@ def main() -> int:
     if audit_result.returncode != 0:
         raise ValueError(audit_result.stdout or audit_result.stderr)
 
-    if manifest["dataset_id"] == "smartcity_v3":
-        audit_path = repo_root() / "data" / "processed" / "eval" / "workload_audit_v3.json"
+    if manifest["dataset_id"] in {"smartcity_v3", "smartcity"}:
+        audit_filename = "workload_audit_mainline.json" if manifest["dataset_id"] == "smartcity" else "workload_audit_v3.json"
+        audit_path = repo_root() / "data" / "processed" / "eval" / audit_filename
         if not audit_path.exists():
-            raise ValueError("workload_audit_v3.json was not generated")
+            raise ValueError(f"{audit_filename} was not generated")
 
     print("OK")
     return 0

@@ -20,11 +20,17 @@ OUTPUT_FIELDS = [
     "topology_id",
     "budget",
     "manifest_size",
+    "run_count",
+    "query_count",
     "mean_success_at_1",
+    "first_fetch_relevant_rate",
+    "manifest_rescue_rate",
+    "mean_manifest_fetch_index_success_only",
     "wrong_object_rate",
     "mean_discovery_bytes",
     "mean_manifest_hit_at_5",
     "mean_latency_ms",
+    "source_run_ids",
 ]
 
 
@@ -45,12 +51,20 @@ def main() -> int:
         return 1
 
     active_sweep_field = sweep_field(experiment)
+    frame = frame.copy()
+    frame["success_at_1"] = frame["success_at_1"].astype(float)
+    frame["first_fetch_relevant"] = frame.get("first_fetch_relevant", 0)
+    frame["first_fetch_relevant"] = frame["first_fetch_relevant"].replace("", 0).astype(float)
+    frame["manifest_fetch_index"] = frame.get("manifest_fetch_index", 0)
+    frame["manifest_fetch_index"] = frame["manifest_fetch_index"].replace("", 0).astype(float)
+    frame["manifest_rescue"] = ((frame["success_at_1"] == 1) & (frame["manifest_fetch_index"] > 0)).astype(float)
     frame["discovery_bytes_total"] = frame["discovery_tx_bytes"] + frame["discovery_rx_bytes"]
     output_rows = []
     for keys, group in frame.groupby(
         ["registry_scheme", "registry_topology_id", active_sweep_field], sort=False
     ):
         scheme, topology_id, sweep_value = keys
+        run_ids = sorted(group["run_id"].unique().tolist())
         budget = int(sweep_value) if active_sweep_field == "budget" else int(group["budget"].max())
         manifest_size = int(sweep_value) if active_sweep_field == "manifest_size" else int(group["manifest_size"].max())
         wrong_object_rate = (group["failure_type"] == "wrong_object").mean()
@@ -61,11 +75,22 @@ def main() -> int:
                 "topology_id": topology_id,
                 "budget": budget,
                 "manifest_size": manifest_size,
+                "run_count": len(run_ids),
+                "query_count": int(len(group)),
                 "mean_success_at_1": round(group["success_at_1"].mean(), 6),
+                "first_fetch_relevant_rate": round(group["first_fetch_relevant"].mean(), 6),
+                "manifest_rescue_rate": round(group["manifest_rescue"].mean(), 6),
+                "mean_manifest_fetch_index_success_only": round(
+                    group.loc[group["success_at_1"] == 1, "manifest_fetch_index"].mean()
+                    if (group["success_at_1"] == 1).any()
+                    else 0.0,
+                    6,
+                ),
                 "wrong_object_rate": round(float(wrong_object_rate), 6),
                 "mean_discovery_bytes": round(group["discovery_bytes_total"].mean(), 6),
                 "mean_manifest_hit_at_5": round(group["manifest_hit_at_5"].mean(), 6),
                 "mean_latency_ms": round(group["latency_ms"].mean(), 6),
+                "source_run_ids": "|".join(run_ids),
             }
         )
 

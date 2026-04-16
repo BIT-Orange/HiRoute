@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -83,6 +84,24 @@ SCRIPT_MAP = {
     "exp_robustness_v3_compact": [
         "scripts/eval/build_robustness_summary.py",
     ],
+    "routing_main": [
+        "scripts/eval/aggregate_query_metrics.py",
+        "scripts/eval/build_candidate_shrinkage.py",
+        "scripts/eval/build_deadline_summary.py",
+    ],
+    "object_main": [
+        "scripts/eval/build_object_main_manifest_sweep.py",
+        "scripts/eval/build_failure_breakdown.py",
+    ],
+    "ablation": [
+        "scripts/eval/build_ablation_summary.py",
+    ],
+    "state_scaling": [
+        "scripts/eval/build_state_scaling_summary.py",
+    ],
+    "robustness": [
+        "scripts/eval/build_robustness_summary.py",
+    ],
 }
 
 
@@ -90,6 +109,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--experiment", required=True, type=Path)
     parser.add_argument("--registry-source", choices=["runs", "promoted"], default="promoted")
+    parser.add_argument("--run-ids-file", type=Path)
     return parser.parse_args()
 
 
@@ -98,6 +118,12 @@ def main() -> int:
     experiment_path = args.experiment if args.experiment.is_absolute() else repo_root() / args.experiment
     experiment = load_json_yaml(experiment_path)
     scripts = SCRIPT_MAP.get(experiment["experiment_id"], ["scripts/eval/aggregate_query_metrics.py"])
+    env = os.environ.copy()
+    if args.run_ids_file:
+        run_ids_path = args.run_ids_file if args.run_ids_file.is_absolute() else repo_root() / args.run_ids_file
+        env["HIROUTE_RUN_IDS_FILE"] = str(run_ids_path)
+    else:
+        env.pop("HIROUTE_RUN_IDS_FILE", None)
 
     for script in scripts:
         result = subprocess.run(
@@ -106,6 +132,7 @@ def main() -> int:
             check=False,
             capture_output=True,
             text=True,
+            env=env,
         )
         if result.returncode != 0:
             sys.stderr.write(result.stderr or result.stdout)

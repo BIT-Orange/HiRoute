@@ -2,24 +2,25 @@
 
 ## Text
 
-The current corrected ablation no longer supports a strong causal superiority claim. Instead it
-shows that `flat_semantic_only` is insufficient by itself, while `predicates_only`,
-`predicates_plus_flat`, and `full_hiroute` all reach full success on the present object-hard
-bundle. This indicates the workload must be hardened before Figure 10 can support a
-publication-grade ablation claim.
+The active ablation claim is now bound to the mainline `ablation` rerun rather than to archived
+legacy figures. Figure 10 stays a mechanism figure at `manifest_size=1`, and its final wording
+must wait for the refreshed mainline slice before it can assert a stable gap between
+`full_hiroute` and `predicates_plus_flat`.
 
 ## Supported by
 
-- `results/figures/fig_ablation.pdf`
+- `results/figures/mainline/fig_ablation_summary.pdf`
 
 ## Aggregates
 
-- `results/aggregate/ablation_summary.csv`
+- `results/aggregate/mainline/ablation_summary.csv`
 
 ## Source runs
 
-- Promoted runs for `exp_ablation_v2`
+- Promoted runs for `ablation`
+- Legacy `exp_ablation_v2` and `exp_ablation_v3_compact` provenance is mapped through
+  `runs/registry/experiment_lineage.csv`
 
 ## Status
 
-revised
+pending mainline rerun

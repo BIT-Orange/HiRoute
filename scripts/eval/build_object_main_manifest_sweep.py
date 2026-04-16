@@ -27,9 +27,14 @@ OUTPUT_FIELDS = [
     "topology_id",
     "budget",
     "manifest_size",
+    "run_count",
     "query_count",
     "mean_success_at_1",
     "ci_success_at_1",
+    "first_fetch_relevant_rate",
+    "ci_first_fetch_relevant_rate",
+    "manifest_rescue_rate",
+    "mean_manifest_fetch_index_success_only",
     "wrong_object_rate",
     "ci_wrong_object_rate",
     "best_object_chosen_given_relevant_domain",
@@ -66,8 +71,14 @@ def main() -> int:
         return float(row["success_at_1"]) if str(row["final_domain_id"]) in relevant_domains else float("nan")
 
     frame = frame.copy()
+    frame["success_at_1"] = frame["success_at_1"].astype(float)
+    frame["first_fetch_relevant"] = frame.get("first_fetch_relevant", 0)
+    frame["first_fetch_relevant"] = frame["first_fetch_relevant"].replace("", 0).astype(float)
+    frame["manifest_fetch_index"] = frame.get("manifest_fetch_index", 0)
+    frame["manifest_fetch_index"] = frame["manifest_fetch_index"].replace("", 0).astype(float)
     frame["best_object_chosen_given_relevant_domain"] = frame.apply(_best_object_given_domain, axis=1)
     frame["wrong_object_indicator"] = (frame["failure_type"] == "wrong_object").astype(float)
+    frame["manifest_rescue"] = ((frame["success_at_1"] == 1) & (frame["manifest_fetch_index"] > 0)).astype(float)
 
     output_rows = []
     for keys, group in frame.groupby(
@@ -83,10 +94,22 @@ def main() -> int:
                 "topology_id": topology_id,
                 "budget": int(group["budget"].max()),
                 "manifest_size": int(manifest_size),
+                "run_count": len(run_ids),
                 "query_count": int(len(group)),
                 "mean_success_at_1": round(group["success_at_1"].mean(), 6),
                 "ci_success_at_1": round(
                     bootstrap_mean_ci(group["success_at_1"], bootstrap_replicates, seed=10), 6
+                ),
+                "first_fetch_relevant_rate": round(group["first_fetch_relevant"].mean(), 6),
+                "ci_first_fetch_relevant_rate": round(
+                    bootstrap_mean_ci(group["first_fetch_relevant"], bootstrap_replicates, seed=13), 6
+                ),
+                "manifest_rescue_rate": round(group["manifest_rescue"].mean(), 6),
+                "mean_manifest_fetch_index_success_only": round(
+                    group.loc[group["success_at_1"] == 1, "manifest_fetch_index"].mean()
+                    if (group["success_at_1"] == 1).any()
+                    else 0.0,
+                    6,
                 ),
                 "wrong_object_rate": round(group["wrong_object_indicator"].mean(), 6),
                 "ci_wrong_object_rate": round(

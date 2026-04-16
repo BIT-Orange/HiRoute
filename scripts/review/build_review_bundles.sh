@@ -7,6 +7,9 @@ OUTPUT_ROOT="${1:-$REPO_ROOT/review_bundles}"
 
 mkdir -p "$OUTPUT_ROOT"
 
+printf 'WARNING: scripts/review/build_review_bundles.sh is legacy archive tooling only.\n' >&2
+printf 'WARNING: use tools/run_mainline_review_stage.sh and tools/package_review_bundle.sh for active mainline review bundles.\n' >&2
+
 copy_path() {
   local bundle_root="$1"
   local rel_path="$2"
