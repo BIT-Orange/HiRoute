@@ -82,6 +82,10 @@ BINARY_FINGERPRINT_FILES = [
     "ns-3/src/ndnSIM/examples/hiroute-scenario-common.hpp",
 ]
 
+EXPERIMENT_RUNTIME_FINGERPRINT_FILES = [
+    "scripts/run/run_experiment.py",
+]
+
 OBJECT_MAIN_QUICK_MATRIX = [
     {"scheme": "hiroute", "manifest_size": 1, "seed": 1},
     {"scheme": "hiroute", "manifest_size": 2, "seed": 1},
@@ -194,6 +198,7 @@ def _normalize_stage_status(status: dict[str, Any]) -> dict[str, Any]:
     normalized.setdefault("validation_status", {})
     normalized.setdefault("aggregate_outputs", [])
     normalized.setdefault("experiment_fingerprint", {})
+    normalized.setdefault("runtime_fingerprint", {})
     normalized.setdefault("inherited_runs", [])
     normalized.setdefault("newly_executed_runs", [])
     normalized.setdefault("skipped_runs", [])
@@ -224,6 +229,49 @@ def _sha256(paths: list[str]) -> dict[str, Any]:
     return {"sha256": hasher.hexdigest(), "files": resolved_paths}
 
 
+def _normalized_matrix(experiment: dict[str, Any], matrix: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return sorted(
+        [
+            {
+                "scheme": str(entry.get("scheme", "")),
+                "topology_id": str(entry.get("topology_id", experiment.get("topology_id", ""))),
+                "seed": int(entry.get("seed", 1)),
+                "manifest_size": int(entry.get("manifest_size", 0)),
+                "budget": int(entry.get("budget", 0)),
+                "variant": str(entry.get("variant", "")),
+            }
+            for entry in matrix
+        ],
+        key=_assignment_key,
+    )
+
+
+def _config_dependency_files(node: Any) -> list[str]:
+    discovered: set[str] = set()
+
+    def _visit(value: Any) -> None:
+        if isinstance(value, dict):
+            for nested in value.values():
+                _visit(nested)
+            return
+        if isinstance(value, list):
+            for nested in value:
+                _visit(nested)
+            return
+        if not isinstance(value, str):
+            return
+        candidate = _resolve(value)
+        if not candidate.exists() or not candidate.is_file():
+            return
+        try:
+            discovered.add(str(candidate.relative_to(repo_root())))
+        except ValueError:
+            return
+
+    _visit(node)
+    return sorted(discovered)
+
+
 def _experiment_fingerprint(experiment_path: Path, experiment: dict[str, Any], matrix: list[dict[str, Any]]) -> dict[str, Any]:
     baseline_configs = experiment.get("configs", {}).get("baselines", {})
     schemes = sorted(
@@ -244,26 +292,44 @@ def _experiment_fingerprint(experiment_path: Path, experiment: dict[str, Any], m
         hasher.update(path.read_bytes())
         hasher.update(b"\0")
 
-    normalized_matrix = sorted(
-        [
-            {
-                "scheme": str(entry.get("scheme", "")),
-                "topology_id": str(entry.get("topology_id", experiment.get("topology_id", ""))),
-                "seed": int(entry.get("seed", 1)),
-                "manifest_size": int(entry.get("manifest_size", 0)),
-                "budget": int(entry.get("budget", 0)),
-                "variant": str(entry.get("variant", "")),
-            }
-            for entry in matrix
-        ],
-        key=_assignment_key,
-    )
+    normalized_matrix = _normalized_matrix(experiment, matrix)
     hasher.update(json.dumps(normalized_matrix, sort_keys=True).encode("utf-8"))
     return {
         "sha256": hasher.hexdigest(),
         "files": files,
         "matrix": normalized_matrix,
     }
+
+
+def _runtime_fingerprint(experiment_path: Path, experiment: dict[str, Any], matrix: list[dict[str, Any]]) -> dict[str, Any]:
+    files = {
+        str(experiment_path.relative_to(repo_root())),
+        *EXPERIMENT_RUNTIME_FINGERPRINT_FILES,
+        *_config_dependency_files(experiment.get("configs", {})),
+    }
+    normalized_files = sorted(files)
+    hasher = hashlib.sha256()
+    for raw in normalized_files:
+        path = _resolve(raw)
+        hasher.update(raw.encode("utf-8"))
+        hasher.update(b"\0")
+        hasher.update(path.read_bytes())
+        hasher.update(b"\0")
+    normalized_matrix = _normalized_matrix(experiment, matrix)
+    hasher.update(json.dumps(normalized_matrix, sort_keys=True).encode("utf-8"))
+    return {
+        "sha256": hasher.hexdigest(),
+        "files": normalized_files,
+        "matrix": normalized_matrix,
+    }
+
+
+def _runtime_fingerprint_changed(previous: dict[str, Any], current: dict[str, Any]) -> bool:
+    previous_fp = previous.get("runtime_fingerprint", {}) or {}
+    previous_sha = str(previous_fp.get("sha256", "")).strip()
+    if not previous_sha:
+        return False
+    return previous_sha != current["sha256"]
 
 
 def _stage_root(stage: str) -> Path:
@@ -472,6 +538,7 @@ def _current_stage_status(
     dataset_fingerprint: dict[str, Any],
     binary_fingerprint: dict[str, Any],
     experiment_fingerprint: dict[str, Any],
+    runtime_fingerprint: dict[str, Any],
     previous: dict[str, Any],
 ) -> dict[str, Any]:
     previous = _normalize_stage_status(previous)
@@ -483,6 +550,7 @@ def _current_stage_status(
         "dataset_fingerprint": dataset_fingerprint,
         "binary_fingerprint": binary_fingerprint,
         "experiment_fingerprint": experiment_fingerprint,
+        "runtime_fingerprint": runtime_fingerprint,
         "requested_matrix": requested_matrix,
         "run_assignments": previous.get("run_assignments", {}),
         "completed_run_ids": previous.get("completed_run_ids", []),
@@ -1077,11 +1145,13 @@ def _object_main_quick(args: argparse.Namespace) -> dict[str, Any]:
         for entry in OBJECT_MAIN_QUICK_MATRIX
     ]
     experiment_fp = _experiment_fingerprint(experiment_path, experiment, requested_matrix)
+    runtime_fp = _runtime_fingerprint(experiment_path, experiment, requested_matrix)
     stale = (
         args.force_rerun
         or previous.get("dataset_fingerprint", {}).get("sha256") != dataset_fp["sha256"]
         or previous.get("binary_fingerprint", {}).get("sha256") != binary_fp["sha256"]
         or previous.get("experiment_fingerprint", {}).get("sha256") != experiment_fp["sha256"]
+        or _runtime_fingerprint_changed(previous, runtime_fp)
     )
     if stale and not args.dry_run:
         _clear_stage_for_rerun(paths)
@@ -1089,7 +1159,12 @@ def _object_main_quick(args: argparse.Namespace) -> dict[str, Any]:
         paths[key].mkdir(parents=True, exist_ok=True)
 
     run_env = _run_env(allow_dirty_worktree=args.allow_dirty_worktree)
-    status = _current_stage_status(stage, requested_matrix, dataset_fp, binary_fp, experiment_fp, {} if stale else previous)
+    status = _current_stage_status(stage, requested_matrix, dataset_fp, binary_fp, experiment_fp, runtime_fp, {} if stale else previous)
+    if not args.force_rerun:
+        _seed_run_assignments_from_latest(status, experiment, requested_matrix)
+    status["inherited_runs"] = []
+    status["newly_executed_runs"] = []
+    status["skipped_runs"] = []
     checks = [
         "completed_experiments: object_main_quick",
         "decision: paused",
@@ -1105,33 +1180,34 @@ def _object_main_quick(args: argparse.Namespace) -> dict[str, Any]:
     status["validation_status"]["validate_run"] = "PASS"
     checks.append("object_main_quick.validate_run.py PASS")
 
+    pending_entries: list[dict[str, Any]] = []
     for entry in requested_matrix:
         key = _assignment_key(entry)
         existing_run_id = "" if args.force_rerun else _matrix_skip_ok(status, entry)
         if existing_run_id:
+            status["run_assignments"][key] = existing_run_id
+            status["skipped_runs"].append(existing_run_id)
             _copy_run_to_stage(existing_run_id, paths["runs"], args.dry_run)
             continue
-        output = _run_experiment(
-            experiment_path,
-            paths["validation"] / f"{key.replace('|', '__').replace('=', '-')}.txt",
-            args.dry_run,
-            args.mode,
-            [
-                "--scheme",
-                entry["scheme"],
-                "--seed",
-                str(entry["seed"]),
-                "--manifest-size",
-                str(entry["manifest_size"]),
-            ],
-            env=run_env,
-        )
-        if args.dry_run:
-            status["run_assignments"][key] = "DRY_RUN"
-            continue
-        run_id = _extract_run_id(output)
+        pending_entries.append(entry)
+
+    executed_run_ids = _run_experiment_entries_parallel(
+        stage=stage,
+        experiment_path=experiment_path,
+        pending_entries=pending_entries,
+        validation_dir=paths["validation"],
+        dry_run=args.dry_run,
+        mode=args.mode,
+        max_workers=args.max_workers,
+        env=run_env,
+    )
+    for entry in pending_entries:
+        key = _assignment_key(entry)
+        run_id = executed_run_ids[key]
         status["run_assignments"][key] = run_id
-        _copy_run_to_stage(run_id, paths["runs"], args.dry_run)
+        if run_id != "DRY_RUN":
+            status["newly_executed_runs"].append(run_id)
+            _copy_run_to_stage(run_id, paths["runs"], args.dry_run)
 
     completed_run_ids = [
         run_id
@@ -1241,7 +1317,9 @@ def _object_main_full(args: argparse.Namespace) -> dict[str, Any]:
         for manifest_size in experiment["manifest_sizes"]
     ]
     experiment_fp = _experiment_fingerprint(experiment_path, experiment, requested_matrix)
+    runtime_fp = _runtime_fingerprint(experiment_path, experiment, requested_matrix)
     stale = stale or previous.get("experiment_fingerprint", {}).get("sha256") != experiment_fp["sha256"]
+    stale = stale or _runtime_fingerprint_changed(previous, runtime_fp)
     if stale and not args.dry_run:
         _clear_stage_for_rerun(paths)
     for key in ("root", "validation", "runs", "aggregate"):
@@ -1278,7 +1356,7 @@ def _object_main_full(args: argparse.Namespace) -> dict[str, Any]:
             raise RuntimeError("fingerprint mismatch: object_main_quick baseline config set differs from current full stage")
 
     run_env = _run_env(allow_dirty_worktree=args.allow_dirty_worktree)
-    status = _current_stage_status(stage, requested_matrix, dataset_fp, binary_fp, experiment_fp, {} if stale else previous)
+    status = _current_stage_status(stage, requested_matrix, dataset_fp, binary_fp, experiment_fp, runtime_fp, {} if stale else previous)
     if not args.force_rerun:
         _seed_run_assignments_from_latest(status, experiment, requested_matrix)
     status["inherited_runs"] = []
@@ -1493,11 +1571,13 @@ def _ablation_quick(args: argparse.Namespace) -> dict[str, Any]:
         for entry in ABLATION_QUICK_MATRIX
     ]
     experiment_fp = _experiment_fingerprint(experiment_path, experiment, requested_matrix)
+    runtime_fp = _runtime_fingerprint(experiment_path, experiment, requested_matrix)
     stale = (
         args.force_rerun
         or previous.get("dataset_fingerprint", {}).get("sha256") != dataset_fp["sha256"]
         or previous.get("binary_fingerprint", {}).get("sha256") != binary_fp["sha256"]
         or previous.get("experiment_fingerprint", {}).get("sha256") != experiment_fp["sha256"]
+        or _runtime_fingerprint_changed(previous, runtime_fp)
     )
     if stale and not args.dry_run:
         _clear_stage_for_rerun(paths)
@@ -1505,7 +1585,7 @@ def _ablation_quick(args: argparse.Namespace) -> dict[str, Any]:
         paths[key].mkdir(parents=True, exist_ok=True)
 
     run_env = _run_env(allow_dirty_worktree=args.allow_dirty_worktree)
-    status = _current_stage_status(stage, requested_matrix, dataset_fp, binary_fp, experiment_fp, {} if stale else previous)
+    status = _current_stage_status(stage, requested_matrix, dataset_fp, binary_fp, experiment_fp, runtime_fp, {} if stale else previous)
     if not args.force_rerun:
         _seed_run_assignments_from_latest(status, experiment, requested_matrix)
     status["inherited_runs"] = []
@@ -1526,6 +1606,7 @@ def _ablation_quick(args: argparse.Namespace) -> dict[str, Any]:
     status["validation_status"]["validate_run"] = "PASS"
     checks.append("ablation_quick.validate_run.py PASS")
 
+    pending_entries: list[dict[str, Any]] = []
     for entry in requested_matrix:
         key = _assignment_key(entry)
         existing_run_id = "" if args.force_rerun else _matrix_skip_ok(status, entry)
@@ -1534,28 +1615,25 @@ def _ablation_quick(args: argparse.Namespace) -> dict[str, Any]:
             status["skipped_runs"].append(existing_run_id)
             _copy_run_to_stage(existing_run_id, paths["runs"], args.dry_run)
             continue
-        output = _run_experiment(
-            experiment_path,
-            paths["validation"] / f"{key.replace('|', '__').replace('=', '-')}.txt",
-            args.dry_run,
-            args.mode,
-            [
-                "--scheme",
-                entry["scheme"],
-                "--seed",
-                str(entry["seed"]),
-                "--manifest-size",
-                str(entry["manifest_size"]),
-            ],
-            env=run_env,
-        )
-        if args.dry_run:
-            status["run_assignments"][key] = "DRY_RUN"
-            continue
-        run_id = _extract_run_id(output)
+        pending_entries.append(entry)
+
+    executed_run_ids = _run_experiment_entries_parallel(
+        stage=stage,
+        experiment_path=experiment_path,
+        pending_entries=pending_entries,
+        validation_dir=paths["validation"],
+        dry_run=args.dry_run,
+        mode=args.mode,
+        max_workers=args.max_workers,
+        env=run_env,
+    )
+    for entry in pending_entries:
+        key = _assignment_key(entry)
+        run_id = executed_run_ids[key]
         status["run_assignments"][key] = run_id
-        status["newly_executed_runs"].append(run_id)
-        _copy_run_to_stage(run_id, paths["runs"], args.dry_run)
+        if run_id != "DRY_RUN":
+            status["newly_executed_runs"].append(run_id)
+            _copy_run_to_stage(run_id, paths["runs"], args.dry_run)
 
     status["completed_run_ids"] = sorted(
         {
@@ -1655,7 +1733,9 @@ def _ablation_full(args: argparse.Namespace) -> dict[str, Any]:
         for manifest_size in experiment["manifest_sizes"]
     ]
     experiment_fp = _experiment_fingerprint(experiment_path, experiment, requested_matrix)
+    runtime_fp = _runtime_fingerprint(experiment_path, experiment, requested_matrix)
     stale = stale or previous.get("experiment_fingerprint", {}).get("sha256") != experiment_fp["sha256"]
+    stale = stale or _runtime_fingerprint_changed(previous, runtime_fp)
     if stale and not args.dry_run:
         _clear_stage_for_rerun(paths)
     for key in ("root", "validation", "runs", "aggregate"):
@@ -1692,7 +1772,7 @@ def _ablation_full(args: argparse.Namespace) -> dict[str, Any]:
             raise RuntimeError("fingerprint mismatch: ablation_quick baseline config set differs from current full stage")
 
     run_env = _run_env(allow_dirty_worktree=args.allow_dirty_worktree)
-    status = _current_stage_status(stage, requested_matrix, dataset_fp, binary_fp, experiment_fp, {} if stale else previous)
+    status = _current_stage_status(stage, requested_matrix, dataset_fp, binary_fp, experiment_fp, runtime_fp, {} if stale else previous)
     if not args.force_rerun:
         _seed_run_assignments_from_latest(status, experiment, requested_matrix)
     status["inherited_runs"] = []
@@ -1931,12 +2011,14 @@ def _generic_full_experiment_stage(
     run_env = _run_env(allow_dirty_worktree=args.allow_dirty_worktree)
     requested_matrix = _generic_requested_matrix(experiment)
     experiment_fp = _experiment_fingerprint(experiment_path, experiment, requested_matrix)
+    runtime_fp = _runtime_fingerprint(experiment_path, experiment, requested_matrix)
     stale = stale or previous.get("experiment_fingerprint", {}).get("sha256") != experiment_fp["sha256"]
+    stale = stale or _runtime_fingerprint_changed(previous, runtime_fp)
     if stale and not args.dry_run:
         _clear_stage_for_rerun(paths)
     for key in ("root", "validation", "runs", "aggregate"):
         paths[key].mkdir(parents=True, exist_ok=True)
-    status = _current_stage_status(stage, requested_matrix, dataset_fp, binary_fp, experiment_fp, {} if stale else previous)
+    status = _current_stage_status(stage, requested_matrix, dataset_fp, binary_fp, experiment_fp, runtime_fp, {} if stale else previous)
     checks = [
         f"completed_experiments: {stage}",
         "decision: completed",
@@ -2046,7 +2128,7 @@ def _source_sync(args: argparse.Namespace) -> dict[str, Any]:
         force_rebuild_dataset=args.force_rebuild_dataset,
         force_rebuild_binary=args.force_rebuild_binary,
     )
-    status = _current_stage_status(stage, [], dataset_fp, binary_fp, {}, {})
+    status = _current_stage_status(stage, [], dataset_fp, binary_fp, {}, {}, {})
     status["decision"] = "completed"
     checks = [
         "completed_experiments: source_sync",
@@ -2092,7 +2174,7 @@ def _diagnostic_object_routing(args: argparse.Namespace) -> dict[str, Any]:
         force_rebuild_dataset=args.force_rebuild_dataset,
         force_rebuild_binary=args.force_rebuild_binary,
     )
-    status = _current_stage_status(stage, [], dataset_fp, binary_fp, {}, {})
+    status = _current_stage_status(stage, [], dataset_fp, binary_fp, {}, {}, {})
     status["decision"] = "completed"
     checks = [
         "completed_experiments: diagnostic_object_routing",

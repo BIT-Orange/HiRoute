@@ -28,9 +28,9 @@ Use `tools/run_mainline_review_stage.sh` as the only active orchestration entryp
 
 ```bash
 tools/run_mainline_review_stage.sh source_sync
-tools/run_mainline_review_stage.sh object_ablation_routing --max-workers 1
-tools/run_mainline_review_stage.sh full_mainline --max-workers 1 --force-rerun
-tools/run_mainline_review_stage.sh paper_freeze --max-workers 1
+tools/run_mainline_review_stage.sh object_ablation_routing --max-workers 4
+tools/run_mainline_review_stage.sh full_mainline --max-workers 4
+tools/run_mainline_review_stage.sh paper_freeze --max-workers 4
 ```
 
 Dry-run must print the exact command order without mutating the repo:
@@ -38,7 +38,7 @@ Dry-run must print the exact command order without mutating the repo:
 ```bash
 tools/run_mainline_review_stage.sh source_sync --dry-run
 tools/run_mainline_review_stage.sh object_ablation_routing --dry-run
-tools/run_mainline_review_stage.sh full_mainline --dry-run --max-workers 1 --force-rerun
+tools/run_mainline_review_stage.sh full_mainline --dry-run --max-workers 4
 ```
 
 `full_mainline` is the only official five-experiment entrypoint. It must execute, in order:
@@ -53,12 +53,14 @@ tools/run_mainline_review_stage.sh full_mainline --dry-run --max-workers 1 --for
 
 The stage runner does not set `HIROUTE_ALLOW_DIRTY_WORKTREE` unless `--allow-dirty-worktree` is passed explicitly. Official reruns should omit that flag.
 
+The stage runner now maintains experiment runtime fingerprints. When the corresponding runtime source/config has not changed, `full_mainline` reuses completed runs and only refreshes stage validations, aggregates, and figures. Use `--force-rerun` only when you explicitly want a from-scratch rerun of every assignment.
+
 ## Gate order per experiment
 
 For `object_main`, `ablation`, `routing_main`, `state_scaling`, and `robustness`, the stage runner applies the same serial gates:
 
 1. `tools/validate_run.py --mode dry`
-2. `scripts/run/run_experiment_matrix.py` with `--max-workers 1`
+2. `scripts/run/run_experiment_matrix.py` with host-tuned `--max-workers`
 3. `tools/validate_runtime_slice.py`
 4. `tools/validate_manifest_regression.py` for `object_main` and `ablation`
 5. `scripts/eval/promote_runs.py`
@@ -79,8 +81,12 @@ Figure notes and the main paper text stay in `pending rerun` language until gate
 
 ## Rerun order
 
-1. `source_sync`
-2. `full_mainline --force-rerun --max-workers 1`
+1. Incremental refresh:
+   `source_sync`
+   `full_mainline --max-workers 4`
+2. Full fresh rerun:
+   `source_sync`
+   `full_mainline --force-rerun --max-workers 4`
 
 ## Review bundles
 
