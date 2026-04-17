@@ -54,3 +54,12 @@
 - Recast Figure 10 as a manifest=`1` ablation figure, which restores a paper-grade mechanism story under tight fallback.
 - Updated the paper notes and figure registry so Figure 4, Figure 5, and Figure 10 now reflect the actual compact promoted results instead of the earlier v2 roles.
 - Expanded the compact routing baseline set to include `predicates_only` and `random_admissible`, so the next Figure 4 rerun can separate hard-filter-only behavior, admissible random control, and hierarchical semantic routing.
+
+## 2026-04-17
+
+- Split the mainline stage freshness model into `simulation_fingerprint` versus `stage_contract_fingerprint`, so unchanged ndnSIM inputs now reuse completed runs while contract-only changes refresh validations, aggregates, and figures without rerunning simulation.
+- Formalized `state_scaling` as a `state_only` experiment, updated `validate_runtime_slice.py` and `validate_aggregate_traceability.py` accordingly, and promoted the existing `20260416_134544` scaling runs without rerunning ndnSIM.
+- Reran the official `robustness` stage on the mainline compact topology with parallel dispatch; all four scenario assignments completed, promoted, aggregated, and rendered successfully.
+- Fixed the mainline figure renderer so `plot_main_figures.py` no longer crashes on duplicate per-scheme rows in `routing_support.csv` / `candidate_shrinkage.csv`; the total `full_mainline` refresh now completes end-to-end.
+- The current mainline gate state is: `object_main = ready_for_main_figure`, `ablation = ready_for_support_figure`, `routing_main = completed`, `state_scaling = completed`, `robustness = completed`.
+- The refreshed Route B evidence remains consistent with the implementation-bound paper story: object-level terminal success is strong, first-fetch correctness stays materially below terminal success for HiRoute, manifest rescue is still invariant in `object_main` / `ablation`, and the ablation mechanism ordering is clean even though cost ordering is not.
