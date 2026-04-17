@@ -552,6 +552,11 @@ def plot_candidate_shrinkage() -> None:
         _placeholder("fig_candidate_shrinkage.pdf", "Figure 6", "Awaiting aggregate data")
         return
 
+    selected_budget = _selected_budget(16)
+    if "budget" in frame.columns and frame["budget"].nunique() > 1:
+        if selected_budget in set(frame["budget"]):
+            frame = frame[frame["budget"] == selected_budget].copy()
+
     fig, axes = plt.subplots(1, 2, figsize=(10.0, 3.9), gridspec_kw={"width_ratios": [1.6, 1.0]})
     left, right = axes
 
@@ -579,10 +584,21 @@ def plot_candidate_shrinkage() -> None:
 
     main_frame = _read_csv(_aggregate_path(_routing_support_aggregate()))
     main_frame = main_frame[main_frame["scheme"] != "exact"].copy()
-    if CURRENT_EXPERIMENT and CURRENT_EXPERIMENT.get("budgets"):
-        selected_budget = _selected_budget()
-        if selected_budget:
+    if "budget" in main_frame.columns and main_frame["budget"].nunique() > 1:
+        if selected_budget in set(main_frame["budget"]):
             main_frame = main_frame[main_frame["budget"] == selected_budget].copy()
+    if main_frame.empty:
+        _placeholder("fig_candidate_shrinkage.pdf", "Figure 6", "No routing-support slice at the default budget")
+        return
+    main_frame = (
+        main_frame.groupby("scheme", as_index=False)
+        .agg(
+            {
+                "mean_num_remote_probes": "mean",
+                "ci_num_remote_probes": "mean",
+            }
+        )
+    )
     ordered_schemes = [scheme for scheme in MAIN_SCHEME_ORDER if scheme in set(main_frame["scheme"])]
     probe_rows = main_frame.set_index("scheme").reindex(ordered_schemes).dropna(subset=["mean_num_remote_probes"])
     right.bar(
