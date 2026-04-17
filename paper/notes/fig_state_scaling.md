@@ -4,7 +4,7 @@
 
 - figure number: Figure 8
 - label: `fig:state`
-- caption target: `Mainline routing-state scaling under increasing object count and domain count. Placeholder until promoted mainline runs land.`
+- caption target: `Routing-state scaling under fixed-budget object-density and active-domain sweeps.`
 
 ## Evidence binding
 
@@ -15,15 +15,16 @@
 
 ## Validation status
 
-- runtime slice: pending rerun
-- aggregate traceability: pending rerun
-- figure binding: pending rerun
+- runtime slice: `review_artifacts/state_scaling/validation/state_scaling_validate_runtime_slice.txt`
+- aggregate traceability: `review_artifacts/state_scaling/validation/state_scaling_validate_aggregate_traceability.txt`
+- figure binding: `review_artifacts/state_scaling/validation/state_scaling_validate_figures.txt`
 
 ## Status
 
-- pending rerun; placeholder figure is acceptable until promoted runs land
+- state-only support figure on the large `rf_1239_sprint` topology
 
 ## Interpretation
 
-- Figure 8 validates the bounded-state claim.
-- The refreshed figure is only paper-ready once exported summaries, summary bytes, and budget compliance all agree.
+- Figure 8 validates the bounded-state claim and nothing more.
+- The left panel should be read as a fixed-budget object-density sweep. The right panel should be read as the active-domain sweep on the larger topology, not as another compact-routing panel.
+- Query-side fields are intentionally absent from this experiment. The paper should not use this figure to imply any end-to-end success claim.

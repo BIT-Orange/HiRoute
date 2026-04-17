@@ -4,7 +4,7 @@
 
 - figure number: Figure 9
 - label: `fig:robust`
-- caption target: `Mainline robustness under stale summaries and controller failures. Placeholder until promoted mainline runs land.`
+- caption target: `Robustness support figure showing degradation under stale summaries and controller loss.`
 
 ## Evidence binding
 
@@ -16,15 +16,16 @@
 
 ## Validation status
 
-- runtime slice: pending rerun
-- aggregate traceability: pending rerun
-- figure binding: pending rerun
+- runtime slice: `review_artifacts/robustness/validation/robustness_validate_runtime_slice.txt`
+- aggregate traceability: `review_artifacts/robustness/validation/robustness_validate_aggregate_traceability.txt`
+- figure binding: `review_artifacts/robustness/validation/robustness_validate_figures.txt`
 
 ## Status
 
-- pending rerun; placeholder figure is acceptable until promoted runs land
+- degradation-profile support figure
 
 ## Interpretation
 
-- Figure 9 is only suitable for the main paper if the rerun yields a real recovery time series, not just a summary bar.
-- The active reading is recovery behavior under stale summaries and controller failure, not a generic fault-tolerance slogan.
+- Figure 9 should be read as a degradation-profile figure, not as a blanket robustness win.
+- The left subplot is the controller-loss scenario and the right subplot is the stale-summaries scenario; the event markers should come directly from `failure_time_s` and `recovery_time_s` in the timeseries aggregate.
+- If `t95_recovery_sec` is zero, the text must explain that this means recovery within the first post-event one-second bin, not that the workload experienced no degradation.

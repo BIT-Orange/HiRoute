@@ -2,9 +2,9 @@
 
 ## Paper binding
 
-- figure number: Figure 10
+- figure number: Figure 4
 - label: `fig:ablation`
-- caption target: `Mainline object-main ablation at manifest size \`1\`.`
+- caption target: `Mainline mechanism ablation at manifest size \`1\`, showing terminal success, first-fetch correctness, and discovery cost.`
 
 ## Evidence binding
 
@@ -15,18 +15,18 @@
 
 ## Validation status
 
-- runtime slice: completed (`review_artifacts/object_ablation_routing/validation/ablation_validate_runtime_slice.txt`)
-- manifest regression: completed (`review_artifacts/object_ablation_routing/validation/ablation_validate_manifest_regression_*.txt`)
-- aggregate traceability: completed (`review_artifacts/object_ablation_routing/validation/ablation_validate_aggregate_traceability.txt`)
-- figure binding: completed (`review_artifacts/object_ablation_routing/validation/ablation_validate_figures_ablation.txt`)
+- runtime slice: `review_artifacts/ablation/validation/ablation_validate_runtime_slice.txt`
+- manifest regression: `review_artifacts/ablation/validation/ablation_validate_manifest_regression.txt`
+- aggregate traceability: `review_artifacts/ablation/validation/ablation_validate_aggregate_traceability.txt`
+- figure binding: `review_artifacts/ablation/validation/ablation_validate_figures.txt`
 
 ## Status
 
-- completed on 2026-03-31 mainline rerun
+- Route B main mechanism figure
 
 ## Interpretation
 
-- Figure 10 remains a mechanism figure, not an archive of legacy compact-v3 numbers.
-- The fresh rerun preserves cost ordering but not success separation: all ablation schemes are at `mean_success_at_1=0.0`, with `flat_semantic_only` highest in discovery bytes, `full_hiroute` intermediate, and `predicates_only` / `predicates_plus_flat` lowest.
-- The paper must describe this as degraded mechanism evidence until the object-main failure mode is explained or fixed.
-- `manifest_size=1` stays fixed because it is the most discriminative setting for local ranking quality, even though the current rerun still collapses the success axis.
+- Figure 4 is the strongest paper-facing evidence for Route B.
+- The paper-facing reading is fixed even when exact values refresh: `full_hiroute` should be judged on terminal success and discovery cost, not on a claim that it necessarily improves first-fetch precision.
+- Panel B is included specifically to expose the difference between terminal success and first-fetch correctness. If those two orderings diverge, the text must say that the gain comes from bounded hierarchical search plus recovery rather than from superior first-choice object ranking alone.
+- `manifest_size=1` stays fixed because it is the sharpest setting for mechanism discrimination; wider fallback would make it easier for later recovery to conceal weak intermediate choices.
