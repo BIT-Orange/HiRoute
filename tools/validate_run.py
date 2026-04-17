@@ -296,7 +296,11 @@ def _validate_v3_contract(experiment: dict[str, Any], mode: str, errors: list[st
         if not selected_query_ids:
             errors.append(f"{experiment_id} must set query_filters.query_ids")
 
-    if (dataset_id == "smartcity" and experiment_id not in DIAGNOSTIC_EXPERIMENT_IDS) or experiment_id.endswith("_v3_compact"):
+    requires_compact_topology = (
+        ((dataset_id == "smartcity" and experiment_id not in DIAGNOSTIC_EXPERIMENT_IDS) or experiment_id.endswith("_v3_compact"))
+        and experiment_id != "state_scaling"
+    )
+    if requires_compact_topology:
         topology_path = experiment.get("configs", {}).get("topology", "")
         mapping_path = experiment.get("inputs", {}).get("topology_mapping_csv", "")
         if "compact" not in str(topology_path):

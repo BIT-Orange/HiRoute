@@ -346,12 +346,12 @@ def _object_main_decision(rows: list[dict[str, Any]], wiring_report: dict[str, A
     if hiroute_manifest_rescue_signal:
         figure_guidance.append("manifest_rescue_signal_visible")
 
-    if any_accuracy_gap_persists:
+    if hiroute_manifest_rescue_signal and first_fetch_advantage and any_accuracy_gap_persists:
         decision = "ready_for_main_figure"
-        figure_title_guidance = "accuracy separation"
-    elif first_fetch_advantage or hiroute_support_gap or hiroute_manifest_rescue_signal:
+        figure_title_guidance = "manifest-backed object ranking"
+    elif any_accuracy_gap_persists or first_fetch_advantage or hiroute_support_gap or hiroute_manifest_rescue_signal:
         decision = "support_only_figure"
-        figure_title_guidance = "first-choice vs terminal support"
+        figure_title_guidance = "terminal vs first-fetch cautionary support"
     elif all_catch_up and any_catch_up_requires_larger_manifest and any_residual_cost_gap:
         decision = "cost_only_figure"
         figure_title_guidance = "manifest efficiency / cost separation"
@@ -437,6 +437,8 @@ def _ablation_decision(rows: list[dict[str, Any]], wiring_report: dict[str, Any]
     flat_semantics_insufficient = True
     bytes_order_clean = True
     probe_order_clean = True
+    full_hiroute_cost_best = True
+    first_fetch_order_matches_success = True
 
     for manifest_size in manifests:
         full_row = index[("full_hiroute", manifest_size)]
@@ -453,6 +455,21 @@ def _ablation_decision(rows: list[dict[str, Any]], wiring_report: dict[str, Any]
         predicate_ok = _materially_better(plus_flat_row, flat_row)
         flat_only_bad = _materially_better(predicate_only_row, flat_row) and _materially_better(full_row, flat_row)
         bytes_ok, probes_ok = _cost_order_flags([full_row, plus_flat_row, predicate_only_row, flat_row])
+        min_discovery_bytes = min(
+            float(row["mean_discovery_bytes"]) for row in (full_row, plus_flat_row, predicate_only_row, flat_row)
+        )
+        full_hiroute_cost_best = full_hiroute_cost_best and (
+            float(full_row["mean_discovery_bytes"]) <= min_discovery_bytes + EPSILON
+        )
+        first_fetch_values = [
+            float(full_row["first_fetch_relevant_rate"]),
+            float(plus_flat_row["first_fetch_relevant_rate"]),
+            float(predicate_only_row["first_fetch_relevant_rate"]),
+            float(flat_row["first_fetch_relevant_rate"]),
+        ]
+        first_fetch_order_matches_success = first_fetch_order_matches_success and _strictly_non_increasing(
+            first_fetch_values
+        )
 
         mechanism_ordering_clean = mechanism_ordering_clean and success_order_clean
         hierarchy_signal_restored = hierarchy_signal_restored and hierarchy_ok
@@ -503,8 +520,12 @@ def _ablation_decision(rows: list[dict[str, Any]], wiring_report: dict[str, Any]
         figure_guidance.append("flat_semantics_insufficient")
     if cost_order_matches_accuracy_order:
         figure_guidance.append("cost_order_matches_accuracy_order")
+    if full_hiroute_cost_best:
+        figure_guidance.append("full_hiroute_cost_best")
     if mechanism_ordering_clean:
         figure_guidance.append("mechanism_ordering_clean")
+    if not first_fetch_order_matches_success:
+        figure_guidance.append("terminal_vs_first_fetch_not_aligned")
 
     if wiring_status == "wiring_suspect":
         decision = "rerun_needed"
@@ -512,7 +533,7 @@ def _ablation_decision(rows: list[dict[str, Any]], wiring_report: dict[str, Any]
     elif distributed_saturated:
         decision = "saturated_revisit_workload"
         figure_title_guidance = "revisit workload"
-    elif mechanism_ordering_clean and hierarchy_signal_restored and predicate_filtering_contributes and flat_semantics_insufficient and cost_order_matches_accuracy_order:
+    elif mechanism_ordering_clean and hierarchy_signal_restored and predicate_filtering_contributes and flat_semantics_insufficient and full_hiroute_cost_best:
         decision = "ready_for_main_figure"
         figure_title_guidance = "mechanism ordering main figure"
     elif mechanism_ordering_clean and hierarchy_signal_restored and predicate_filtering_contributes and flat_semantics_insufficient:
@@ -543,6 +564,8 @@ def _ablation_decision(rows: list[dict[str, Any]], wiring_report: dict[str, Any]
             "predicate_filtering_contributes": predicate_filtering_contributes,
             "flat_semantics_insufficient": flat_semantics_insufficient,
             "cost_order_matches_accuracy_order": cost_order_matches_accuracy_order,
+            "full_hiroute_cost_best": full_hiroute_cost_best,
+            "first_fetch_order_matches_success": first_fetch_order_matches_success,
             "mechanism_ordering_clean": mechanism_ordering_clean,
             "distributed_saturated": distributed_saturated,
         },

@@ -465,7 +465,7 @@ def _plot_object_manifest_sweep() -> None:
         _placeholder(output_filename, "Figure 5", "No manifest-sweep rows found")
         return
 
-    fig, axes = plt.subplots(1, 2, figsize=(8.7, 3.35), sharex=True)
+    fig, axes = plt.subplots(1, 3, figsize=(11.2, 3.35), sharex=True)
     schemes = [scheme for scheme in COMPACT_OBJECT_MAIN_SCHEMES if scheme in set(frame["scheme"])]
 
     _line_panel(
@@ -494,8 +494,22 @@ def _plot_object_manifest_sweep() -> None:
     )
     axes[1].set_xticks(sorted(frame["manifest_size"].unique().tolist()))
     axes[1].set_ylim(0.0, 1.03)
-    axes[1].legend(fontsize=7.8, frameon=False, loc="upper right")
     _add_panel_label(axes[1], "B")
+
+    _line_panel(
+        axes[2],
+        frame,
+        schemes,
+        "manifest_size",
+        "manifest_rescue_rate",
+        "ci_manifest_rescue_rate",
+        "Manifest rescue rate",
+        "Manifest size",
+    )
+    axes[2].set_xticks(sorted(frame["manifest_size"].unique().tolist()))
+    axes[2].set_ylim(0.0, 0.15 if float(frame["manifest_rescue_rate"].max()) <= 0.02 else 1.03)
+    axes[2].legend(fontsize=7.8, frameon=False, loc="upper right")
+    _add_panel_label(axes[2], "C")
 
     _save(fig, output_filename)
 
@@ -654,14 +668,18 @@ def plot_deadlines() -> None:
         .reindex(ordered_schemes)
         .dropna(subset=["median_success_latency_ms"])
     )
-    right.bar(
-        [_scheme_label(scheme) for scheme in latency_rows.index],
+    labels = [_scheme_label(scheme) for scheme in latency_rows.index]
+    positions = list(range(len(latency_rows.index)))
+    right.barh(
+        positions,
         latency_rows["median_success_latency_ms"],
         color=[_scheme_color(scheme) for scheme in latency_rows.index],
         alpha=0.92,
     )
-    right.set_ylabel("Median successful latency (ms)")
-    right.grid(axis="y", alpha=0.25)
+    right.set_yticks(positions)
+    right.set_yticklabels(labels)
+    right.set_xlabel("Median successful latency (ms)")
+    right.grid(axis="x", alpha=0.25)
     _save(fig, "fig_deadline_summary.pdf")
 
 
@@ -693,6 +711,7 @@ def plot_state_scaling() -> None:
                 label=_scheme_label(scheme),
             )
         axis.set_xlabel(xlabel)
+        axis.set_title(xlabel)
         axis.grid(alpha=0.25)
     axes[0].set_ylabel("Mean exported summaries")
     axes[0].legend(fontsize=8, frameon=False)
@@ -710,6 +729,10 @@ def plot_robustness() -> None:
     fig, axes = plt.subplots(1, len(variants), figsize=(5.2 * len(variants), 4.2), sharey=True)
     if len(variants) == 1:
         axes = [axes]
+    titles = {
+        "controller_down": "Controller down",
+        "stale_summaries": "Stale summaries",
+    }
     for axis, variant in zip(axes, variants):
         subset = frame[frame["scenario_variant"] == variant].copy()
         for scheme in [scheme for scheme in MAIN_SCHEME_ORDER if scheme in set(subset["scheme"])]:
@@ -722,7 +745,24 @@ def plot_robustness() -> None:
                 color=_scheme_color(scheme),
                 label=_scheme_label(scheme),
             )
+        if "failure_time_s" in subset.columns and not subset["failure_time_s"].dropna().empty:
+            axis.axvline(
+                float(subset["failure_time_s"].dropna().iloc[0]),
+                color="#a33a2a",
+                linestyle="--",
+                linewidth=1.3,
+                alpha=0.8,
+            )
+        if "recovery_time_s" in subset.columns and not subset["recovery_time_s"].dropna().empty:
+            axis.axvline(
+                float(subset["recovery_time_s"].dropna().iloc[0]),
+                color="#2f7d57",
+                linestyle=":",
+                linewidth=1.3,
+                alpha=0.85,
+            )
         axis.set_xlabel("Time (s)")
+        axis.set_title(titles.get(variant, variant.replace("_", " ")))
         axis.grid(alpha=0.25)
     axes[0].set_ylabel("Terminal success")
     axes[0].legend(fontsize=8, loc="lower right", frameon=False)
@@ -756,12 +796,20 @@ def plot_ablation() -> None:
     colors = [_scheme_color(scheme) for scheme in frame["scheme"]]
 
     panels = [
-        ("mean_success_at_1", "Terminal success", (0.0, 1.02)),
-        ("wrong_object_rate", "Wrong-object rate", (0.0, max(0.22, float(frame["wrong_object_rate"].max()) + 0.03))),
-        ("mean_discovery_bytes", "Discovery bytes / query", None),
+        ("mean_success_at_1", "ci_success_at_1", "Terminal success", (0.0, 1.02)),
+        ("first_fetch_relevant_rate", "ci_first_fetch_relevant_rate", "First-fetch relevant rate", (0.0, 1.02)),
+        ("mean_discovery_bytes", "ci_discovery_bytes", "Discovery bytes / query", None),
     ]
-    for index, (axis, (column, ylabel, ylim)) in enumerate(zip(axes, panels)):
-        axis.bar(x_positions, frame[column], color=colors, alpha=0.92, width=0.68)
+    for index, (axis, (column, error_column, ylabel, ylim)) in enumerate(zip(axes, panels)):
+        axis.bar(
+            x_positions,
+            frame[column],
+            yerr=frame.get(error_column, pd.Series(0.0, index=frame.index)),
+            color=colors,
+            alpha=0.92,
+            width=0.68,
+            capsize=3,
+        )
         axis.set_ylabel(ylabel)
         if ylim is not None:
             axis.set_ylim(*ylim)

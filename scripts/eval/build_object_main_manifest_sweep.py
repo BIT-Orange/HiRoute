@@ -15,7 +15,6 @@ from scripts.eval.eval_support import (
     bootstrap_mean_ci,
     load_experiment,
     log_frame,
-    qrels_maps_by_topology,
     require_rows,
 )
 from tools.workflow_support import write_csv
@@ -34,11 +33,10 @@ OUTPUT_FIELDS = [
     "first_fetch_relevant_rate",
     "ci_first_fetch_relevant_rate",
     "manifest_rescue_rate",
+    "ci_manifest_rescue_rate",
     "mean_manifest_fetch_index_success_only",
     "wrong_object_rate",
     "ci_wrong_object_rate",
-    "best_object_chosen_given_relevant_domain",
-    "ci_best_object_chosen_given_relevant_domain",
     "source_run_ids",
 ]
 
@@ -60,15 +58,6 @@ def main() -> int:
         return 1
 
     bootstrap_replicates = int(experiment.get("statistics", {}).get("bootstrap_replicates", 1000))
-    qrels_maps = qrels_maps_by_topology(experiment)
-
-    def _best_object_given_domain(row):
-        relevant_domains = (
-            qrels_maps.get(str(row["registry_topology_id"]), {})
-            .get("strong_domains", {})
-            .get(str(row["query_id"]), set())
-        )
-        return float(row["success_at_1"]) if str(row["final_domain_id"]) in relevant_domains else float("nan")
 
     frame = frame.copy()
     frame["success_at_1"] = frame["success_at_1"].astype(float)
@@ -76,7 +65,6 @@ def main() -> int:
     frame["first_fetch_relevant"] = frame["first_fetch_relevant"].replace("", 0).astype(float)
     frame["manifest_fetch_index"] = frame.get("manifest_fetch_index", 0)
     frame["manifest_fetch_index"] = frame["manifest_fetch_index"].replace("", 0).astype(float)
-    frame["best_object_chosen_given_relevant_domain"] = frame.apply(_best_object_given_domain, axis=1)
     frame["wrong_object_indicator"] = (frame["failure_type"] == "wrong_object").astype(float)
     frame["manifest_rescue"] = ((frame["success_at_1"] == 1) & (frame["manifest_fetch_index"] > 0)).astype(float)
 
@@ -86,7 +74,6 @@ def main() -> int:
     ):
         scheme, topology_id, manifest_size = keys
         run_ids = sorted(group["run_id"].unique().tolist())
-        best_object = group["best_object_chosen_given_relevant_domain"].dropna()
         output_rows.append(
             {
                 "experiment_id": experiment["experiment_id"],
@@ -105,6 +92,9 @@ def main() -> int:
                     bootstrap_mean_ci(group["first_fetch_relevant"], bootstrap_replicates, seed=13), 6
                 ),
                 "manifest_rescue_rate": round(group["manifest_rescue"].mean(), 6),
+                "ci_manifest_rescue_rate": round(
+                    bootstrap_mean_ci(group["manifest_rescue"], bootstrap_replicates, seed=14), 6
+                ),
                 "mean_manifest_fetch_index_success_only": round(
                     group.loc[group["success_at_1"] == 1, "manifest_fetch_index"].mean()
                     if (group["success_at_1"] == 1).any()
@@ -114,13 +104,6 @@ def main() -> int:
                 "wrong_object_rate": round(group["wrong_object_indicator"].mean(), 6),
                 "ci_wrong_object_rate": round(
                     bootstrap_mean_ci(group["wrong_object_indicator"], bootstrap_replicates, seed=11), 6
-                ),
-                "best_object_chosen_given_relevant_domain": round(
-                    best_object.mean() if not best_object.empty else 0.0, 6
-                ),
-                "ci_best_object_chosen_given_relevant_domain": round(
-                    bootstrap_mean_ci(best_object, bootstrap_replicates, seed=12) if not best_object.empty else 0.0,
-                    6,
                 ),
                 "source_run_ids": "|".join(run_ids),
             }

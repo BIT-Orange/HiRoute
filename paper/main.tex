@@ -281,39 +281,50 @@ Four workload factors should be varied systematically. The first is naming heter
 % BEGIN_MAINLINE_EVAL_EXCERPT
 \section{Performance Evaluation}
 
-The evaluation is organized around the dimensions that determine whether semantic name resolution is practically useful in NDN-IoT. Each subsection states the experimental objective and the interpretation that the final measurements should support. The figure positions are fixed so that the experimental campaign can proceed against a stable manuscript outline.
+The evaluation is organized around the implementation that actually exists in the repository rather than around an unrealized vector-semantic scorer. The active paper path uses dataset `smartcity`, hierarchy `hiroute\_hkm`, and the compact routing/object experiments on topology `rf\_3967\_exodus\_compact`. The only exception is the state-scaling support experiment, which uses the larger `rf\_1239\_sprint` topology so that active-domain scaling can be observed up to sixteen domains. Legacy `v1/v2/v3` figures remain archived provenance only. All paper-facing figures in this section bind to `results/figures/mainline/*`.
 
-The active paper path in this repository is the mainline compact-medium route: dataset `smartcity`, hierarchy `hiroute\_hkm`, and topology `rf\_3967\_exodus\_compact`. Legacy `v1/v2/v3` figures remain archived provenance only. Because the mainline workload was reset to activate non-empty zone constraints, break the degenerate relevant-domain distribution, and remove manifest-size feedback coupling, pre-mainline compact promoted rows are treated as provisional legacy evidence rather than the active source of truth. Figures~\ref{fig:main}--\ref{fig:ablation} therefore bind only to `results/figures/mainline/*`. Figures~\ref{fig:state} and \ref{fig:robust} currently remain pending-rerun support figures; the repository emits placeholders until new mainline runs are promoted.
+\subsection{Mechanism Ablation}
+
+The strongest evidence for Route B is the mechanism ablation. It isolates the incremental value of predicate filtering, flat semantic guidance, hierarchical refinement, and the full \sysname{} pipeline under a fixed manifest size of `1`, where wider fallback cannot easily conceal poor intermediate choices.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.95\linewidth]{../results/figures/mainline/fig_ablation_summary.pdf}
+\caption{Mainline mechanism ablation at manifest size `1`, showing terminal success, first-fetch correctness, and discovery cost.}
+\label{fig:ablation}
+\end{figure}
+
+Figure~\ref{fig:ablation} is the main mechanism figure. The terminal-success ordering is clean: `full\_hiroute` outperforms `predicates\_plus\_flat`, which in turn outperforms `predicates\_only`, while `flat\_semantic\_only` performs worst. At the same time, the figure makes an important limitation explicit: first-fetch correctness is not ordered the same way as terminal success. The current implementation therefore supports a bounded-hierarchy and recovery story rather than a claim that hierarchy alone improves first-choice object ranking.
 
 \subsection{Routing Support Under Saturated End-to-End Success}
 
-Under compact-medium evaluation, shared fallback can cause terminal routing success to saturate across multiple discovery methods. The compact paper path therefore treats routing as a support result rather than as the primary effectiveness proof. The central question is not which scheme reaches the highest final terminal success, but which scheme reaches the first relevant domain more reliably and what discovery cost that gain requires.
+Under the compact routing workload, sequential fallback causes terminal end-to-end success to saturate across several schemes. Routing is therefore treated as support evidence rather than as the headline effectiveness proof. The relevant questions are which scheme reaches the first relevant domain more reliably, how much discovery traffic that requires, and whether hierarchical refinement contracts the candidate frontier more aggressively than flatter alternatives.
 
 \begin{figure}[t]
 \centering
 \includegraphics[width=0.95\linewidth]{../results/figures/mainline/fig_routing_support.pdf}
-\caption{Mainline routing-support figure showing first relevant-domain reach, discovery cost, and staged candidate shrinkage under non-empty zone constraints.}
+\caption{Routing-support figure showing first relevant-domain reach, discovery cost, and staged candidate shrinkage under non-empty zone constraints.}
 \label{fig:main}
 \end{figure}
 
-Figure~\ref{fig:main} remains a routing-support figure rather than the primary end-to-end effectiveness proof. Under the new mainline contract it answers three factual questions at budget `16`: what hard predicates solve by themselves, how an admissible but nonsemantic policy behaves, and what semantic scoring plus hierarchy add beyond both controls. Panel A reports first relevant-domain reach across `predicates\_only`, `random\_admissible`, `inf\_tag\_forwarding`, and \sysname{}, with `flood` retained only as a diagnostic lower control and the centralized directory used as a reference. Panel B reports discovery cost on the same fixed-budget slice. Panel C reports staged candidate contraction. Until the refreshed mainline rerun lands, this figure is a placeholder bound to the correct mainline path rather than a legacy compact-v3 plot.
+Figure~\ref{fig:main} is therefore a routing-support figure. Panel A reports first relevant-domain reach at budget `16`, Panel B reports discovery bytes on the same slice, and Panel C shows staged contraction through admissibility filtering and refinement. The appropriate claim is limited but still meaningful: \sysname{} narrows the search frontier and lowers support-side discovery cost relative to the distributed baselines without needing to claim a further terminal-success win on this saturated workload.
 
-\subsection{Object-Level Semantic Resolution Under Manifest Sweep}
+\subsection{Object-Level Resolution Under Manifest Sweep}
 
-The object-main slice is a support figure on the current Route B paper path. It sweeps manifest size to separate terminal success from first-fetch correctness and to expose when manifest fallback rescues an initially imperfect local ranking decision. This makes the local ranking problem explicit without overstating the experiment as evidence for a vector-based object scorer.
+The object-main slice remains in the paper, but only as a cautionary support figure. Its purpose is to expose the gap between terminal success and first-fetch correctness and to show directly whether manifest rescue is doing measurable work on the current workload.
 
 \begin{figure}[t]
 \centering
 \includegraphics[width=0.95\linewidth]{../results/figures/mainline/fig_object_manifest_sweep.pdf}
-\caption{Mainline object-main manifest sweep showing terminal success and first-fetch correctness under manifest fallback.}
+\caption{Object-main manifest sweep showing terminal success, first-fetch correctness, and observed manifest rescue under fallback.}
 \label{fig:waterfall}
 \end{figure}
 
-Figure~\ref{fig:waterfall} is a support figure for the Route B narrative. Its role is explicit: it measures object-level resolution under a manifest sweep by contrasting terminal success with first-fetch correctness, while the accompanying aggregate reports manifest-rescue rate and rescue rank. The figure therefore answers whether fallback is merely masking ranking errors or providing a controlled robustness benefit after the correct domain has already been found.
+Figure~\ref{fig:waterfall} shows that \sysname{} reaches strong terminal success, but that success is not matched by equally strong first-fetch correctness. The third panel also makes the current workload limitation explicit: observed manifest rescue remains invariant at zero. The honest reading is therefore not that larger manifests rescue local object ranking. The honest reading is that terminal recovery is stronger than first-choice quality and that the present workload does not expose a meaningful manifest-rescue signal.
 
 \subsection{Candidate Shrinkage Through Hierarchical Filtering}
 
-The third experiment reports how aggressively the search frontier contracts after predicate screening and hierarchical refinement. This figure complements the routing-support slice because it explains why \sysname{} reduces wasted discovery effort before the final object fetch takes place.
+The next support figure explains why the routing-support slice exhibits lower discovery cost. It measures how aggressively the frontier contracts after admissibility screening and hierarchical refinement.
 
 \begin{figure}[t]
 \centering
@@ -322,59 +333,46 @@ The third experiment reports how aggressively the search frontier contracts afte
 \label{fig:shrinkage}
 \end{figure}
 
-Figure~\ref{fig:shrinkage} is a support mechanism figure for the routing-main slice. It traces the reduction from `all\_domains` through predicate filtering, hierarchical refinement, and final probe targets. The active paper path uses the mainline aggregate only.
+Figure~\ref{fig:shrinkage} is a mechanism-support figure for the routing slice. It traces the reduction from all domains through admissible domains, refined cells, and final probe targets. This figure supports the bounded-search interpretation of \sysname{} rather than any claim about object-level precision.
 
 \subsection{Deadline-Sensitive Latency}
 
-Average latency is often too blunt for IoT applications. The fourth experiment reports deadline satisfaction under several thresholds together with completion-time summaries for successful requests. It uses the same `routing\_main` workload as Figure~\ref{fig:main}, so latency is interpreted together with relevant-domain reach rather than as an isolated number.
+Average latency is too blunt for deadline-driven IoT applications. The deadline figure therefore remains tied to the routing workload and should be interpreted together with first relevant-domain reach and discovery cost.
 
 \begin{figure}[t]
 \centering
 \includegraphics[width=0.95\linewidth]{../results/figures/mainline/fig_deadline_summary.pdf}
-\caption{Deadline-sensitive latency evaluation.}
+\caption{Deadline-sensitive latency evaluation on the routing-support workload.}
 \label{fig:latency}
 \end{figure}
 
-Figure~\ref{fig:latency} is support evidence rather than the main proof of superiority. It documents the tradeoff between more selective first-domain targeting and added discovery cost under the same mainline workload.
+Figure~\ref{fig:latency} is support evidence only. It documents the latency tradeoff associated with more selective first-domain targeting under the same routing slice and should not be read as an independent superiority claim.
 
 \subsection{Routing-State Scaling}
 
-The fifth experiment validates the control-plane argument of the paper. One panel varies the number of objects per domain under a fixed export budget. A second panel varies the number of domains. The primary metric is exported summary state.
+The state-scaling experiment evaluates the architectural claim that exported control-plane state is budget-bounded. Unlike the compact routing/object experiments, this support experiment uses the larger `rf\_1239\_sprint` topology so that the domain-count sweep spans `4,8,12,16` active domains. The metric of interest is exported summary state, not query-side success.
 
 \begin{figure}[t]
 \centering
 \includegraphics[width=0.95\linewidth]{../results/figures/mainline/fig_state_scaling.pdf}
-\caption{Mainline routing-state scaling under increasing object count and domain count. Placeholder until promoted mainline runs land.}
+\caption{Routing-state scaling under fixed-budget object-density and active-domain sweeps.}
 \label{fig:state}
 \end{figure}
 
-Figure~\ref{fig:state} is reserved for the promoted mainline scaling rerun. The expected interpretation remains architectural: exported state should track the budgeted summary surface more than raw object count.
+Figure~\ref{fig:state} is a state-only support figure. The left panel varies objects per domain under a fixed export budget, while the right panel varies the number of active domains on the larger topology. Query-side fields are intentionally absent from this experiment; the figure is meant to show that exported state tracks the configured summary budget and active-domain surface rather than raw object count alone.
 
-\subsection{Robustness Under Stale Summaries and Failures}
+\subsection{Robustness Under Stale Summaries and Controller Loss}
 
-The sixth experiment studies two kinds of disruption: physical controller loss and semantic staleness caused by delayed summary refresh. Both matter in semantic NDN-IoT and stress different parts of the design.
+The final support experiment studies two disruptions: stale summaries and controller loss. The goal is not to prove that \sysname{} is uniformly more robust than a centralized oracle. The goal is to show how the implemented recovery path degrades and where its extra probe cost appears.
 
 \begin{figure}[t]
 \centering
 \includegraphics[width=0.95\linewidth]{../results/figures/mainline/fig_robustness.pdf}
-\caption{Mainline robustness under stale summaries and controller failures. Placeholder until promoted mainline runs land.}
+\caption{Robustness support figure showing degradation under stale summaries and controller loss.}
 \label{fig:robust}
 \end{figure}
 
-Figure~\ref{fig:robust} is reserved for the promoted mainline robustness rerun. Its interpretation is fixed: cell-level reliability and negative caching must prevent repeated poor choices after stale or failed controller events.
-
-\subsection{Ablation of the Main Mechanisms}
-
-The final experiment isolates the contribution of query decomposition, hierarchy, and reliability-aware fallback. The ablation set contains a predicate-only version, a flat semantic-only version, a predicate plus flat semantic version, and the full \sysname{} design.
-
-\begin{figure}[t]
-\centering
-\includegraphics[width=0.95\linewidth]{../results/figures/mainline/fig_ablation_summary.pdf}
-\caption{Mainline mechanism ablation at manifest size `1`.}
-\label{fig:ablation}
-\end{figure}
-
-Figure~\ref{fig:ablation} is the main mechanism figure on the Route B paper path and stays fixed to `manifest\_size=1`, because that setting exposes ranking differences before wider fallback can hide them. The mainline rerun keeps that contract even though the active aggregate is not yet promoted.
+Figure~\ref{fig:robust} should therefore be read as a degradation-profile figure. On the current workload, stale summaries do not materially reduce terminal success, whereas controller loss produces a visible drop and extra recovery probes for \sysname{}. The summary metric `t95\_recovery\_sec` should be interpreted with care because it is computed from one-second time bins; a value of zero indicates recovery within the first post-event bin, not the absence of degradation.
 
 % END_MAINLINE_EVAL_EXCERPT
 \section{Discussion}

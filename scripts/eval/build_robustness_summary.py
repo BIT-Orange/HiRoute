@@ -43,6 +43,8 @@ TIMESERIES_FIELDS = [
     "scheme",
     "topology_id",
     "time_bin_s",
+    "failure_time_s",
+    "recovery_time_s",
     "run_count",
     "query_count",
     "success_at_1_rate",
@@ -133,23 +135,6 @@ def main() -> int:
             )
             .sort_values("time_bin_s")
         )
-        for _, row in aggregated_bins.iterrows():
-            timeseries_rows.append(
-                {
-                    "experiment_id": experiment["experiment_id"],
-                    "scenario_variant": scenario_variant,
-                    "scheme": scheme,
-                    "topology_id": topology_id,
-                    "time_bin_s": int(row["time_bin_s"]),
-                    "run_count": len(run_ids),
-                    "query_count": int(row["query_count"]),
-                    "success_at_1_rate": round(float(row["success_at_1_rate"]), 6),
-                    "mean_remote_probes": round(float(row["mean_remote_probes"]), 6),
-                    "mean_discovery_bytes": round(float(row["mean_discovery_bytes"]), 6),
-                    "source_run_ids": "|".join(run_ids),
-                }
-            )
-
         failure_times = []
         recovery_times = []
         for run_id in group["run_id"].unique():
@@ -159,6 +144,25 @@ def main() -> int:
             recovery_times.append(float(runner_params.get("recoveryTime") or 0.0))
         failure_time_s = sum(failure_times) / len(failure_times) if failure_times else 0.0
         recovery_time_s = sum(recovery_times) / len(recovery_times) if recovery_times else failure_time_s
+
+        for _, row in aggregated_bins.iterrows():
+            timeseries_rows.append(
+                {
+                    "experiment_id": experiment["experiment_id"],
+                    "scenario_variant": scenario_variant,
+                    "scheme": scheme,
+                    "topology_id": topology_id,
+                    "time_bin_s": int(row["time_bin_s"]),
+                    "failure_time_s": round(failure_time_s, 6),
+                    "recovery_time_s": round(recovery_time_s, 6),
+                    "run_count": len(run_ids),
+                    "query_count": int(row["query_count"]),
+                    "success_at_1_rate": round(float(row["success_at_1_rate"]), 6),
+                    "mean_remote_probes": round(float(row["mean_remote_probes"]), 6),
+                    "mean_discovery_bytes": round(float(row["mean_discovery_bytes"]), 6),
+                    "source_run_ids": "|".join(run_ids),
+                }
+            )
 
         pre = aggregated_bins[aggregated_bins["time_bin_s"] < failure_time_s]
         pre_event_success = float(pre["success_at_1_rate"].mean()) if not pre.empty else float(

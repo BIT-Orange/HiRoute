@@ -10,7 +10,9 @@
     "full_hiroute"
   ],
   "seeds": [
-    1
+    1,
+    2,
+    3
   ],
   "manifest_sizes": [
     1,
