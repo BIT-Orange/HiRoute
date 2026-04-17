@@ -1,0 +1,267 @@
+{
+  "stage": "robustness",
+  "git_sha": "a3a00be",
+  "generated_at": "2026-04-17T07:17:19Z",
+  "updated_at": "2026-04-17T07:32:16Z",
+  "dataset_fingerprint": {
+    "sha256": "d8b4acc314ab4909b30952fea851cefcb0e219ae4f93601dbb3386994e31e4ff",
+    "files": [
+      "configs/datasets/smartcity.yaml",
+      "configs/hierarchy/hiroute_hkm.yaml",
+      "scripts/build_dataset/build_queries_and_qrels.py",
+      "scripts/build_dataset/build_hierarchy_and_hslsa.py",
+      "docs/datasets/schema_reference.md"
+    ]
+  },
+  "binary_fingerprint": {
+    "sha256": "0cd3c5c65209e766f826c135c4dc8c8a3615b24a589925a93adcac0f262adaf4",
+    "files": [
+      "ns-3/src/ndnSIM/apps/hiroute-controller-app.cpp",
+      "ns-3/src/ndnSIM/apps/hiroute-ingress-app.cpp",
+      "ns-3/src/ndnSIM/examples/hiroute-scenario-common.hpp"
+    ]
+  },
+  "simulation_fingerprint": {
+    "sha256": "2ff9cf5d69d9a8414fdd35bda7fc651c71db74f49e145796dd0552beefe94227",
+    "files": [
+      "configs/baselines/central_directory.yaml",
+      "configs/baselines/hiroute.yaml",
+      "configs/datasets/smartcity.yaml",
+      "configs/hierarchy/hiroute_hkm.yaml",
+      "configs/topologies/rocketfuel_3967_exodus_compact.yaml",
+      "scripts/run/run_experiment.py"
+    ],
+    "payload": {
+      "stage_identity": "configs/experiments/robustness.yaml",
+      "experiment": {
+        "experiment_id": "robustness",
+        "dataset_id": "smartcity",
+        "topology_id": "rf_3967_exodus_compact",
+        "scenario": "hiroute-domain-failure",
+        "schemes": [
+          "hiroute",
+          "central_directory"
+        ],
+        "seeds": [
+          1
+        ],
+        "budgets": [
+          16
+        ],
+        "default_budget": 16,
+        "query_filters": {
+          "splits": [
+            "test"
+          ],
+          "workload_tiers": [
+            "routing_main"
+          ]
+        },
+        "inputs": {
+          "objects_csv": "data/processed/smartcity/objects_master.csv",
+          "queries_csv": "data/processed/smartcity/rf_3967_exodus/queries_master.csv",
+          "query_embedding_index_csv": "data/processed/smartcity/rf_3967_exodus/query_embedding_index.csv",
+          "qrels_object_csv": "data/processed/smartcity/rf_3967_exodus/qrels_object.csv",
+          "qrels_domain_csv": "data/processed/smartcity/rf_3967_exodus/qrels_domain.csv",
+          "hslsa_csv": "data/processed/smartcity/hslsa_export.csv",
+          "controller_local_index_csv": "data/processed/smartcity/controller_local_index.csv",
+          "topology_mapping_csv": "data/processed/ndnsim/topology_mapping_rf_3967_exodus_compact.csv"
+        }
+      },
+      "runner": {
+        "type": "ndnsim",
+        "params": {
+          "stopSeconds": 32,
+          "manifestSize": 5,
+          "probeBudget": 5,
+          "queryLimitPerIngress": 0,
+          "failureTime": 6,
+          "recoveryTime": 16,
+          "staleDropProbability": 0.5
+        },
+        "scenario_variants": {
+          "stale_summaries": "hiroute-staleness",
+          "controller_down": "hiroute-domain-failure"
+        }
+      },
+      "matrix": [
+        {
+          "scheme": "central_directory",
+          "topology_id": "rf_3967_exodus_compact",
+          "seed": 1,
+          "manifest_size": 5,
+          "budget": 16,
+          "variant": "controller_down"
+        },
+        {
+          "scheme": "central_directory",
+          "topology_id": "rf_3967_exodus_compact",
+          "seed": 1,
+          "manifest_size": 5,
+          "budget": 16,
+          "variant": "stale_summaries"
+        },
+        {
+          "scheme": "hiroute",
+          "topology_id": "rf_3967_exodus_compact",
+          "seed": 1,
+          "manifest_size": 5,
+          "budget": 16,
+          "variant": "controller_down"
+        },
+        {
+          "scheme": "hiroute",
+          "topology_id": "rf_3967_exodus_compact",
+          "seed": 1,
+          "manifest_size": 5,
+          "budget": 16,
+          "variant": "stale_summaries"
+        }
+      ]
+    }
+  },
+  "stage_contract_fingerprint": {
+    "sha256": "718a75f879d1ac718ada185d9e402297a689f5ae37a98faf18ad0b2829248fd2",
+    "files": [
+      "scripts/eval/aggregate_experiment.py",
+      "scripts/eval/build_robustness_summary.py",
+      "scripts/eval/promote_runs.py",
+      "scripts/plots/plot_experiment.py",
+      "scripts/run/run_experiment_matrix.py",
+      "tools/run_mainline_review_stage.py",
+      "tools/validate_aggregate_traceability.py",
+      "tools/validate_figures.py",
+      "tools/validate_manifest_regression.py",
+      "tools/validate_manifest_wiring.py",
+      "tools/validate_run.py",
+      "tools/validate_runtime_slice.py"
+    ],
+    "payload": {
+      "stage": "robustness",
+      "experiment_path": "configs/experiments/robustness.yaml",
+      "contract": {
+        "promotion_rule": {
+          "min_runs_per_scheme": 1,
+          "min_test_queries_per_scheme_budget_tier": 240,
+          "max_missing_logs": 0,
+          "require_clean_git": true
+        },
+        "outputs": [
+          "results/aggregate/mainline/robustness_summary.csv",
+          "results/aggregate/mainline/robustness_timeseries.csv",
+          "results/figures/mainline/fig_robustness.pdf"
+        ]
+      },
+      "matrix": [
+        {
+          "scheme": "central_directory",
+          "topology_id": "rf_3967_exodus_compact",
+          "seed": 1,
+          "manifest_size": 5,
+          "budget": 16,
+          "variant": "controller_down"
+        },
+        {
+          "scheme": "central_directory",
+          "topology_id": "rf_3967_exodus_compact",
+          "seed": 1,
+          "manifest_size": 5,
+          "budget": 16,
+          "variant": "stale_summaries"
+        },
+        {
+          "scheme": "hiroute",
+          "topology_id": "rf_3967_exodus_compact",
+          "seed": 1,
+          "manifest_size": 5,
+          "budget": 16,
+          "variant": "controller_down"
+        },
+        {
+          "scheme": "hiroute",
+          "topology_id": "rf_3967_exodus_compact",
+          "seed": 1,
+          "manifest_size": 5,
+          "budget": 16,
+          "variant": "stale_summaries"
+        }
+      ]
+    }
+  },
+  "requested_matrix": [
+    {
+      "scheme": "hiroute",
+      "topology_id": "rf_3967_exodus_compact",
+      "seed": 1,
+      "manifest_size": 5,
+      "budget": 16,
+      "variant": "stale_summaries"
+    },
+    {
+      "scheme": "hiroute",
+      "topology_id": "rf_3967_exodus_compact",
+      "seed": 1,
+      "manifest_size": 5,
+      "budget": 16,
+      "variant": "controller_down"
+    },
+    {
+      "scheme": "central_directory",
+      "topology_id": "rf_3967_exodus_compact",
+      "seed": 1,
+      "manifest_size": 5,
+      "budget": 16,
+      "variant": "stale_summaries"
+    },
+    {
+      "scheme": "central_directory",
+      "topology_id": "rf_3967_exodus_compact",
+      "seed": 1,
+      "manifest_size": 5,
+      "budget": 16,
+      "variant": "controller_down"
+    }
+  ],
+  "run_assignments": {
+    "scheme=hiroute|topology_id=rf_3967_exodus_compact|seed=1|manifest_size=5|budget=16|variant=stale_summaries": "robustness__hiroute__smartcity__rf_3967_exodus_compact__stale_summaries__budget16__manifest5__seed1__20260417_071719",
+    "scheme=hiroute|topology_id=rf_3967_exodus_compact|seed=1|manifest_size=5|budget=16|variant=controller_down": "robustness__hiroute__smartcity__rf_3967_exodus_compact__controller_down__budget16__manifest5__seed1__20260417_071719",
+    "scheme=central_directory|topology_id=rf_3967_exodus_compact|seed=1|manifest_size=5|budget=16|variant=stale_summaries": "robustness__central_directory__smartcity__rf_3967_exodus_compact__stale_summaries__budget16__manifest5__seed1__20260417_071719",
+    "scheme=central_directory|topology_id=rf_3967_exodus_compact|seed=1|manifest_size=5|budget=16|variant=controller_down": "robustness__central_directory__smartcity__rf_3967_exodus_compact__controller_down__budget16__manifest5__seed1__20260417_071719"
+  },
+  "completed_run_ids": [
+    "robustness__central_directory__smartcity__rf_3967_exodus_compact__controller_down__budget16__manifest5__seed1__20260417_071719",
+    "robustness__central_directory__smartcity__rf_3967_exodus_compact__stale_summaries__budget16__manifest5__seed1__20260417_071719",
+    "robustness__hiroute__smartcity__rf_3967_exodus_compact__controller_down__budget16__manifest5__seed1__20260417_071719",
+    "robustness__hiroute__smartcity__rf_3967_exodus_compact__stale_summaries__budget16__manifest5__seed1__20260417_071719"
+  ],
+  "validation_status": {
+    "validate_run": "PASS",
+    "run_experiment_matrix": "PASS",
+    "validate_runtime_slice": "PASS",
+    "promote_runs": "PASS",
+    "aggregate_experiment": "PASS",
+    "validate_aggregate_traceability": "PASS",
+    "plot_experiment": "PASS",
+    "validate_figures": "PASS"
+  },
+  "aggregate_outputs": [
+    "results/aggregate/mainline/robustness_summary.csv",
+    "results/aggregate/mainline/robustness_timeseries.csv",
+    "results/figures/mainline/fig_robustness.pdf"
+  ],
+  "decision": "completed",
+  "stage_decision": "completed",
+  "completed_experiments": "robustness",
+  "representative_run": "robustness__central_directory__smartcity__rf_3967_exodus_compact__controller_down__budget16__manifest5__seed1__20260417_071719",
+  "representative_runs": [],
+  "figure_guidance": [],
+  "recommend_next_stage": "",
+  "inherited_runs": [],
+  "newly_executed_runs": [],
+  "skipped_runs": [
+    "robustness__hiroute__smartcity__rf_3967_exodus_compact__stale_summaries__budget16__manifest5__seed1__20260417_071719",
+    "robustness__hiroute__smartcity__rf_3967_exodus_compact__controller_down__budget16__manifest5__seed1__20260417_071719",
+    "robustness__central_directory__smartcity__rf_3967_exodus_compact__stale_summaries__budget16__manifest5__seed1__20260417_071719",
+    "robustness__central_directory__smartcity__rf_3967_exodus_compact__controller_down__budget16__manifest5__seed1__20260417_071719"
+  ]
+}

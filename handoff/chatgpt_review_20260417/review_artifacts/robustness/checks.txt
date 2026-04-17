@@ -1,0 +1,15 @@
+completed_experiments: robustness
+decision: completed
+cache_status: dataset=reused binary=reused
+robustness.validate_run.py PASS
+robustness.run_experiment_matrix.py PASS
+robustness.validate_runtime_slice.py PASS
+robustness.validate_manifest_regression.py SKIPPED
+robustness.promote_runs.py PASS
+robustness.aggregate_experiment.py PASS
+robustness.validate_aggregate_traceability.py PASS
+robustness.plot_experiment.py PASS
+robustness.validate_figures.py PASS
+representative_run: robustness__central_directory__smartcity__rf_3967_exodus_compact__controller_down__budget16__manifest5__seed1__20260417_071719
+reused_run_count: 4
+newly_executed_run_count: 0

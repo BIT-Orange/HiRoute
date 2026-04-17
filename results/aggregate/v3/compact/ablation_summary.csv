@@ -1,0 +1,9 @@
+experiment_id,scheme,topology_id,budget,manifest_size,mean_success_at_1,wrong_object_rate,mean_discovery_bytes,mean_manifest_hit_at_5,mean_latency_ms
+exp_ablation_v3_compact,predicates_only,rf_3967_exodus_compact,0,1,0.841667,0.158333,362.25,0.841667,321.495833
+exp_ablation_v3_compact,predicates_only,rf_3967_exodus_compact,0,2,0.841667,0.158333,362.25,0.841667,383.666667
+exp_ablation_v3_compact,flat_semantic_only,rf_3967_exodus_compact,0,1,0.575,0.175,565.808333,0.575,316.6125
+exp_ablation_v3_compact,flat_semantic_only,rf_3967_exodus_compact,0,2,0.575,0.175,565.808333,0.575,391.8125
+exp_ablation_v3_compact,predicates_plus_flat,rf_3967_exodus_compact,0,1,0.908333,0.091667,476.0125,0.908333,339.454167
+exp_ablation_v3_compact,predicates_plus_flat,rf_3967_exodus_compact,0,2,0.908333,0.091667,476.0125,0.908333,429.120833
+exp_ablation_v3_compact,full_hiroute,rf_3967_exodus_compact,0,1,0.9375,0.0625,499.7375,0.9375,374.016667
+exp_ablation_v3_compact,full_hiroute,rf_3967_exodus_compact,0,2,0.925,0.075,507.920833,0.925,465.729167

@@ -1,0 +1,416 @@
+{
+  "stage": "object_main",
+  "git_sha": "a3a00be",
+  "generated_at": "2026-04-17T07:29:58Z",
+  "updated_at": "2026-04-17T07:32:02Z",
+  "dataset_fingerprint": {
+    "sha256": "d8b4acc314ab4909b30952fea851cefcb0e219ae4f93601dbb3386994e31e4ff",
+    "files": [
+      "configs/datasets/smartcity.yaml",
+      "configs/hierarchy/hiroute_hkm.yaml",
+      "scripts/build_dataset/build_queries_and_qrels.py",
+      "scripts/build_dataset/build_hierarchy_and_hslsa.py",
+      "docs/datasets/schema_reference.md"
+    ]
+  },
+  "binary_fingerprint": {
+    "sha256": "0cd3c5c65209e766f826c135c4dc8c8a3615b24a589925a93adcac0f262adaf4",
+    "files": [
+      "ns-3/src/ndnSIM/apps/hiroute-controller-app.cpp",
+      "ns-3/src/ndnSIM/apps/hiroute-ingress-app.cpp",
+      "ns-3/src/ndnSIM/examples/hiroute-scenario-common.hpp"
+    ]
+  },
+  "simulation_fingerprint": {
+    "sha256": "74a9474b0b17dc5ca9593cac74ef162cfa8c4d463cab2434c4f074d1e18ace56",
+    "files": [
+      "configs/baselines/central_directory.yaml",
+      "configs/baselines/hiroute.yaml",
+      "configs/baselines/inf_tag_forwarding.yaml",
+      "configs/datasets/smartcity.yaml",
+      "configs/hierarchy/hiroute_hkm.yaml",
+      "configs/topologies/rocketfuel_3967_exodus_compact.yaml",
+      "scripts/run/run_experiment.py"
+    ],
+    "payload": {
+      "stage_identity": "configs/experiments/object_main.yaml",
+      "experiment": {
+        "experiment_id": "object_main",
+        "dataset_id": "smartcity",
+        "topology_id": "rf_3967_exodus_compact",
+        "scenario": "hiroute-main",
+        "schemes": [
+          "inf_tag_forwarding",
+          "hiroute",
+          "central_directory"
+        ],
+        "seeds": [
+          1
+        ],
+        "manifest_sizes": [
+          1,
+          2,
+          3
+        ],
+        "default_manifest_size": 1,
+        "query_filters": {
+          "splits": [
+            "test"
+          ],
+          "workload_tiers": [
+            "object_main"
+          ]
+        },
+        "inputs": {
+          "objects_csv": "data/processed/smartcity/objects_master.csv",
+          "queries_csv": "data/processed/smartcity/rf_3967_exodus/queries_master.csv",
+          "query_embedding_index_csv": "data/processed/smartcity/rf_3967_exodus/query_embedding_index.csv",
+          "qrels_object_csv": "data/processed/smartcity/rf_3967_exodus/qrels_object.csv",
+          "qrels_domain_csv": "data/processed/smartcity/rf_3967_exodus/qrels_domain.csv",
+          "hslsa_csv": "data/processed/smartcity/hslsa_export.csv",
+          "controller_local_index_csv": "data/processed/smartcity/controller_local_index.csv",
+          "topology_mapping_csv": "data/processed/ndnsim/topology_mapping_rf_3967_exodus_compact.csv"
+        }
+      },
+      "runner": {
+        "type": "ndnsim",
+        "params": {
+          "stopSeconds": 32,
+          "manifestSize": 1,
+          "probeBudget": 5,
+          "queryLimitPerIngress": 0
+        }
+      },
+      "matrix": [
+        {
+          "scheme": "central_directory",
+          "topology_id": "rf_3967_exodus_compact",
+          "seed": 1,
+          "manifest_size": 1,
+          "budget": 0,
+          "variant": ""
+        },
+        {
+          "scheme": "central_directory",
+          "topology_id": "rf_3967_exodus_compact",
+          "seed": 1,
+          "manifest_size": 2,
+          "budget": 0,
+          "variant": ""
+        },
+        {
+          "scheme": "central_directory",
+          "topology_id": "rf_3967_exodus_compact",
+          "seed": 1,
+          "manifest_size": 3,
+          "budget": 0,
+          "variant": ""
+        },
+        {
+          "scheme": "hiroute",
+          "topology_id": "rf_3967_exodus_compact",
+          "seed": 1,
+          "manifest_size": 1,
+          "budget": 0,
+          "variant": ""
+        },
+        {
+          "scheme": "hiroute",
+          "topology_id": "rf_3967_exodus_compact",
+          "seed": 1,
+          "manifest_size": 2,
+          "budget": 0,
+          "variant": ""
+        },
+        {
+          "scheme": "hiroute",
+          "topology_id": "rf_3967_exodus_compact",
+          "seed": 1,
+          "manifest_size": 3,
+          "budget": 0,
+          "variant": ""
+        },
+        {
+          "scheme": "inf_tag_forwarding",
+          "topology_id": "rf_3967_exodus_compact",
+          "seed": 1,
+          "manifest_size": 1,
+          "budget": 0,
+          "variant": ""
+        },
+        {
+          "scheme": "inf_tag_forwarding",
+          "topology_id": "rf_3967_exodus_compact",
+          "seed": 1,
+          "manifest_size": 2,
+          "budget": 0,
+          "variant": ""
+        },
+        {
+          "scheme": "inf_tag_forwarding",
+          "topology_id": "rf_3967_exodus_compact",
+          "seed": 1,
+          "manifest_size": 3,
+          "budget": 0,
+          "variant": ""
+        }
+      ]
+    }
+  },
+  "stage_contract_fingerprint": {
+    "sha256": "f5f73a603e86b8438076b3ea1fe8f39885edd475a055b30ac202af4aa9ae531e",
+    "files": [
+      "scripts/eval/aggregate_experiment.py",
+      "scripts/eval/build_failure_breakdown.py",
+      "scripts/eval/build_object_main_manifest_sweep.py",
+      "scripts/eval/build_stage_decision.py",
+      "scripts/eval/promote_runs.py",
+      "scripts/plots/plot_experiment.py",
+      "scripts/run/run_experiment_matrix.py",
+      "tools/run_mainline_review_stage.py",
+      "tools/validate_aggregate_traceability.py",
+      "tools/validate_figures.py",
+      "tools/validate_manifest_regression.py",
+      "tools/validate_manifest_wiring.py",
+      "tools/validate_run.py",
+      "tools/validate_runtime_slice.py"
+    ],
+    "payload": {
+      "stage": "object_main",
+      "experiment_path": "configs/experiments/object_main.yaml",
+      "contract": {
+        "promotion_rule": {
+          "min_runs_per_scheme": 1,
+          "min_test_queries_per_scheme_budget_tier": 240,
+          "max_missing_logs": 0,
+          "require_clean_git": true
+        },
+        "outputs": [
+          "results/aggregate/mainline/object_main_manifest_sweep.csv",
+          "results/aggregate/mainline/failure_breakdown.csv",
+          "results/figures/mainline/fig_object_manifest_sweep.pdf"
+        ]
+      },
+      "matrix": [
+        {
+          "scheme": "central_directory",
+          "topology_id": "rf_3967_exodus_compact",
+          "seed": 1,
+          "manifest_size": 1,
+          "budget": 0,
+          "variant": ""
+        },
+        {
+          "scheme": "central_directory",
+          "topology_id": "rf_3967_exodus_compact",
+          "seed": 1,
+          "manifest_size": 2,
+          "budget": 0,
+          "variant": ""
+        },
+        {
+          "scheme": "central_directory",
+          "topology_id": "rf_3967_exodus_compact",
+          "seed": 1,
+          "manifest_size": 3,
+          "budget": 0,
+          "variant": ""
+        },
+        {
+          "scheme": "hiroute",
+          "topology_id": "rf_3967_exodus_compact",
+          "seed": 1,
+          "manifest_size": 1,
+          "budget": 0,
+          "variant": ""
+        },
+        {
+          "scheme": "hiroute",
+          "topology_id": "rf_3967_exodus_compact",
+          "seed": 1,
+          "manifest_size": 2,
+          "budget": 0,
+          "variant": ""
+        },
+        {
+          "scheme": "hiroute",
+          "topology_id": "rf_3967_exodus_compact",
+          "seed": 1,
+          "manifest_size": 3,
+          "budget": 0,
+          "variant": ""
+        },
+        {
+          "scheme": "inf_tag_forwarding",
+          "topology_id": "rf_3967_exodus_compact",
+          "seed": 1,
+          "manifest_size": 1,
+          "budget": 0,
+          "variant": ""
+        },
+        {
+          "scheme": "inf_tag_forwarding",
+          "topology_id": "rf_3967_exodus_compact",
+          "seed": 1,
+          "manifest_size": 2,
+          "budget": 0,
+          "variant": ""
+        },
+        {
+          "scheme": "inf_tag_forwarding",
+          "topology_id": "rf_3967_exodus_compact",
+          "seed": 1,
+          "manifest_size": 3,
+          "budget": 0,
+          "variant": ""
+        }
+      ]
+    }
+  },
+  "requested_matrix": [
+    {
+      "scheme": "inf_tag_forwarding",
+      "topology_id": "rf_3967_exodus_compact",
+      "seed": 1,
+      "manifest_size": 1,
+      "budget": 0,
+      "variant": ""
+    },
+    {
+      "scheme": "inf_tag_forwarding",
+      "topology_id": "rf_3967_exodus_compact",
+      "seed": 1,
+      "manifest_size": 2,
+      "budget": 0,
+      "variant": ""
+    },
+    {
+      "scheme": "inf_tag_forwarding",
+      "topology_id": "rf_3967_exodus_compact",
+      "seed": 1,
+      "manifest_size": 3,
+      "budget": 0,
+      "variant": ""
+    },
+    {
+      "scheme": "hiroute",
+      "topology_id": "rf_3967_exodus_compact",
+      "seed": 1,
+      "manifest_size": 1,
+      "budget": 0,
+      "variant": ""
+    },
+    {
+      "scheme": "hiroute",
+      "topology_id": "rf_3967_exodus_compact",
+      "seed": 1,
+      "manifest_size": 2,
+      "budget": 0,
+      "variant": ""
+    },
+    {
+      "scheme": "hiroute",
+      "topology_id": "rf_3967_exodus_compact",
+      "seed": 1,
+      "manifest_size": 3,
+      "budget": 0,
+      "variant": ""
+    },
+    {
+      "scheme": "central_directory",
+      "topology_id": "rf_3967_exodus_compact",
+      "seed": 1,
+      "manifest_size": 1,
+      "budget": 0,
+      "variant": ""
+    },
+    {
+      "scheme": "central_directory",
+      "topology_id": "rf_3967_exodus_compact",
+      "seed": 1,
+      "manifest_size": 2,
+      "budget": 0,
+      "variant": ""
+    },
+    {
+      "scheme": "central_directory",
+      "topology_id": "rf_3967_exodus_compact",
+      "seed": 1,
+      "manifest_size": 3,
+      "budget": 0,
+      "variant": ""
+    }
+  ],
+  "run_assignments": {
+    "scheme=central_directory|topology_id=rf_3967_exodus_compact|seed=1|manifest_size=1|budget=0|variant=": "object_main__central_directory__smartcity__rf_3967_exodus_compact__manifest1__seed1__20260416_092228",
+    "scheme=central_directory|topology_id=rf_3967_exodus_compact|seed=1|manifest_size=2|budget=0|variant=": "object_main__central_directory__smartcity__rf_3967_exodus_compact__manifest2__seed1__20260416_092915",
+    "scheme=central_directory|topology_id=rf_3967_exodus_compact|seed=1|manifest_size=3|budget=0|variant=": "object_main__central_directory__smartcity__rf_3967_exodus_compact__manifest3__seed1__20260416_093601",
+    "scheme=hiroute|topology_id=rf_3967_exodus_compact|seed=1|manifest_size=1|budget=0|variant=": "object_main__hiroute__smartcity__rf_3967_exodus_compact__manifest1__seed1__20260416_132916",
+    "scheme=hiroute|topology_id=rf_3967_exodus_compact|seed=1|manifest_size=2|budget=0|variant=": "object_main__hiroute__smartcity__rf_3967_exodus_compact__manifest2__seed1__20260416_090857",
+    "scheme=hiroute|topology_id=rf_3967_exodus_compact|seed=1|manifest_size=3|budget=0|variant=": "object_main__hiroute__smartcity__rf_3967_exodus_compact__manifest3__seed1__20260416_091543",
+    "scheme=inf_tag_forwarding|topology_id=rf_3967_exodus_compact|seed=1|manifest_size=1|budget=0|variant=": "object_main__inf_tag_forwarding__smartcity__rf_3967_exodus_compact__manifest1__seed1__20260416_083650",
+    "scheme=inf_tag_forwarding|topology_id=rf_3967_exodus_compact|seed=1|manifest_size=2|budget=0|variant=": "object_main__inf_tag_forwarding__smartcity__rf_3967_exodus_compact__manifest2__seed1__20260416_084816",
+    "scheme=inf_tag_forwarding|topology_id=rf_3967_exodus_compact|seed=1|manifest_size=3|budget=0|variant=": "object_main__inf_tag_forwarding__smartcity__rf_3967_exodus_compact__manifest3__seed1__20260416_085500"
+  },
+  "completed_run_ids": [
+    "object_main__central_directory__smartcity__rf_3967_exodus_compact__manifest1__seed1__20260416_092228",
+    "object_main__central_directory__smartcity__rf_3967_exodus_compact__manifest2__seed1__20260416_092915",
+    "object_main__central_directory__smartcity__rf_3967_exodus_compact__manifest3__seed1__20260416_093601",
+    "object_main__hiroute__smartcity__rf_3967_exodus_compact__manifest1__seed1__20260416_132916",
+    "object_main__hiroute__smartcity__rf_3967_exodus_compact__manifest2__seed1__20260416_090857",
+    "object_main__hiroute__smartcity__rf_3967_exodus_compact__manifest3__seed1__20260416_091543",
+    "object_main__inf_tag_forwarding__smartcity__rf_3967_exodus_compact__manifest1__seed1__20260416_083650",
+    "object_main__inf_tag_forwarding__smartcity__rf_3967_exodus_compact__manifest2__seed1__20260416_084816",
+    "object_main__inf_tag_forwarding__smartcity__rf_3967_exodus_compact__manifest3__seed1__20260416_085500"
+  ],
+  "validation_status": {
+    "validate_run": "PASS",
+    "run_experiment_matrix": "PASS",
+    "validate_runtime_slice": "PASS",
+    "validate_manifest_regression": "PASS",
+    "promote_runs": "PASS",
+    "aggregate_experiment": "PASS",
+    "validate_aggregate_traceability": "PASS",
+    "validate_manifest_wiring": "PASS",
+    "plot_experiment": "PASS",
+    "validate_figures": "PASS"
+  },
+  "aggregate_outputs": [
+    "results/aggregate/mainline/object_main_manifest_sweep.csv",
+    "results/aggregate/mainline/failure_breakdown.csv",
+    "review_artifacts/object_main/aggregate/object_main_manifest_wiring_report.json",
+    "review_artifacts/object_main/aggregate/object_main_decision.json",
+    "review_artifacts/object_main/aggregate/object_main_decision.stdout.txt"
+  ],
+  "decision": "ready_for_main_figure",
+  "stage_decision": "ready_for_main_figure",
+  "completed_experiments": "object_main",
+  "representative_run": "object_main__hiroute__smartcity__rf_3967_exodus_compact__manifest1__seed1__20260416_132916",
+  "representative_runs": [
+    "object_main__hiroute__smartcity__rf_3967_exodus_compact__manifest1__seed1__20260416_132916",
+    "object_main__inf_tag_forwarding__smartcity__rf_3967_exodus_compact__manifest3__seed1__20260416_085500",
+    "object_main__central_directory__smartcity__rf_3967_exodus_compact__manifest1__seed1__20260416_092228"
+  ],
+  "figure_guidance": [
+    "hiroute_reaches_ceiling_at_manifest1",
+    "accuracy_gap_persists_at_manifest3",
+    "residual_cost_gap_persists",
+    "oracle_remains_lower_byte_upper_bound",
+    "terminal_vs_first_fetch_gap_visible"
+  ],
+  "recommend_next_stage": "ablation_quick",
+  "inherited_runs": [
+    "object_main__inf_tag_forwarding__smartcity__rf_3967_exodus_compact__manifest1__seed1__20260416_083650",
+    "object_main__hiroute__smartcity__rf_3967_exodus_compact__manifest1__seed1__20260416_132916",
+    "object_main__hiroute__smartcity__rf_3967_exodus_compact__manifest2__seed1__20260416_090857",
+    "object_main__hiroute__smartcity__rf_3967_exodus_compact__manifest3__seed1__20260416_091543",
+    "object_main__central_directory__smartcity__rf_3967_exodus_compact__manifest1__seed1__20260416_092228"
+  ],
+  "newly_executed_runs": [],
+  "skipped_runs": [
+    "object_main__inf_tag_forwarding__smartcity__rf_3967_exodus_compact__manifest2__seed1__20260416_084816",
+    "object_main__inf_tag_forwarding__smartcity__rf_3967_exodus_compact__manifest3__seed1__20260416_085500",
+    "object_main__central_directory__smartcity__rf_3967_exodus_compact__manifest2__seed1__20260416_092915",
+    "object_main__central_directory__smartcity__rf_3967_exodus_compact__manifest3__seed1__20260416_093601"
+  ]
+}

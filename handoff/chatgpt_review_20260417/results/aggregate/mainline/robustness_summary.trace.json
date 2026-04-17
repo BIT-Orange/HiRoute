@@ -1,0 +1,72 @@
+{
+  "experiment_id": "robustness",
+  "aggregate_csv": "results/aggregate/mainline/robustness_summary.csv",
+  "generated_at": "2026-04-17T07:32:17Z",
+  "row_count": 4,
+  "rows": [
+    {
+      "row_index": 0,
+      "locator": {
+        "scheme": "central_directory",
+        "topology_id": "rf_3967_exodus_compact",
+        "scenario_variant": "controller_down"
+      },
+      "source_run_ids": [
+        "robustness__central_directory__smartcity__rf_3967_exodus_compact__controller_down__budget16__manifest5__seed1__20260417_071719"
+      ],
+      "source_run_dirs": [
+        "runs/completed/robustness__central_directory__smartcity__rf_3967_exodus_compact__controller_down__budget16__manifest5__seed1__20260417_071719"
+      ],
+      "source_query_count_total": 240,
+      "row_query_count": "240"
+    },
+    {
+      "row_index": 1,
+      "locator": {
+        "scheme": "hiroute",
+        "topology_id": "rf_3967_exodus_compact",
+        "scenario_variant": "controller_down"
+      },
+      "source_run_ids": [
+        "robustness__hiroute__smartcity__rf_3967_exodus_compact__controller_down__budget16__manifest5__seed1__20260417_071719"
+      ],
+      "source_run_dirs": [
+        "runs/completed/robustness__hiroute__smartcity__rf_3967_exodus_compact__controller_down__budget16__manifest5__seed1__20260417_071719"
+      ],
+      "source_query_count_total": 240,
+      "row_query_count": "240"
+    },
+    {
+      "row_index": 2,
+      "locator": {
+        "scheme": "central_directory",
+        "topology_id": "rf_3967_exodus_compact",
+        "scenario_variant": "stale_summaries"
+      },
+      "source_run_ids": [
+        "robustness__central_directory__smartcity__rf_3967_exodus_compact__stale_summaries__budget16__manifest5__seed1__20260417_071719"
+      ],
+      "source_run_dirs": [
+        "runs/completed/robustness__central_directory__smartcity__rf_3967_exodus_compact__stale_summaries__budget16__manifest5__seed1__20260417_071719"
+      ],
+      "source_query_count_total": 240,
+      "row_query_count": "240"
+    },
+    {
+      "row_index": 3,
+      "locator": {
+        "scheme": "hiroute",
+        "topology_id": "rf_3967_exodus_compact",
+        "scenario_variant": "stale_summaries"
+      },
+      "source_run_ids": [
+        "robustness__hiroute__smartcity__rf_3967_exodus_compact__stale_summaries__budget16__manifest5__seed1__20260417_071719"
+      ],
+      "source_run_dirs": [
+        "runs/completed/robustness__hiroute__smartcity__rf_3967_exodus_compact__stale_summaries__budget16__manifest5__seed1__20260417_071719"
+      ],
+      "source_query_count_total": 240,
+      "row_query_count": "240"
+    }
+  ]
+}

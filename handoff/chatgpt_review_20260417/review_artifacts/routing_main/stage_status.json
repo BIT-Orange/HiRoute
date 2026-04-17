@@ -1,0 +1,558 @@
+{
+  "stage": "routing_main",
+  "git_sha": "a3a00be",
+  "generated_at": "2026-04-17T07:30:05Z",
+  "updated_at": "2026-04-17T07:32:09Z",
+  "dataset_fingerprint": {
+    "sha256": "d8b4acc314ab4909b30952fea851cefcb0e219ae4f93601dbb3386994e31e4ff",
+    "files": [
+      "configs/datasets/smartcity.yaml",
+      "configs/hierarchy/hiroute_hkm.yaml",
+      "scripts/build_dataset/build_queries_and_qrels.py",
+      "scripts/build_dataset/build_hierarchy_and_hslsa.py",
+      "docs/datasets/schema_reference.md"
+    ]
+  },
+  "binary_fingerprint": {
+    "sha256": "0cd3c5c65209e766f826c135c4dc8c8a3615b24a589925a93adcac0f262adaf4",
+    "files": [
+      "ns-3/src/ndnSIM/apps/hiroute-controller-app.cpp",
+      "ns-3/src/ndnSIM/apps/hiroute-ingress-app.cpp",
+      "ns-3/src/ndnSIM/examples/hiroute-scenario-common.hpp"
+    ]
+  },
+  "simulation_fingerprint": {
+    "sha256": "d18a4fa1dd5041fc21304b5b4743ed018e7a7b7f786ff6b6affcae199af761a2",
+    "files": [
+      "configs/baselines/central_directory.yaml",
+      "configs/baselines/flood.yaml",
+      "configs/baselines/hiroute.yaml",
+      "configs/baselines/inf_tag_forwarding.yaml",
+      "configs/baselines/predicates_only.yaml",
+      "configs/baselines/random_admissible.yaml",
+      "configs/datasets/smartcity.yaml",
+      "configs/hierarchy/hiroute_hkm.yaml",
+      "configs/topologies/rocketfuel_3967_exodus_compact.yaml",
+      "scripts/run/run_experiment.py"
+    ],
+    "payload": {
+      "stage_identity": "configs/experiments/routing_main.yaml",
+      "experiment": {
+        "experiment_id": "routing_main",
+        "dataset_id": "smartcity",
+        "topology_id": "rf_3967_exodus_compact",
+        "scenario": "hiroute-main",
+        "schemes": [
+          "predicates_only",
+          "random_admissible",
+          "inf_tag_forwarding",
+          "flood",
+          "hiroute",
+          "central_directory"
+        ],
+        "seeds": [
+          1
+        ],
+        "budgets": [
+          8,
+          16,
+          32
+        ],
+        "default_budget": 16,
+        "reference_schemes": [
+          "flood",
+          "central_directory"
+        ],
+        "frontier_schemes": [
+          "predicates_only",
+          "random_admissible",
+          "inf_tag_forwarding",
+          "hiroute"
+        ],
+        "query_filters": {
+          "splits": [
+            "test"
+          ],
+          "workload_tiers": [
+            "routing_main"
+          ]
+        },
+        "inputs": {
+          "objects_csv": "data/processed/smartcity/objects_master.csv",
+          "queries_csv": "data/processed/smartcity/rf_3967_exodus/queries_master.csv",
+          "query_embedding_index_csv": "data/processed/smartcity/rf_3967_exodus/query_embedding_index.csv",
+          "qrels_object_csv": "data/processed/smartcity/rf_3967_exodus/qrels_object.csv",
+          "qrels_domain_csv": "data/processed/smartcity/rf_3967_exodus/qrels_domain.csv",
+          "hslsa_csv": "data/processed/smartcity/hslsa_export.csv",
+          "controller_local_index_csv": "data/processed/smartcity/controller_local_index.csv",
+          "topology_mapping_csv": "data/processed/ndnsim/topology_mapping_rf_3967_exodus_compact.csv"
+        }
+      },
+      "runner": {
+        "type": "ndnsim",
+        "params": {
+          "stopSeconds": 32,
+          "manifestSize": 5,
+          "probeBudget": 5,
+          "queryLimitPerIngress": 0
+        }
+      },
+      "matrix": [
+        {
+          "scheme": "central_directory",
+          "topology_id": "rf_3967_exodus_compact",
+          "seed": 1,
+          "manifest_size": 5,
+          "budget": 16,
+          "variant": ""
+        },
+        {
+          "scheme": "flood",
+          "topology_id": "rf_3967_exodus_compact",
+          "seed": 1,
+          "manifest_size": 5,
+          "budget": 16,
+          "variant": ""
+        },
+        {
+          "scheme": "hiroute",
+          "topology_id": "rf_3967_exodus_compact",
+          "seed": 1,
+          "manifest_size": 5,
+          "budget": 16,
+          "variant": ""
+        },
+        {
+          "scheme": "hiroute",
+          "topology_id": "rf_3967_exodus_compact",
+          "seed": 1,
+          "manifest_size": 5,
+          "budget": 32,
+          "variant": ""
+        },
+        {
+          "scheme": "hiroute",
+          "topology_id": "rf_3967_exodus_compact",
+          "seed": 1,
+          "manifest_size": 5,
+          "budget": 8,
+          "variant": ""
+        },
+        {
+          "scheme": "inf_tag_forwarding",
+          "topology_id": "rf_3967_exodus_compact",
+          "seed": 1,
+          "manifest_size": 5,
+          "budget": 16,
+          "variant": ""
+        },
+        {
+          "scheme": "inf_tag_forwarding",
+          "topology_id": "rf_3967_exodus_compact",
+          "seed": 1,
+          "manifest_size": 5,
+          "budget": 32,
+          "variant": ""
+        },
+        {
+          "scheme": "inf_tag_forwarding",
+          "topology_id": "rf_3967_exodus_compact",
+          "seed": 1,
+          "manifest_size": 5,
+          "budget": 8,
+          "variant": ""
+        },
+        {
+          "scheme": "predicates_only",
+          "topology_id": "rf_3967_exodus_compact",
+          "seed": 1,
+          "manifest_size": 5,
+          "budget": 16,
+          "variant": ""
+        },
+        {
+          "scheme": "predicates_only",
+          "topology_id": "rf_3967_exodus_compact",
+          "seed": 1,
+          "manifest_size": 5,
+          "budget": 32,
+          "variant": ""
+        },
+        {
+          "scheme": "predicates_only",
+          "topology_id": "rf_3967_exodus_compact",
+          "seed": 1,
+          "manifest_size": 5,
+          "budget": 8,
+          "variant": ""
+        },
+        {
+          "scheme": "random_admissible",
+          "topology_id": "rf_3967_exodus_compact",
+          "seed": 1,
+          "manifest_size": 5,
+          "budget": 16,
+          "variant": ""
+        },
+        {
+          "scheme": "random_admissible",
+          "topology_id": "rf_3967_exodus_compact",
+          "seed": 1,
+          "manifest_size": 5,
+          "budget": 32,
+          "variant": ""
+        },
+        {
+          "scheme": "random_admissible",
+          "topology_id": "rf_3967_exodus_compact",
+          "seed": 1,
+          "manifest_size": 5,
+          "budget": 8,
+          "variant": ""
+        }
+      ]
+    }
+  },
+  "stage_contract_fingerprint": {
+    "sha256": "bc0d7725d2ef7817cbbf8a3c86edb7bb890c97b08489d85737a421bf07558c5d",
+    "files": [
+      "scripts/eval/aggregate_experiment.py",
+      "scripts/eval/aggregate_query_metrics.py",
+      "scripts/eval/build_candidate_shrinkage.py",
+      "scripts/eval/build_deadline_summary.py",
+      "scripts/eval/promote_runs.py",
+      "scripts/plots/plot_experiment.py",
+      "scripts/run/run_experiment_matrix.py",
+      "tools/run_mainline_review_stage.py",
+      "tools/validate_aggregate_traceability.py",
+      "tools/validate_figures.py",
+      "tools/validate_manifest_regression.py",
+      "tools/validate_manifest_wiring.py",
+      "tools/validate_run.py",
+      "tools/validate_runtime_slice.py"
+    ],
+    "payload": {
+      "stage": "routing_main",
+      "experiment_path": "configs/experiments/routing_main.yaml",
+      "contract": {
+        "promotion_rule": {
+          "min_runs_per_scheme": 1,
+          "min_test_queries_per_scheme_budget_tier": 240,
+          "max_missing_logs": 0,
+          "require_clean_git": true
+        },
+        "outputs": [
+          "results/aggregate/mainline/routing_support.csv",
+          "results/aggregate/mainline/candidate_shrinkage.csv",
+          "results/aggregate/mainline/deadline_summary.csv",
+          "results/figures/mainline/fig_routing_support.pdf",
+          "results/figures/mainline/fig_candidate_shrinkage.pdf",
+          "results/figures/mainline/fig_deadline_summary.pdf"
+        ]
+      },
+      "matrix": [
+        {
+          "scheme": "central_directory",
+          "topology_id": "rf_3967_exodus_compact",
+          "seed": 1,
+          "manifest_size": 5,
+          "budget": 16,
+          "variant": ""
+        },
+        {
+          "scheme": "flood",
+          "topology_id": "rf_3967_exodus_compact",
+          "seed": 1,
+          "manifest_size": 5,
+          "budget": 16,
+          "variant": ""
+        },
+        {
+          "scheme": "hiroute",
+          "topology_id": "rf_3967_exodus_compact",
+          "seed": 1,
+          "manifest_size": 5,
+          "budget": 16,
+          "variant": ""
+        },
+        {
+          "scheme": "hiroute",
+          "topology_id": "rf_3967_exodus_compact",
+          "seed": 1,
+          "manifest_size": 5,
+          "budget": 32,
+          "variant": ""
+        },
+        {
+          "scheme": "hiroute",
+          "topology_id": "rf_3967_exodus_compact",
+          "seed": 1,
+          "manifest_size": 5,
+          "budget": 8,
+          "variant": ""
+        },
+        {
+          "scheme": "inf_tag_forwarding",
+          "topology_id": "rf_3967_exodus_compact",
+          "seed": 1,
+          "manifest_size": 5,
+          "budget": 16,
+          "variant": ""
+        },
+        {
+          "scheme": "inf_tag_forwarding",
+          "topology_id": "rf_3967_exodus_compact",
+          "seed": 1,
+          "manifest_size": 5,
+          "budget": 32,
+          "variant": ""
+        },
+        {
+          "scheme": "inf_tag_forwarding",
+          "topology_id": "rf_3967_exodus_compact",
+          "seed": 1,
+          "manifest_size": 5,
+          "budget": 8,
+          "variant": ""
+        },
+        {
+          "scheme": "predicates_only",
+          "topology_id": "rf_3967_exodus_compact",
+          "seed": 1,
+          "manifest_size": 5,
+          "budget": 16,
+          "variant": ""
+        },
+        {
+          "scheme": "predicates_only",
+          "topology_id": "rf_3967_exodus_compact",
+          "seed": 1,
+          "manifest_size": 5,
+          "budget": 32,
+          "variant": ""
+        },
+        {
+          "scheme": "predicates_only",
+          "topology_id": "rf_3967_exodus_compact",
+          "seed": 1,
+          "manifest_size": 5,
+          "budget": 8,
+          "variant": ""
+        },
+        {
+          "scheme": "random_admissible",
+          "topology_id": "rf_3967_exodus_compact",
+          "seed": 1,
+          "manifest_size": 5,
+          "budget": 16,
+          "variant": ""
+        },
+        {
+          "scheme": "random_admissible",
+          "topology_id": "rf_3967_exodus_compact",
+          "seed": 1,
+          "manifest_size": 5,
+          "budget": 32,
+          "variant": ""
+        },
+        {
+          "scheme": "random_admissible",
+          "topology_id": "rf_3967_exodus_compact",
+          "seed": 1,
+          "manifest_size": 5,
+          "budget": 8,
+          "variant": ""
+        }
+      ]
+    }
+  },
+  "requested_matrix": [
+    {
+      "scheme": "predicates_only",
+      "topology_id": "rf_3967_exodus_compact",
+      "seed": 1,
+      "manifest_size": 5,
+      "budget": 8,
+      "variant": ""
+    },
+    {
+      "scheme": "predicates_only",
+      "topology_id": "rf_3967_exodus_compact",
+      "seed": 1,
+      "manifest_size": 5,
+      "budget": 16,
+      "variant": ""
+    },
+    {
+      "scheme": "predicates_only",
+      "topology_id": "rf_3967_exodus_compact",
+      "seed": 1,
+      "manifest_size": 5,
+      "budget": 32,
+      "variant": ""
+    },
+    {
+      "scheme": "random_admissible",
+      "topology_id": "rf_3967_exodus_compact",
+      "seed": 1,
+      "manifest_size": 5,
+      "budget": 8,
+      "variant": ""
+    },
+    {
+      "scheme": "random_admissible",
+      "topology_id": "rf_3967_exodus_compact",
+      "seed": 1,
+      "manifest_size": 5,
+      "budget": 16,
+      "variant": ""
+    },
+    {
+      "scheme": "random_admissible",
+      "topology_id": "rf_3967_exodus_compact",
+      "seed": 1,
+      "manifest_size": 5,
+      "budget": 32,
+      "variant": ""
+    },
+    {
+      "scheme": "inf_tag_forwarding",
+      "topology_id": "rf_3967_exodus_compact",
+      "seed": 1,
+      "manifest_size": 5,
+      "budget": 8,
+      "variant": ""
+    },
+    {
+      "scheme": "inf_tag_forwarding",
+      "topology_id": "rf_3967_exodus_compact",
+      "seed": 1,
+      "manifest_size": 5,
+      "budget": 16,
+      "variant": ""
+    },
+    {
+      "scheme": "inf_tag_forwarding",
+      "topology_id": "rf_3967_exodus_compact",
+      "seed": 1,
+      "manifest_size": 5,
+      "budget": 32,
+      "variant": ""
+    },
+    {
+      "scheme": "flood",
+      "topology_id": "rf_3967_exodus_compact",
+      "seed": 1,
+      "manifest_size": 5,
+      "budget": 16,
+      "variant": ""
+    },
+    {
+      "scheme": "hiroute",
+      "topology_id": "rf_3967_exodus_compact",
+      "seed": 1,
+      "manifest_size": 5,
+      "budget": 8,
+      "variant": ""
+    },
+    {
+      "scheme": "hiroute",
+      "topology_id": "rf_3967_exodus_compact",
+      "seed": 1,
+      "manifest_size": 5,
+      "budget": 16,
+      "variant": ""
+    },
+    {
+      "scheme": "hiroute",
+      "topology_id": "rf_3967_exodus_compact",
+      "seed": 1,
+      "manifest_size": 5,
+      "budget": 32,
+      "variant": ""
+    },
+    {
+      "scheme": "central_directory",
+      "topology_id": "rf_3967_exodus_compact",
+      "seed": 1,
+      "manifest_size": 5,
+      "budget": 16,
+      "variant": ""
+    }
+  ],
+  "run_assignments": {
+    "scheme=central_directory|topology_id=rf_3967_exodus_compact|seed=1|manifest_size=5|budget=16|variant=": "routing_main__central_directory__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260416_130408",
+    "scheme=flood|topology_id=rf_3967_exodus_compact|seed=1|manifest_size=5|budget=16|variant=": "routing_main__flood__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260416_123646",
+    "scheme=hiroute|topology_id=rf_3967_exodus_compact|seed=1|manifest_size=5|budget=16|variant=": "routing_main__hiroute__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260416_125027",
+    "scheme=hiroute|topology_id=rf_3967_exodus_compact|seed=1|manifest_size=5|budget=32|variant=": "routing_main__hiroute__smartcity__rf_3967_exodus_compact__budget32__manifest5__seed1__20260416_125717",
+    "scheme=hiroute|topology_id=rf_3967_exodus_compact|seed=1|manifest_size=5|budget=8|variant=": "routing_main__hiroute__smartcity__rf_3967_exodus_compact__budget8__manifest5__seed1__20260416_124340",
+    "scheme=inf_tag_forwarding|topology_id=rf_3967_exodus_compact|seed=1|manifest_size=5|budget=16|variant=": "routing_main__inf_tag_forwarding__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260416_122301",
+    "scheme=inf_tag_forwarding|topology_id=rf_3967_exodus_compact|seed=1|manifest_size=5|budget=32|variant=": "routing_main__inf_tag_forwarding__smartcity__rf_3967_exodus_compact__budget32__manifest5__seed1__20260416_122957",
+    "scheme=inf_tag_forwarding|topology_id=rf_3967_exodus_compact|seed=1|manifest_size=5|budget=8|variant=": "routing_main__inf_tag_forwarding__smartcity__rf_3967_exodus_compact__budget8__manifest5__seed1__20260416_121610",
+    "scheme=predicates_only|topology_id=rf_3967_exodus_compact|seed=1|manifest_size=5|budget=16|variant=": "routing_main__predicates_only__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260416_114152",
+    "scheme=predicates_only|topology_id=rf_3967_exodus_compact|seed=1|manifest_size=5|budget=32|variant=": "routing_main__predicates_only__smartcity__rf_3967_exodus_compact__budget32__manifest5__seed1__20260416_114845",
+    "scheme=predicates_only|topology_id=rf_3967_exodus_compact|seed=1|manifest_size=5|budget=8|variant=": "routing_main__predicates_only__smartcity__rf_3967_exodus_compact__budget8__manifest5__seed1__20260416_113501",
+    "scheme=random_admissible|topology_id=rf_3967_exodus_compact|seed=1|manifest_size=5|budget=16|variant=": "routing_main__random_admissible__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260416_120230",
+    "scheme=random_admissible|topology_id=rf_3967_exodus_compact|seed=1|manifest_size=5|budget=32|variant=": "routing_main__random_admissible__smartcity__rf_3967_exodus_compact__budget32__manifest5__seed1__20260416_120920",
+    "scheme=random_admissible|topology_id=rf_3967_exodus_compact|seed=1|manifest_size=5|budget=8|variant=": "routing_main__random_admissible__smartcity__rf_3967_exodus_compact__budget8__manifest5__seed1__20260416_115541"
+  },
+  "completed_run_ids": [
+    "routing_main__central_directory__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260416_130408",
+    "routing_main__flood__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260416_123646",
+    "routing_main__hiroute__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260416_125027",
+    "routing_main__hiroute__smartcity__rf_3967_exodus_compact__budget32__manifest5__seed1__20260416_125717",
+    "routing_main__hiroute__smartcity__rf_3967_exodus_compact__budget8__manifest5__seed1__20260416_124340",
+    "routing_main__inf_tag_forwarding__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260416_122301",
+    "routing_main__inf_tag_forwarding__smartcity__rf_3967_exodus_compact__budget32__manifest5__seed1__20260416_122957",
+    "routing_main__inf_tag_forwarding__smartcity__rf_3967_exodus_compact__budget8__manifest5__seed1__20260416_121610",
+    "routing_main__predicates_only__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260416_114152",
+    "routing_main__predicates_only__smartcity__rf_3967_exodus_compact__budget32__manifest5__seed1__20260416_114845",
+    "routing_main__predicates_only__smartcity__rf_3967_exodus_compact__budget8__manifest5__seed1__20260416_113501",
+    "routing_main__random_admissible__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260416_120230",
+    "routing_main__random_admissible__smartcity__rf_3967_exodus_compact__budget32__manifest5__seed1__20260416_120920",
+    "routing_main__random_admissible__smartcity__rf_3967_exodus_compact__budget8__manifest5__seed1__20260416_115541"
+  ],
+  "validation_status": {
+    "validate_run": "PASS",
+    "run_experiment_matrix": "PASS",
+    "validate_runtime_slice": "PASS",
+    "promote_runs": "PASS",
+    "aggregate_experiment": "PASS",
+    "validate_aggregate_traceability": "PASS",
+    "plot_experiment": "PASS",
+    "validate_figures": "PASS"
+  },
+  "aggregate_outputs": [
+    "results/aggregate/mainline/routing_support.csv",
+    "results/aggregate/mainline/candidate_shrinkage.csv",
+    "results/aggregate/mainline/deadline_summary.csv",
+    "results/figures/mainline/fig_routing_support.pdf",
+    "results/figures/mainline/fig_candidate_shrinkage.pdf",
+    "results/figures/mainline/fig_deadline_summary.pdf"
+  ],
+  "decision": "completed",
+  "stage_decision": "completed",
+  "completed_experiments": "routing_main",
+  "representative_run": "routing_main__central_directory__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260416_130408",
+  "representative_runs": [],
+  "figure_guidance": [],
+  "recommend_next_stage": "",
+  "inherited_runs": [],
+  "newly_executed_runs": [],
+  "skipped_runs": [
+    "routing_main__predicates_only__smartcity__rf_3967_exodus_compact__budget8__manifest5__seed1__20260416_113501",
+    "routing_main__predicates_only__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260416_114152",
+    "routing_main__predicates_only__smartcity__rf_3967_exodus_compact__budget32__manifest5__seed1__20260416_114845",
+    "routing_main__random_admissible__smartcity__rf_3967_exodus_compact__budget8__manifest5__seed1__20260416_115541",
+    "routing_main__random_admissible__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260416_120230",
+    "routing_main__random_admissible__smartcity__rf_3967_exodus_compact__budget32__manifest5__seed1__20260416_120920",
+    "routing_main__inf_tag_forwarding__smartcity__rf_3967_exodus_compact__budget8__manifest5__seed1__20260416_121610",
+    "routing_main__inf_tag_forwarding__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260416_122301",
+    "routing_main__inf_tag_forwarding__smartcity__rf_3967_exodus_compact__budget32__manifest5__seed1__20260416_122957",
+    "routing_main__flood__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260416_123646",
+    "routing_main__hiroute__smartcity__rf_3967_exodus_compact__budget8__manifest5__seed1__20260416_124340",
+    "routing_main__hiroute__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260416_125027",
+    "routing_main__hiroute__smartcity__rf_3967_exodus_compact__budget32__manifest5__seed1__20260416_125717",
+    "routing_main__central_directory__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260416_130408"
+  ]
+}

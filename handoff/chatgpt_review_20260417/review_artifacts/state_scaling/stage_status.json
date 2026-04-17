@@ -1,0 +1,206 @@
+{
+  "stage": "state_scaling",
+  "git_sha": "a3a00be",
+  "generated_at": "2026-04-17T07:17:05Z",
+  "updated_at": "2026-04-17T07:32:14Z",
+  "dataset_fingerprint": {
+    "sha256": "d8b4acc314ab4909b30952fea851cefcb0e219ae4f93601dbb3386994e31e4ff",
+    "files": [
+      "configs/datasets/smartcity.yaml",
+      "configs/hierarchy/hiroute_hkm.yaml",
+      "scripts/build_dataset/build_queries_and_qrels.py",
+      "scripts/build_dataset/build_hierarchy_and_hslsa.py",
+      "docs/datasets/schema_reference.md"
+    ]
+  },
+  "binary_fingerprint": {
+    "sha256": "0cd3c5c65209e766f826c135c4dc8c8a3615b24a589925a93adcac0f262adaf4",
+    "files": [
+      "ns-3/src/ndnSIM/apps/hiroute-controller-app.cpp",
+      "ns-3/src/ndnSIM/apps/hiroute-ingress-app.cpp",
+      "ns-3/src/ndnSIM/examples/hiroute-scenario-common.hpp"
+    ]
+  },
+  "simulation_fingerprint": {
+    "sha256": "8b24f9a04082189b7973a665d5c638d6c9d9275f2ac7bad19858e68c0796b831",
+    "files": [
+      "configs/baselines/hiroute.yaml",
+      "configs/baselines/inf_tag_forwarding.yaml",
+      "configs/datasets/smartcity.yaml",
+      "configs/hierarchy/hiroute_hkm.yaml",
+      "configs/topologies/rocketfuel_3967_exodus_compact.yaml",
+      "scripts/run/run_experiment.py"
+    ],
+    "payload": {
+      "stage_identity": "configs/experiments/state_scaling.yaml",
+      "experiment": {
+        "experiment_id": "state_scaling",
+        "dataset_id": "smartcity",
+        "topology_id": "rf_3967_exodus_compact",
+        "scenario": "hiroute-state-scaling",
+        "schemes": [
+          "inf_tag_forwarding",
+          "hiroute"
+        ],
+        "seeds": [
+          1
+        ],
+        "budgets": [
+          16
+        ],
+        "default_budget": 16,
+        "query_filters": {
+          "splits": [
+            "test"
+          ],
+          "workload_tiers": [
+            "routing_main"
+          ]
+        },
+        "inputs": {
+          "objects_csv": "data/processed/smartcity/objects_master.csv",
+          "queries_csv": "data/processed/smartcity/rf_3967_exodus/queries_master.csv",
+          "query_embedding_index_csv": "data/processed/smartcity/rf_3967_exodus/query_embedding_index.csv",
+          "qrels_object_csv": "data/processed/smartcity/rf_3967_exodus/qrels_object.csv",
+          "qrels_domain_csv": "data/processed/smartcity/rf_3967_exodus/qrels_domain.csv",
+          "hslsa_csv": "data/processed/smartcity/hslsa_export.csv",
+          "controller_local_index_csv": "data/processed/smartcity/controller_local_index.csv",
+          "topology_mapping_csv": "data/processed/ndnsim/topology_mapping_rf_3967_exodus_compact.csv"
+        }
+      },
+      "runner": {
+        "type": "ndnsim",
+        "params": {
+          "stopSeconds": 16,
+          "manifestSize": 3,
+          "probeBudget": 5,
+          "queryLimitPerIngress": 0,
+          "objectsPerDomainSweep": "200,400,800",
+          "domainSweepCounts": "8"
+        }
+      },
+      "matrix": [
+        {
+          "scheme": "hiroute",
+          "topology_id": "rf_3967_exodus_compact",
+          "seed": 1,
+          "manifest_size": 3,
+          "budget": 16,
+          "variant": ""
+        },
+        {
+          "scheme": "inf_tag_forwarding",
+          "topology_id": "rf_3967_exodus_compact",
+          "seed": 1,
+          "manifest_size": 3,
+          "budget": 16,
+          "variant": ""
+        }
+      ]
+    }
+  },
+  "stage_contract_fingerprint": {
+    "sha256": "44b30e2f13c7e06908504458631aaa8d22ce5a34996f757215bf9437d6bbd4fe",
+    "files": [
+      "scripts/eval/aggregate_experiment.py",
+      "scripts/eval/build_state_scaling_summary.py",
+      "scripts/eval/promote_runs.py",
+      "scripts/plots/plot_experiment.py",
+      "scripts/run/run_experiment_matrix.py",
+      "tools/run_mainline_review_stage.py",
+      "tools/validate_aggregate_traceability.py",
+      "tools/validate_figures.py",
+      "tools/validate_manifest_regression.py",
+      "tools/validate_manifest_wiring.py",
+      "tools/validate_run.py",
+      "tools/validate_runtime_slice.py"
+    ],
+    "payload": {
+      "stage": "state_scaling",
+      "experiment_path": "configs/experiments/state_scaling.yaml",
+      "contract": {
+        "promotion_rule": {
+          "min_runs_per_scheme": 1,
+          "max_missing_logs": 0,
+          "require_clean_git": true
+        },
+        "measurement_mode": "state_only",
+        "outputs": [
+          "results/aggregate/mainline/state_scaling_summary.csv",
+          "results/figures/mainline/fig_state_scaling.pdf"
+        ]
+      },
+      "matrix": [
+        {
+          "scheme": "hiroute",
+          "topology_id": "rf_3967_exodus_compact",
+          "seed": 1,
+          "manifest_size": 3,
+          "budget": 16,
+          "variant": ""
+        },
+        {
+          "scheme": "inf_tag_forwarding",
+          "topology_id": "rf_3967_exodus_compact",
+          "seed": 1,
+          "manifest_size": 3,
+          "budget": 16,
+          "variant": ""
+        }
+      ]
+    }
+  },
+  "requested_matrix": [
+    {
+      "scheme": "inf_tag_forwarding",
+      "topology_id": "rf_3967_exodus_compact",
+      "seed": 1,
+      "manifest_size": 3,
+      "budget": 16,
+      "variant": ""
+    },
+    {
+      "scheme": "hiroute",
+      "topology_id": "rf_3967_exodus_compact",
+      "seed": 1,
+      "manifest_size": 3,
+      "budget": 16,
+      "variant": ""
+    }
+  ],
+  "run_assignments": {
+    "scheme=hiroute|topology_id=rf_3967_exodus_compact|seed=1|manifest_size=3|budget=16|variant=": "state_scaling__hiroute__smartcity__rf_3967_exodus_compact__budget16__manifest3__seed1__20260416_134544",
+    "scheme=inf_tag_forwarding|topology_id=rf_3967_exodus_compact|seed=1|manifest_size=3|budget=16|variant=": "state_scaling__inf_tag_forwarding__smartcity__rf_3967_exodus_compact__budget16__manifest3__seed1__20260416_134544"
+  },
+  "completed_run_ids": [
+    "state_scaling__hiroute__smartcity__rf_3967_exodus_compact__budget16__manifest3__seed1__20260416_134544",
+    "state_scaling__inf_tag_forwarding__smartcity__rf_3967_exodus_compact__budget16__manifest3__seed1__20260416_134544"
+  ],
+  "validation_status": {
+    "validate_run": "PASS",
+    "run_experiment_matrix": "PASS",
+    "validate_runtime_slice": "PASS",
+    "promote_runs": "PASS",
+    "aggregate_experiment": "PASS",
+    "validate_aggregate_traceability": "PASS",
+    "plot_experiment": "PASS",
+    "validate_figures": "PASS"
+  },
+  "aggregate_outputs": [
+    "results/aggregate/mainline/state_scaling_summary.csv",
+    "results/figures/mainline/fig_state_scaling.pdf"
+  ],
+  "decision": "completed",
+  "stage_decision": "completed",
+  "completed_experiments": "state_scaling",
+  "representative_run": "state_scaling__hiroute__smartcity__rf_3967_exodus_compact__budget16__manifest3__seed1__20260416_134544",
+  "representative_runs": [],
+  "figure_guidance": [],
+  "recommend_next_stage": "",
+  "inherited_runs": [],
+  "newly_executed_runs": [],
+  "skipped_runs": [
+    "state_scaling__inf_tag_forwarding__smartcity__rf_3967_exodus_compact__budget16__manifest3__seed1__20260416_134544",
+    "state_scaling__hiroute__smartcity__rf_3967_exodus_compact__budget16__manifest3__seed1__20260416_134544"
+  ]
+}

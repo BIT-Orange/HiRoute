@@ -1,0 +1,146 @@
+"""Dispatch experiment-specific aggregate builders for Figure 4-10."""
+
+from __future__ import annotations
+
+import argparse
+import os
+from pathlib import Path
+import subprocess
+import sys
+
+ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from tools.workflow_support import load_json_yaml, repo_root
+
+
+SCRIPT_MAP = {
+    "exp_main_v1": [
+        "scripts/eval/aggregate_query_metrics.py",
+        "scripts/eval/build_failure_breakdown.py",
+        "scripts/eval/build_candidate_shrinkage.py",
+        "scripts/eval/build_deadline_summary.py",
+    ],
+    "exp_scaling_v1": [
+        "scripts/eval/build_state_scaling_summary.py",
+    ],
+    "exp_staleness_v1": [
+        "scripts/eval/build_robustness_summary.py",
+    ],
+    "exp_failures_v1": [
+        "scripts/eval/build_robustness_summary.py",
+    ],
+    "exp_ablation_v1": [
+        "scripts/eval/build_ablation_summary.py",
+    ],
+    "exp_routing_main_v2": [
+        "scripts/eval/aggregate_query_metrics.py",
+        "scripts/eval/build_candidate_shrinkage.py",
+        "scripts/eval/build_deadline_summary.py",
+    ],
+    "exp_object_main_v2": [
+        "scripts/eval/build_failure_breakdown.py",
+    ],
+    "exp_ablation_v2": [
+        "scripts/eval/build_ablation_summary.py",
+    ],
+    "exp_sanity_appendix_v2": [
+        "scripts/eval/aggregate_query_metrics.py",
+    ],
+    "exp_routing_main_v3": [
+        "scripts/eval/aggregate_query_metrics.py",
+        "scripts/eval/build_candidate_shrinkage.py",
+        "scripts/eval/build_deadline_summary.py",
+    ],
+    "exp_routing_main_v3_compact": [
+        "scripts/eval/aggregate_query_metrics.py",
+        "scripts/eval/build_candidate_shrinkage.py",
+        "scripts/eval/build_deadline_summary.py",
+    ],
+    "exp_object_main_v3": [
+        "scripts/eval/build_object_main_manifest_sweep.py",
+        "scripts/eval/build_failure_breakdown.py",
+    ],
+    "exp_object_main_v3_compact": [
+        "scripts/eval/build_object_main_manifest_sweep.py",
+        "scripts/eval/build_failure_breakdown.py",
+    ],
+    "exp_ablation_v3": [
+        "scripts/eval/build_ablation_summary.py",
+    ],
+    "exp_ablation_v3_compact": [
+        "scripts/eval/build_ablation_summary.py",
+    ],
+    "exp_scaling_v3": [
+        "scripts/eval/build_state_scaling_summary.py",
+    ],
+    "exp_scaling_v3_compact": [
+        "scripts/eval/build_state_scaling_summary.py",
+    ],
+    "exp_robustness_v3": [
+        "scripts/eval/build_robustness_summary.py",
+    ],
+    "exp_robustness_v3_compact": [
+        "scripts/eval/build_robustness_summary.py",
+    ],
+    "routing_main": [
+        "scripts/eval/aggregate_query_metrics.py",
+        "scripts/eval/build_candidate_shrinkage.py",
+        "scripts/eval/build_deadline_summary.py",
+    ],
+    "object_main": [
+        "scripts/eval/build_object_main_manifest_sweep.py",
+        "scripts/eval/build_failure_breakdown.py",
+    ],
+    "ablation": [
+        "scripts/eval/build_ablation_summary.py",
+    ],
+    "state_scaling": [
+        "scripts/eval/build_state_scaling_summary.py",
+    ],
+    "robustness": [
+        "scripts/eval/build_robustness_summary.py",
+    ],
+}
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--experiment", required=True, type=Path)
+    parser.add_argument("--registry-source", choices=["runs", "promoted"], default="promoted")
+    parser.add_argument("--run-ids-file", type=Path)
+    return parser.parse_args()
+
+
+def main() -> int:
+    args = parse_args()
+    experiment_path = args.experiment if args.experiment.is_absolute() else repo_root() / args.experiment
+    experiment = load_json_yaml(experiment_path)
+    scripts = SCRIPT_MAP.get(experiment["experiment_id"], ["scripts/eval/aggregate_query_metrics.py"])
+    env = os.environ.copy()
+    if args.run_ids_file:
+        run_ids_path = args.run_ids_file if args.run_ids_file.is_absolute() else repo_root() / args.run_ids_file
+        env["HIROUTE_RUN_IDS_FILE"] = str(run_ids_path)
+    else:
+        env.pop("HIROUTE_RUN_IDS_FILE", None)
+
+    for script in scripts:
+        result = subprocess.run(
+            [sys.executable, str(repo_root() / script), "--experiment", str(experiment_path), "--registry-source", args.registry_source],
+            cwd=repo_root(),
+            check=False,
+            capture_output=True,
+            text=True,
+            env=env,
+        )
+        if result.returncode != 0:
+            sys.stderr.write(result.stderr or result.stdout)
+            return result.returncode
+        if result.stdout:
+            sys.stdout.write(result.stdout)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -1,0 +1,92 @@
+{
+  "experiment_id": "routing_main",
+  "dataset_id": "smartcity",
+  "topology_id": "rf_3967_exodus_compact",
+  "scenario": "hiroute-main",
+  "schemes": [
+    "predicates_only",
+    "random_admissible",
+    "inf_tag_forwarding",
+    "flood",
+    "hiroute",
+    "central_directory"
+  ],
+  "frontier_schemes": [
+    "predicates_only",
+    "random_admissible",
+    "inf_tag_forwarding",
+    "hiroute"
+  ],
+  "reference_schemes": [
+    "flood",
+    "central_directory"
+  ],
+  "seeds": [
+    1
+  ],
+  "budgets": [
+    8,
+    16,
+    32
+  ],
+  "default_budget": 16,
+  "statistics": {
+    "ci_method": "bootstrap_query",
+    "bootstrap_replicates": 1000
+  },
+  "outputs": [
+    "results/aggregate/mainline/routing_support.csv",
+    "results/aggregate/mainline/candidate_shrinkage.csv",
+    "results/aggregate/mainline/deadline_summary.csv",
+    "results/figures/mainline/fig_routing_support.pdf",
+    "results/figures/mainline/fig_candidate_shrinkage.pdf",
+    "results/figures/mainline/fig_deadline_summary.pdf"
+  ],
+  "promotion_rule": {
+    "min_runs_per_scheme": 1,
+    "min_test_queries_per_scheme_budget_tier": 240,
+    "max_missing_logs": 0,
+    "require_clean_git": true
+  },
+  "configs": {
+    "dataset": "configs/datasets/smartcity.yaml",
+    "hierarchy": "configs/hierarchy/hiroute_hkm.yaml",
+    "topology": "configs/topologies/rocketfuel_3967_exodus_compact.yaml",
+    "baselines": {
+      "predicates_only": "configs/baselines/predicates_only.yaml",
+      "random_admissible": "configs/baselines/random_admissible.yaml",
+      "inf_tag_forwarding": "configs/baselines/inf_tag_forwarding.yaml",
+      "flood": "configs/baselines/flood.yaml",
+      "hiroute": "configs/baselines/hiroute.yaml",
+      "central_directory": "configs/baselines/central_directory.yaml"
+    }
+  },
+  "inputs": {
+    "objects_csv": "data/processed/smartcity/objects_master.csv",
+    "queries_csv": "data/processed/smartcity/rf_3967_exodus/queries_master.csv",
+    "query_embedding_index_csv": "data/processed/smartcity/rf_3967_exodus/query_embedding_index.csv",
+    "qrels_object_csv": "data/processed/smartcity/rf_3967_exodus/qrels_object.csv",
+    "qrels_domain_csv": "data/processed/smartcity/rf_3967_exodus/qrels_domain.csv",
+    "hslsa_csv": "data/processed/smartcity/hslsa_export.csv",
+    "controller_local_index_csv": "data/processed/smartcity/controller_local_index.csv",
+    "topology_mapping_csv": "data/processed/ndnsim/topology_mapping_rf_3967_exodus_compact.csv"
+  },
+  "query_filters": {
+    "splits": [
+      "test"
+    ],
+    "workload_tiers": [
+      "routing_main"
+    ]
+  },
+  "runner": {
+    "type": "ndnsim",
+    "ns3_root": "ns-3",
+    "params": {
+      "stopSeconds": 32,
+      "manifestSize": 5,
+      "probeBudget": 5,
+      "queryLimitPerIngress": 0
+    }
+  }
+}
