@@ -82,9 +82,85 @@ BINARY_FINGERPRINT_FILES = [
     "ns-3/src/ndnSIM/examples/hiroute-scenario-common.hpp",
 ]
 
-EXPERIMENT_RUNTIME_FINGERPRINT_FILES = [
+SIMULATION_FINGERPRINT_FILES = [
     "scripts/run/run_experiment.py",
 ]
+
+SIMULATION_IDENTITY_KEYS = (
+    "experiment_id",
+    "dataset_id",
+    "topology_id",
+    "comparison_topologies",
+    "scenario",
+    "schemes",
+    "seeds",
+    "budgets",
+    "manifest_sizes",
+    "default_budget",
+    "default_manifest_size",
+    "reference_schemes",
+    "frontier_schemes",
+    "query_filters",
+    "inputs",
+)
+
+SIMULATION_RUNNER_KEYS = (
+    "type",
+    "params",
+    "scenario_variants",
+    "default_variant",
+)
+
+STAGE_CONTRACT_EXPERIMENT_KEYS = (
+    "promotion_rule",
+    "measurement_mode",
+    "outputs",
+)
+
+COMMON_STAGE_CONTRACT_FILES = [
+    "tools/run_mainline_review_stage.py",
+    "tools/validate_run.py",
+    "tools/validate_runtime_slice.py",
+    "tools/validate_aggregate_traceability.py",
+    "tools/validate_figures.py",
+    "tools/validate_manifest_regression.py",
+    "tools/validate_manifest_wiring.py",
+    "scripts/eval/promote_runs.py",
+    "scripts/eval/aggregate_experiment.py",
+    "scripts/plots/plot_experiment.py",
+    "scripts/run/run_experiment_matrix.py",
+]
+
+STAGE_CONTRACT_FILE_MAP = {
+    "object_main_quick": [
+        "scripts/eval/build_stage_quick_summary.py",
+        "scripts/eval/build_stage_decision.py",
+    ],
+    "object_main": [
+        "scripts/eval/build_object_main_manifest_sweep.py",
+        "scripts/eval/build_failure_breakdown.py",
+        "scripts/eval/build_stage_decision.py",
+    ],
+    "ablation_quick": [
+        "scripts/eval/build_stage_quick_summary.py",
+        "scripts/eval/build_stage_decision.py",
+    ],
+    "ablation": [
+        "scripts/eval/build_ablation_summary.py",
+        "scripts/eval/build_stage_decision.py",
+    ],
+    "routing_main": [
+        "scripts/eval/aggregate_query_metrics.py",
+        "scripts/eval/build_candidate_shrinkage.py",
+        "scripts/eval/build_deadline_summary.py",
+    ],
+    "state_scaling": [
+        "scripts/eval/build_state_scaling_summary.py",
+    ],
+    "robustness": [
+        "scripts/eval/build_robustness_summary.py",
+    ],
+}
 
 OBJECT_MAIN_QUICK_MATRIX = [
     {"scheme": "hiroute", "manifest_size": 1, "seed": 1},
@@ -197,6 +273,8 @@ def _normalize_stage_status(status: dict[str, Any]) -> dict[str, Any]:
     normalized.setdefault("completed_run_ids", [])
     normalized.setdefault("validation_status", {})
     normalized.setdefault("aggregate_outputs", [])
+    normalized.setdefault("simulation_fingerprint", {})
+    normalized.setdefault("stage_contract_fingerprint", {})
     normalized.setdefault("experiment_fingerprint", {})
     normalized.setdefault("runtime_fingerprint", {})
     normalized.setdefault("inherited_runs", [])
@@ -229,6 +307,23 @@ def _sha256(paths: list[str]) -> dict[str, Any]:
     return {"sha256": hasher.hexdigest(), "files": resolved_paths}
 
 
+def _payload_fingerprint(files: list[str], payload: dict[str, Any]) -> dict[str, Any]:
+    normalized_files = sorted(dict.fromkeys(files))
+    hasher = hashlib.sha256()
+    for raw in normalized_files:
+        path = _resolve(raw)
+        hasher.update(raw.encode("utf-8"))
+        hasher.update(b"\0")
+        hasher.update(path.read_bytes())
+        hasher.update(b"\0")
+    hasher.update(json.dumps(payload, sort_keys=True).encode("utf-8"))
+    return {
+        "sha256": hasher.hexdigest(),
+        "files": normalized_files,
+        "payload": payload,
+    }
+
+
 def _normalized_matrix(experiment: dict[str, Any], matrix: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return sorted(
         [
@@ -244,6 +339,14 @@ def _normalized_matrix(experiment: dict[str, Any], matrix: list[dict[str, Any]])
         ],
         key=_assignment_key,
     )
+
+
+def _select_keys(source: dict[str, Any], keys: tuple[str, ...]) -> dict[str, Any]:
+    return {
+        key: source[key]
+        for key in keys
+        if key in source
+    }
 
 
 def _config_dependency_files(node: Any) -> list[str]:
@@ -272,64 +375,83 @@ def _config_dependency_files(node: Any) -> list[str]:
     return sorted(discovered)
 
 
-def _experiment_fingerprint(experiment_path: Path, experiment: dict[str, Any], matrix: list[dict[str, Any]]) -> dict[str, Any]:
-    baseline_configs = experiment.get("configs", {}).get("baselines", {})
-    schemes = sorted(
-        {
-            str(entry.get("scheme", ""))
-            for entry in matrix
-            if str(entry.get("scheme", "")) in baseline_configs
-        }
-    )
-    files = [str(experiment_path.relative_to(repo_root()))]
-    files.extend(str(_resolve(baseline_configs[scheme]).relative_to(repo_root())) for scheme in schemes)
-
-    hasher = hashlib.sha256()
-    for raw in files:
-        path = _resolve(raw)
-        hasher.update(raw.encode("utf-8"))
-        hasher.update(b"\0")
-        hasher.update(path.read_bytes())
-        hasher.update(b"\0")
-
-    normalized_matrix = _normalized_matrix(experiment, matrix)
-    hasher.update(json.dumps(normalized_matrix, sort_keys=True).encode("utf-8"))
+def _simulation_payload(experiment_path: Path, experiment: dict[str, Any], matrix: list[dict[str, Any]]) -> dict[str, Any]:
     return {
-        "sha256": hasher.hexdigest(),
-        "files": files,
-        "matrix": normalized_matrix,
+        "stage_identity": str(experiment_path.relative_to(repo_root())),
+        "experiment": _select_keys(experiment, SIMULATION_IDENTITY_KEYS),
+        "runner": _select_keys(experiment.get("runner", {}) or {}, SIMULATION_RUNNER_KEYS),
+        "matrix": _normalized_matrix(experiment, matrix),
     }
 
 
-def _runtime_fingerprint(experiment_path: Path, experiment: dict[str, Any], matrix: list[dict[str, Any]]) -> dict[str, Any]:
-    files = {
-        str(experiment_path.relative_to(repo_root())),
-        *EXPERIMENT_RUNTIME_FINGERPRINT_FILES,
+def _simulation_fingerprint(experiment_path: Path, experiment: dict[str, Any], matrix: list[dict[str, Any]]) -> dict[str, Any]:
+    files = [
+        *SIMULATION_FINGERPRINT_FILES,
         *_config_dependency_files(experiment.get("configs", {})),
-    }
-    normalized_files = sorted(files)
-    hasher = hashlib.sha256()
-    for raw in normalized_files:
-        path = _resolve(raw)
-        hasher.update(raw.encode("utf-8"))
-        hasher.update(b"\0")
-        hasher.update(path.read_bytes())
-        hasher.update(b"\0")
-    normalized_matrix = _normalized_matrix(experiment, matrix)
-    hasher.update(json.dumps(normalized_matrix, sort_keys=True).encode("utf-8"))
+    ]
+    return _payload_fingerprint(files, _simulation_payload(experiment_path, experiment, matrix))
+
+
+def _stage_contract_payload(stage: str, experiment_path: Path, experiment: dict[str, Any], matrix: list[dict[str, Any]]) -> dict[str, Any]:
     return {
-        "sha256": hasher.hexdigest(),
-        "files": normalized_files,
-        "matrix": normalized_matrix,
+        "stage": stage,
+        "experiment_path": str(experiment_path.relative_to(repo_root())),
+        "contract": _select_keys(experiment, STAGE_CONTRACT_EXPERIMENT_KEYS),
+        "matrix": _normalized_matrix(experiment, matrix),
     }
 
 
-def _runtime_fingerprint_changed(previous: dict[str, Any], current: dict[str, Any]) -> bool:
-    previous_fp = previous.get("runtime_fingerprint", {}) or {}
+def _stage_contract_fingerprint(stage: str, experiment_path: Path, experiment: dict[str, Any], matrix: list[dict[str, Any]]) -> dict[str, Any]:
+    files = [
+        *COMMON_STAGE_CONTRACT_FILES,
+        *STAGE_CONTRACT_FILE_MAP.get(stage, []),
+    ]
+    return _payload_fingerprint(files, _stage_contract_payload(stage, experiment_path, experiment, matrix))
+
+
+def _fingerprint_changed(previous: dict[str, Any], key: str, current: dict[str, Any]) -> bool:
+    previous_fp = previous.get(key, {}) or {}
     previous_sha = str(previous_fp.get("sha256", "")).strip()
     if not previous_sha:
         return False
     return previous_sha != current["sha256"]
+
+
+def _missing_fingerprint(previous: dict[str, Any], key: str) -> bool:
+    previous_fp = previous.get(key, {}) or {}
+    return not str(previous_fp.get("sha256", "")).strip()
+
+
+def _simulation_rerun_required(
+    args: argparse.Namespace,
+    previous: dict[str, Any],
+    dataset_fingerprint: dict[str, Any],
+    binary_fingerprint: dict[str, Any],
+    simulation_fingerprint: dict[str, Any],
+) -> bool:
+    return (
+        args.force_rerun
+        or _fingerprint_changed(previous, "dataset_fingerprint", dataset_fingerprint)
+        or _fingerprint_changed(previous, "binary_fingerprint", binary_fingerprint)
+        or _fingerprint_changed(previous, "simulation_fingerprint", simulation_fingerprint)
+    )
+
+
+def _stage_refresh_required(
+    args: argparse.Namespace,
+    previous: dict[str, Any],
+    dataset_fingerprint: dict[str, Any],
+    binary_fingerprint: dict[str, Any],
+    simulation_fingerprint: dict[str, Any],
+    stage_contract_fingerprint: dict[str, Any],
+) -> bool:
+    return (
+        not previous
+        or _simulation_rerun_required(args, previous, dataset_fingerprint, binary_fingerprint, simulation_fingerprint)
+        or _fingerprint_changed(previous, "stage_contract_fingerprint", stage_contract_fingerprint)
+        or _missing_fingerprint(previous, "simulation_fingerprint")
+        or _missing_fingerprint(previous, "stage_contract_fingerprint")
+    )
 
 
 def _stage_root(stage: str) -> Path:
@@ -425,6 +547,16 @@ def _write_checks(paths: dict[str, Path], checks: list[str], dry_run: bool) -> N
             print(f"CHECK {line}")
         return
     paths["checks"].write_text("\n".join(checks) + "\n", encoding="utf-8")
+
+
+def _write_dispatch_log(path: Path, lines: list[str], dry_run: bool) -> None:
+    if dry_run:
+        print(f"dispatch_log={path}")
+        for line in lines:
+            print(f"DISPATCH {line}")
+        return
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("\n".join(lines) + ("\n" if lines else ""), encoding="utf-8")
 
 
 def _extract_run_id(output: str) -> str:
@@ -537,8 +669,8 @@ def _current_stage_status(
     requested_matrix: list[dict[str, Any]],
     dataset_fingerprint: dict[str, Any],
     binary_fingerprint: dict[str, Any],
-    experiment_fingerprint: dict[str, Any],
-    runtime_fingerprint: dict[str, Any],
+    simulation_fingerprint: dict[str, Any],
+    stage_contract_fingerprint: dict[str, Any],
     previous: dict[str, Any],
 ) -> dict[str, Any]:
     previous = _normalize_stage_status(previous)
@@ -549,8 +681,8 @@ def _current_stage_status(
         "updated_at": isoformat_z(),
         "dataset_fingerprint": dataset_fingerprint,
         "binary_fingerprint": binary_fingerprint,
-        "experiment_fingerprint": experiment_fingerprint,
-        "runtime_fingerprint": runtime_fingerprint,
+        "simulation_fingerprint": simulation_fingerprint,
+        "stage_contract_fingerprint": stage_contract_fingerprint,
         "requested_matrix": requested_matrix,
         "run_assignments": previous.get("run_assignments", {}),
         "completed_run_ids": previous.get("completed_run_ids", []),
@@ -1077,15 +1209,22 @@ def _representative_runs_from_status(status: dict[str, Any]) -> list[str]:
 
 
 def _compatibility_files_match(previous_fingerprint: dict[str, Any], current_fingerprint: dict[str, Any]) -> bool:
-    previous_files = {
-        str(path)
-        for path in list(previous_fingerprint.get("files", []))[1:]
-    }
-    current_files = {
-        str(path)
-        for path in list(current_fingerprint.get("files", []))[1:]
-    }
-    return previous_files == current_files
+    def _compatibility_subset(fingerprint: dict[str, Any]) -> set[str]:
+        files = [str(path) for path in fingerprint.get("files", [])]
+        baseline_files = {path for path in files if path.startswith("configs/baselines/")}
+        if baseline_files:
+            return baseline_files
+        return {
+            path
+            for path in files
+            if path.endswith(".yaml") and not path.endswith("configs/experiments/object_main.yaml") and not path.endswith("configs/experiments/ablation.yaml")
+        }
+
+    previous_files = _compatibility_subset(previous_fingerprint)
+    current_files = _compatibility_subset(current_fingerprint)
+    if not previous_files:
+        return True
+    return previous_files.issubset(current_files)
 
 
 def _object_main_allows_ablation(status: dict[str, Any]) -> bool:
@@ -1144,23 +1283,18 @@ def _object_main_quick(args: argparse.Namespace) -> dict[str, Any]:
         {**entry, "topology_id": experiment["topology_id"], "budget": 0, "variant": ""}
         for entry in OBJECT_MAIN_QUICK_MATRIX
     ]
-    experiment_fp = _experiment_fingerprint(experiment_path, experiment, requested_matrix)
-    runtime_fp = _runtime_fingerprint(experiment_path, experiment, requested_matrix)
-    stale = (
-        args.force_rerun
-        or previous.get("dataset_fingerprint", {}).get("sha256") != dataset_fp["sha256"]
-        or previous.get("binary_fingerprint", {}).get("sha256") != binary_fp["sha256"]
-        or previous.get("experiment_fingerprint", {}).get("sha256") != experiment_fp["sha256"]
-        or _runtime_fingerprint_changed(previous, runtime_fp)
-    )
-    if stale and not args.dry_run:
+    simulation_fp = _simulation_fingerprint(experiment_path, experiment, requested_matrix)
+    stage_contract_fp = _stage_contract_fingerprint(stage, experiment_path, experiment, requested_matrix)
+    rerun_simulation = _simulation_rerun_required(args, previous, dataset_fp, binary_fp, simulation_fp)
+    refresh_stage = _stage_refresh_required(args, previous, dataset_fp, binary_fp, simulation_fp, stage_contract_fp)
+    if refresh_stage and not args.dry_run:
         _clear_stage_for_rerun(paths)
     for key in ("root", "validation", "runs", "aggregate"):
         paths[key].mkdir(parents=True, exist_ok=True)
 
     run_env = _run_env(allow_dirty_worktree=args.allow_dirty_worktree)
-    status = _current_stage_status(stage, requested_matrix, dataset_fp, binary_fp, experiment_fp, runtime_fp, {} if stale else previous)
-    if not args.force_rerun:
+    status = _current_stage_status(stage, requested_matrix, dataset_fp, binary_fp, simulation_fp, stage_contract_fp, {} if refresh_stage else previous)
+    if not rerun_simulation:
         _seed_run_assignments_from_latest(status, experiment, requested_matrix)
     status["inherited_runs"] = []
     status["newly_executed_runs"] = []
@@ -1183,7 +1317,7 @@ def _object_main_quick(args: argparse.Namespace) -> dict[str, Any]:
     pending_entries: list[dict[str, Any]] = []
     for entry in requested_matrix:
         key = _assignment_key(entry)
-        existing_run_id = "" if args.force_rerun else _matrix_skip_ok(status, entry)
+        existing_run_id = "" if rerun_simulation else _matrix_skip_ok(status, entry)
         if existing_run_id:
             status["run_assignments"][key] = existing_run_id
             status["skipped_runs"].append(existing_run_id)
@@ -1298,11 +1432,6 @@ def _object_main_full(args: argparse.Namespace) -> dict[str, Any]:
         force_rebuild_binary=args.force_rebuild_binary,
     )
     previous = _load_stage_status(stage)
-    stale = (
-        args.force_rerun
-        or previous.get("dataset_fingerprint", {}).get("sha256") != dataset_fp["sha256"]
-        or previous.get("binary_fingerprint", {}).get("sha256") != binary_fp["sha256"]
-    )
     experiment_path, experiment = _load_experiment("object_main")
     requested_matrix = [
         {
@@ -1316,11 +1445,11 @@ def _object_main_full(args: argparse.Namespace) -> dict[str, Any]:
         for scheme in experiment["schemes"]
         for manifest_size in experiment["manifest_sizes"]
     ]
-    experiment_fp = _experiment_fingerprint(experiment_path, experiment, requested_matrix)
-    runtime_fp = _runtime_fingerprint(experiment_path, experiment, requested_matrix)
-    stale = stale or previous.get("experiment_fingerprint", {}).get("sha256") != experiment_fp["sha256"]
-    stale = stale or _runtime_fingerprint_changed(previous, runtime_fp)
-    if stale and not args.dry_run:
+    simulation_fp = _simulation_fingerprint(experiment_path, experiment, requested_matrix)
+    stage_contract_fp = _stage_contract_fingerprint(stage, experiment_path, experiment, requested_matrix)
+    rerun_simulation = _simulation_rerun_required(args, previous, dataset_fp, binary_fp, simulation_fp)
+    refresh_stage = _stage_refresh_required(args, previous, dataset_fp, binary_fp, simulation_fp, stage_contract_fp)
+    if refresh_stage and not args.dry_run:
         _clear_stage_for_rerun(paths)
     for key in ("root", "validation", "runs", "aggregate"):
         paths[key].mkdir(parents=True, exist_ok=True)
@@ -1336,11 +1465,7 @@ def _object_main_full(args: argparse.Namespace) -> dict[str, Any]:
         }
         for entry in (quick_status.get("requested_matrix") or OBJECT_MAIN_QUICK_MATRIX)
     ]
-    quick_experiment_fp = quick_status.get("experiment_fingerprint") or _experiment_fingerprint(
-        experiment_path,
-        experiment,
-        quick_requested_matrix,
-    )
+    quick_simulation_fp = _simulation_fingerprint(experiment_path, experiment, quick_requested_matrix)
     if not args.force_rerun:
         validation_mismatches = [
             key for key in QUICK_REQUIRED_VALIDATIONS if quick_status.get("validation_status", {}).get(key) != "PASS"
@@ -1351,13 +1476,21 @@ def _object_main_full(args: argparse.Namespace) -> dict[str, Any]:
             raise RuntimeError("fingerprint mismatch: object_main_quick dataset_fingerprint differs from current full stage")
         if quick_status.get("binary_fingerprint", {}).get("sha256") != binary_fp["sha256"]:
             raise RuntimeError("fingerprint mismatch: object_main_quick binary_fingerprint differs from current full stage")
-        current_quick_fp = _experiment_fingerprint(experiment_path, experiment, quick_requested_matrix)
-        if not _compatibility_files_match(quick_experiment_fp, current_quick_fp):
-            raise RuntimeError("fingerprint mismatch: object_main_quick baseline config set differs from current full stage")
+        stored_quick_simulation_fp = quick_status.get("simulation_fingerprint", {}) or {}
+        if stored_quick_simulation_fp:
+            if stored_quick_simulation_fp.get("sha256") != quick_simulation_fp["sha256"]:
+                raise RuntimeError("fingerprint mismatch: object_main_quick simulation_fingerprint differs from current full stage")
+        else:
+            quick_experiment_fp = quick_status.get("experiment_fingerprint") or {}
+            current_quick_fp = {
+                "files": quick_simulation_fp.get("files", []),
+            }
+            if quick_experiment_fp and not _compatibility_files_match(quick_experiment_fp, current_quick_fp):
+                raise RuntimeError("fingerprint mismatch: object_main_quick baseline config set differs from current full stage")
 
     run_env = _run_env(allow_dirty_worktree=args.allow_dirty_worktree)
-    status = _current_stage_status(stage, requested_matrix, dataset_fp, binary_fp, experiment_fp, runtime_fp, {} if stale else previous)
-    if not args.force_rerun:
+    status = _current_stage_status(stage, requested_matrix, dataset_fp, binary_fp, simulation_fp, stage_contract_fp, {} if refresh_stage else previous)
+    if not rerun_simulation:
         _seed_run_assignments_from_latest(status, experiment, requested_matrix)
     status["inherited_runs"] = []
     status["newly_executed_runs"] = []
@@ -1400,7 +1533,7 @@ def _object_main_full(args: argparse.Namespace) -> dict[str, Any]:
             dispatch_lines.append(f"inherited {key} -> {run_id}")
             continue
 
-        existing_run_id = "" if args.force_rerun else _matrix_skip_ok(status, entry)
+        existing_run_id = "" if rerun_simulation else _matrix_skip_ok(status, entry)
         if existing_run_id:
             status["run_assignments"][key] = existing_run_id
             status["skipped_runs"].append(existing_run_id)
@@ -1570,23 +1703,18 @@ def _ablation_quick(args: argparse.Namespace) -> dict[str, Any]:
         {**entry, "topology_id": experiment["topology_id"], "budget": 0, "variant": ""}
         for entry in ABLATION_QUICK_MATRIX
     ]
-    experiment_fp = _experiment_fingerprint(experiment_path, experiment, requested_matrix)
-    runtime_fp = _runtime_fingerprint(experiment_path, experiment, requested_matrix)
-    stale = (
-        args.force_rerun
-        or previous.get("dataset_fingerprint", {}).get("sha256") != dataset_fp["sha256"]
-        or previous.get("binary_fingerprint", {}).get("sha256") != binary_fp["sha256"]
-        or previous.get("experiment_fingerprint", {}).get("sha256") != experiment_fp["sha256"]
-        or _runtime_fingerprint_changed(previous, runtime_fp)
-    )
-    if stale and not args.dry_run:
+    simulation_fp = _simulation_fingerprint(experiment_path, experiment, requested_matrix)
+    stage_contract_fp = _stage_contract_fingerprint(stage, experiment_path, experiment, requested_matrix)
+    rerun_simulation = _simulation_rerun_required(args, previous, dataset_fp, binary_fp, simulation_fp)
+    refresh_stage = _stage_refresh_required(args, previous, dataset_fp, binary_fp, simulation_fp, stage_contract_fp)
+    if refresh_stage and not args.dry_run:
         _clear_stage_for_rerun(paths)
     for key in ("root", "validation", "runs", "aggregate"):
         paths[key].mkdir(parents=True, exist_ok=True)
 
     run_env = _run_env(allow_dirty_worktree=args.allow_dirty_worktree)
-    status = _current_stage_status(stage, requested_matrix, dataset_fp, binary_fp, experiment_fp, runtime_fp, {} if stale else previous)
-    if not args.force_rerun:
+    status = _current_stage_status(stage, requested_matrix, dataset_fp, binary_fp, simulation_fp, stage_contract_fp, {} if refresh_stage else previous)
+    if not rerun_simulation:
         _seed_run_assignments_from_latest(status, experiment, requested_matrix)
     status["inherited_runs"] = []
     status["newly_executed_runs"] = []
@@ -1609,7 +1737,7 @@ def _ablation_quick(args: argparse.Namespace) -> dict[str, Any]:
     pending_entries: list[dict[str, Any]] = []
     for entry in requested_matrix:
         key = _assignment_key(entry)
-        existing_run_id = "" if args.force_rerun else _matrix_skip_ok(status, entry)
+        existing_run_id = "" if rerun_simulation else _matrix_skip_ok(status, entry)
         if existing_run_id:
             status["run_assignments"][key] = existing_run_id
             status["skipped_runs"].append(existing_run_id)
@@ -1714,11 +1842,6 @@ def _ablation_full(args: argparse.Namespace) -> dict[str, Any]:
         force_rebuild_binary=args.force_rebuild_binary,
     )
     previous = _load_stage_status(stage)
-    stale = (
-        args.force_rerun
-        or previous.get("dataset_fingerprint", {}).get("sha256") != dataset_fp["sha256"]
-        or previous.get("binary_fingerprint", {}).get("sha256") != binary_fp["sha256"]
-    )
     experiment_path, experiment = _load_experiment("ablation")
     requested_matrix = [
         {
@@ -1732,11 +1855,11 @@ def _ablation_full(args: argparse.Namespace) -> dict[str, Any]:
         for scheme in experiment["schemes"]
         for manifest_size in experiment["manifest_sizes"]
     ]
-    experiment_fp = _experiment_fingerprint(experiment_path, experiment, requested_matrix)
-    runtime_fp = _runtime_fingerprint(experiment_path, experiment, requested_matrix)
-    stale = stale or previous.get("experiment_fingerprint", {}).get("sha256") != experiment_fp["sha256"]
-    stale = stale or _runtime_fingerprint_changed(previous, runtime_fp)
-    if stale and not args.dry_run:
+    simulation_fp = _simulation_fingerprint(experiment_path, experiment, requested_matrix)
+    stage_contract_fp = _stage_contract_fingerprint(stage, experiment_path, experiment, requested_matrix)
+    rerun_simulation = _simulation_rerun_required(args, previous, dataset_fp, binary_fp, simulation_fp)
+    refresh_stage = _stage_refresh_required(args, previous, dataset_fp, binary_fp, simulation_fp, stage_contract_fp)
+    if refresh_stage and not args.dry_run:
         _clear_stage_for_rerun(paths)
     for key in ("root", "validation", "runs", "aggregate"):
         paths[key].mkdir(parents=True, exist_ok=True)
@@ -1752,11 +1875,7 @@ def _ablation_full(args: argparse.Namespace) -> dict[str, Any]:
         }
         for entry in (quick_status.get("requested_matrix") or ABLATION_QUICK_MATRIX)
     ]
-    quick_experiment_fp = quick_status.get("experiment_fingerprint") or _experiment_fingerprint(
-        experiment_path,
-        experiment,
-        quick_requested_matrix,
-    )
+    quick_simulation_fp = _simulation_fingerprint(experiment_path, experiment, quick_requested_matrix)
     if not args.force_rerun:
         validation_mismatches = [
             key for key in ABLATION_QUICK_REQUIRED_VALIDATIONS if quick_status.get("validation_status", {}).get(key) != "PASS"
@@ -1767,13 +1886,21 @@ def _ablation_full(args: argparse.Namespace) -> dict[str, Any]:
             raise RuntimeError("fingerprint mismatch: ablation_quick dataset_fingerprint differs from current full stage")
         if quick_status.get("binary_fingerprint", {}).get("sha256") != binary_fp["sha256"]:
             raise RuntimeError("fingerprint mismatch: ablation_quick binary_fingerprint differs from current full stage")
-        current_quick_fp = _experiment_fingerprint(experiment_path, experiment, quick_requested_matrix)
-        if not _compatibility_files_match(quick_experiment_fp, current_quick_fp):
-            raise RuntimeError("fingerprint mismatch: ablation_quick baseline config set differs from current full stage")
+        stored_quick_simulation_fp = quick_status.get("simulation_fingerprint", {}) or {}
+        if stored_quick_simulation_fp:
+            if stored_quick_simulation_fp.get("sha256") != quick_simulation_fp["sha256"]:
+                raise RuntimeError("fingerprint mismatch: ablation_quick simulation_fingerprint differs from current full stage")
+        else:
+            quick_experiment_fp = quick_status.get("experiment_fingerprint") or {}
+            current_quick_fp = {
+                "files": quick_simulation_fp.get("files", []),
+            }
+            if quick_experiment_fp and not _compatibility_files_match(quick_experiment_fp, current_quick_fp):
+                raise RuntimeError("fingerprint mismatch: ablation_quick baseline config set differs from current full stage")
 
     run_env = _run_env(allow_dirty_worktree=args.allow_dirty_worktree)
-    status = _current_stage_status(stage, requested_matrix, dataset_fp, binary_fp, experiment_fp, runtime_fp, {} if stale else previous)
-    if not args.force_rerun:
+    status = _current_stage_status(stage, requested_matrix, dataset_fp, binary_fp, simulation_fp, stage_contract_fp, {} if refresh_stage else previous)
+    if not rerun_simulation:
         _seed_run_assignments_from_latest(status, experiment, requested_matrix)
     status["inherited_runs"] = []
     status["newly_executed_runs"] = []
@@ -1816,7 +1943,7 @@ def _ablation_full(args: argparse.Namespace) -> dict[str, Any]:
             dispatch_lines.append(f"inherited {key} -> {run_id}")
             continue
 
-        existing_run_id = "" if args.force_rerun else _matrix_skip_ok(status, entry)
+        existing_run_id = "" if rerun_simulation else _matrix_skip_ok(status, entry)
         if existing_run_id:
             status["run_assignments"][key] = existing_run_id
             status["skipped_runs"].append(existing_run_id)
@@ -2001,24 +2128,24 @@ def _generic_full_experiment_stage(
         force_rebuild_binary=args.force_rebuild_binary,
     )
     previous = _load_stage_status(stage)
-    stale = (
-        args.force_rerun
-        or previous.get("dataset_fingerprint", {}).get("sha256") != dataset_fp["sha256"]
-        or previous.get("binary_fingerprint", {}).get("sha256") != binary_fp["sha256"]
-    )
 
     experiment_path, experiment = _load_experiment(experiment_key)
     run_env = _run_env(allow_dirty_worktree=args.allow_dirty_worktree)
     requested_matrix = _generic_requested_matrix(experiment)
-    experiment_fp = _experiment_fingerprint(experiment_path, experiment, requested_matrix)
-    runtime_fp = _runtime_fingerprint(experiment_path, experiment, requested_matrix)
-    stale = stale or previous.get("experiment_fingerprint", {}).get("sha256") != experiment_fp["sha256"]
-    stale = stale or _runtime_fingerprint_changed(previous, runtime_fp)
-    if stale and not args.dry_run:
+    simulation_fp = _simulation_fingerprint(experiment_path, experiment, requested_matrix)
+    stage_contract_fp = _stage_contract_fingerprint(stage, experiment_path, experiment, requested_matrix)
+    rerun_simulation = _simulation_rerun_required(args, previous, dataset_fp, binary_fp, simulation_fp)
+    refresh_stage = _stage_refresh_required(args, previous, dataset_fp, binary_fp, simulation_fp, stage_contract_fp)
+    if refresh_stage and not args.dry_run:
         _clear_stage_for_rerun(paths)
     for key in ("root", "validation", "runs", "aggregate"):
         paths[key].mkdir(parents=True, exist_ok=True)
-    status = _current_stage_status(stage, requested_matrix, dataset_fp, binary_fp, experiment_fp, runtime_fp, {} if stale else previous)
+    status = _current_stage_status(stage, requested_matrix, dataset_fp, binary_fp, simulation_fp, stage_contract_fp, {} if refresh_stage else previous)
+    if not rerun_simulation:
+        _seed_run_assignments_from_latest(status, experiment, requested_matrix)
+    status["inherited_runs"] = []
+    status["newly_executed_runs"] = []
+    status["skipped_runs"] = []
     checks = [
         f"completed_experiments: {stage}",
         "decision: completed",
@@ -2035,15 +2162,45 @@ def _generic_full_experiment_stage(
     status["validation_status"]["validate_run"] = "PASS"
     checks.append(f"{stage}.validate_run.py PASS")
 
-    _run_matrix(
-        experiment_path,
-        paths["validation"] / f"{stage}_run_experiment_matrix.txt",
-        args.dry_run,
-        args.mode,
-        args.max_workers,
-        args.force_rerun,
-        env=run_env,
-    )
+    existing_run_map: dict[str, str] = {}
+    if not rerun_simulation:
+        for entry in requested_matrix:
+            key = _assignment_key(entry)
+            run_id = _matrix_skip_ok(status, entry)
+            if run_id:
+                existing_run_map[key] = run_id
+
+    dispatch_lines: list[str] = []
+    if not rerun_simulation and len(existing_run_map) == len(requested_matrix):
+        for entry in requested_matrix:
+            key = _assignment_key(entry)
+            dispatch_lines.append(f"skipped {key} -> {existing_run_map[key]}")
+        if args.dry_run:
+            print(f"reuse_summary={len(existing_run_map)} reused + 0 to run")
+        _write_dispatch_log(paths["validation"] / f"{stage}_run_experiment_matrix.txt", dispatch_lines, args.dry_run)
+    else:
+        if not rerun_simulation:
+            missing_count = 0
+            for entry in requested_matrix:
+                key = _assignment_key(entry)
+                if key in existing_run_map:
+                    dispatch_lines.append(f"skipped {key} -> {existing_run_map[key]}")
+                    continue
+                missing_count += 1
+                dispatch_lines.append(f"execute {key}")
+            if args.dry_run:
+                print(f"reuse_summary={len(existing_run_map)} reused + {missing_count} to run")
+        _run_matrix(
+            experiment_path,
+            paths["validation"] / f"{stage}_run_experiment_matrix.txt",
+            args.dry_run,
+            args.mode,
+            args.max_workers,
+            rerun_simulation,
+            env=run_env,
+        )
+        if dispatch_lines:
+            _write_dispatch_log(paths["validation"] / f"{stage}_run_experiment_dispatch.txt", dispatch_lines, args.dry_run)
     status["validation_status"]["run_experiment_matrix"] = "PASS"
     checks.append(f"{stage}.run_experiment_matrix.py PASS")
 
@@ -2063,6 +2220,10 @@ def _generic_full_experiment_stage(
             if not run_id:
                 continue
             status["run_assignments"][key] = run_id
+            if key in existing_run_map and not rerun_simulation:
+                status["skipped_runs"].append(run_id)
+            else:
+                status["newly_executed_runs"].append(run_id)
             _copy_run_to_stage(run_id, paths["runs"], args.dry_run)
 
     run_ids_file = _write_run_ids_file(paths, "run_ids.txt", status.get("completed_run_ids", []), args.dry_run)
@@ -2104,6 +2265,8 @@ def _generic_full_experiment_stage(
     if status["completed_run_ids"]:
         status["representative_run"] = status["completed_run_ids"][0]
         checks.append(f"representative_run: {status['representative_run']}")
+    checks.append(f"reused_run_count: {len(status['skipped_runs'])}")
+    checks.append(f"newly_executed_run_count: {len(status['newly_executed_runs'])}")
     status["aggregate_outputs"] = [str(path) for path in experiment.get("outputs", [])]
     _finalize_stage(
         stage,
@@ -2271,6 +2434,67 @@ def _finalize_full_mainline_figures(stage: str, dry_run: bool) -> None:
     _plot_mainline_figures(paths["validation"] / f"{stage}_plot_main_figures.txt", dry_run)
 
 
+def _finalize_meta_stage(
+    stage: str,
+    *,
+    change_scope: str,
+    completed_experiments: str,
+    known_incomplete_items: str,
+    dry_run: bool,
+    extra_validation_status: dict[str, str] | None = None,
+    extra_checks: list[str] | None = None,
+) -> None:
+    paths = _stage_paths(stage)
+    for key in ("root", "validation"):
+        paths[key].mkdir(parents=True, exist_ok=True)
+
+    previous = _load_stage_status(stage)
+    status = _current_stage_status(
+        stage,
+        [],
+        _sha256(DATASET_FINGERPRINT_FILES),
+        _sha256(BINARY_FINGERPRINT_FILES),
+        {},
+        {},
+        previous,
+    )
+    status["decision"] = "completed"
+    status["stage_decision"] = "completed"
+    status["validation_status"]["plot_main_figures"] = "PASS"
+    if extra_validation_status:
+        status["validation_status"].update(extra_validation_status)
+    representative_runs: list[str] = []
+    for substage in ("object_main", "ablation", "routing_main", "state_scaling", "robustness"):
+        representative_runs.extend(_representative_runs_from_status(_load_stage_status(substage)))
+    status["representative_runs"] = list(dict.fromkeys(run_id for run_id in representative_runs if run_id))
+    status["representative_run"] = status["representative_runs"][0] if status["representative_runs"] else ""
+    status["aggregate_outputs"] = [
+        str(path.relative_to(repo_root()))
+        for path in sorted((_resolve("results/figures/mainline")).glob("fig_*.pdf"))
+    ]
+    checks = [
+        f"completed_experiments: {completed_experiments}",
+        "decision: completed",
+        f"{stage}.plot_main_figures.py PASS",
+    ]
+    if extra_checks:
+        checks.extend(extra_checks)
+    representative_runs = _representative_runs_from_status(status)
+    if representative_runs:
+        checks.append(f"representative_runs: {_csv_line(representative_runs)}")
+
+    _finalize_stage(
+        stage,
+        paths,
+        status,
+        checks,
+        change_scope=change_scope,
+        completed_experiments=completed_experiments,
+        known_incomplete_items=known_incomplete_items,
+        dry_run=dry_run,
+    )
+
+
 def main() -> int:
     args = parse_args()
     if args.stage not in STAGES:
@@ -2335,6 +2559,13 @@ def main() -> int:
                 _ablation_full(args)
             _run_full_mainline_tail(args, known_incomplete_items="paper_freeze")
             _finalize_full_mainline_figures("full_mainline", args.dry_run)
+            _finalize_meta_stage(
+                "full_mainline",
+                change_scope="Top-level mainline refresh across object_main, ablation, routing_main, state_scaling, and robustness.",
+                completed_experiments="object_main_quick, object_main, ablation_quick, ablation, routing_main, state_scaling, robustness",
+                known_incomplete_items="paper_freeze",
+                dry_run=args.dry_run,
+            )
         elif args.stage == "paper_freeze":
             _stage_paths("paper_freeze")["validation"].mkdir(parents=True, exist_ok=True)
             _run(
@@ -2351,6 +2582,15 @@ def main() -> int:
                 _ablation_full(args)
             _run_full_mainline_tail(args, known_incomplete_items="")
             _finalize_full_mainline_figures("paper_freeze", args.dry_run)
+            _finalize_meta_stage(
+                "paper_freeze",
+                change_scope="Paper-freeze refresh after full dataset rebuild and all five mainline experiments.",
+                completed_experiments="paper_freeze",
+                known_incomplete_items="",
+                dry_run=args.dry_run,
+                extra_validation_status={"build_all": "PASS"},
+                extra_checks=["paper_freeze.build_all.py PASS"],
+            )
 
         if (not args.skip_package or args.package) and args.stage in PACKAGEABLE_STAGES:
             _package_stage(args.stage, args.dry_run)

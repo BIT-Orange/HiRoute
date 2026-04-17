@@ -69,6 +69,10 @@ def _active_domains(manifest: dict) -> set[str]:
     return {row["domain_id"] for row in rows if row.get("domain_id")}
 
 
+def _is_state_only_experiment(experiment: dict) -> bool:
+    return str(experiment.get("measurement_mode", "") or "").strip().lower() == "state_only"
+
+
 def main() -> int:
     args = parse_args()
     experiment = load_experiment(args.experiment)
@@ -83,6 +87,7 @@ def main() -> int:
     combined_routing_support: set[int] = set()
     combined_object_support: set[int] = set()
     combined_object_confusers: set[int] = set()
+    state_only = _is_state_only_experiment(experiment)
 
     for row in rows:
         current_run_dir = run_dir(row)
@@ -119,7 +124,7 @@ def main() -> int:
         if not query_rows:
             errors.append(f"{row['run_id']}: runtime queries are missing")
             continue
-        if runtime_query_ids != query_log_ids:
+        if not state_only and runtime_query_ids != query_log_ids:
             errors.append(
                 f"{row['run_id']}: query_log query ids do not match runtime queries "
                 f"({len(query_log_ids)} vs {len(runtime_query_ids)})"
@@ -128,9 +133,9 @@ def main() -> int:
             errors.append(f"{row['run_id']}: qrels_domain_runtime does not cover the full runtime query slice")
         if {entry['query_id'] for entry in qrels_object_rows} != runtime_query_ids:
             errors.append(f"{row['run_id']}: qrels_object_runtime does not cover the full runtime query slice")
-        if not probe_query_ids.issubset(runtime_query_ids):
+        if not state_only and not probe_query_ids.issubset(runtime_query_ids):
             errors.append(f"{row['run_id']}: probe_log references queries outside runtime slice")
-        if not trace_query_ids.issubset(runtime_query_ids):
+        if not state_only and not trace_query_ids.issubset(runtime_query_ids):
             errors.append(f"{row['run_id']}: search_trace references queries outside runtime slice")
         if any(not domains for domains in strong_domains.values()):
             errors.append(f"{row['run_id']}: qrels_domain_runtime contains queries without strong domains")

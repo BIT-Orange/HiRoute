@@ -18,9 +18,9 @@
     "results/aggregate/mainline/state_scaling_summary.csv",
     "results/figures/mainline/fig_state_scaling.pdf"
   ],
+  "measurement_mode": "state_only",
   "promotion_rule": {
     "min_runs_per_scheme": 1,
-    "min_test_queries_per_scheme_budget_tier": 240,
     "max_missing_logs": 0,
     "require_clean_git": true
   },

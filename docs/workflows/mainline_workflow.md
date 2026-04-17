@@ -27,18 +27,16 @@ This is the only active paper-facing workflow. The mainline source of truth is:
 Use `tools/run_mainline_review_stage.sh` as the only active orchestration entrypoint.
 
 ```bash
-tools/run_mainline_review_stage.sh source_sync
-tools/run_mainline_review_stage.sh object_ablation_routing --max-workers 4
-tools/run_mainline_review_stage.sh full_mainline --max-workers 4
-tools/run_mainline_review_stage.sh paper_freeze --max-workers 4
+tools/run_mainline_review_stage.sh source_sync --mode official
+tools/run_mainline_review_stage.sh full_mainline --mode official --max-workers 6
+tools/run_mainline_review_stage.sh paper_freeze --mode official --max-workers 6 --force-rerun
 ```
 
 Dry-run must print the exact command order without mutating the repo:
 
 ```bash
 tools/run_mainline_review_stage.sh source_sync --dry-run
-tools/run_mainline_review_stage.sh object_ablation_routing --dry-run
-tools/run_mainline_review_stage.sh full_mainline --dry-run --max-workers 4
+tools/run_mainline_review_stage.sh full_mainline --dry-run --max-workers 6
 ```
 
 `full_mainline` is the only official five-experiment entrypoint. It must execute, in order:
@@ -53,14 +51,25 @@ tools/run_mainline_review_stage.sh full_mainline --dry-run --max-workers 4
 
 The stage runner does not set `HIROUTE_ALLOW_DIRTY_WORKTREE` unless `--allow-dirty-worktree` is passed explicitly. Official reruns should omit that flag.
 
-The stage runner now maintains experiment runtime fingerprints. When the corresponding runtime source/config has not changed, `full_mainline` reuses completed runs and only refreshes stage validations, aggregates, and figures. Use `--force-rerun` only when you explicitly want a from-scratch rerun of every assignment.
+The stage runner now maintains two fingerprint layers:
+
+- `simulation_fingerprint`: ndnSIM-relevant experiment fields plus `scripts/run/run_experiment.py` and referenced baseline/topology/hierarchy/dataset configs
+- `stage_contract_fingerprint`: promotion/measurement/output contract plus the gate/aggregate/figure tooling for that stage
+
+Reuse policy is:
+
+- dataset/binary/simulation fingerprint changed: rerun ndnSIM assignments for that experiment
+- only stage-contract fingerprint changed: reuse completed runs and refresh validations, aggregates, and figures
+- no fingerprint changed: skip simulation and only refresh the minimal stage metadata needed for traceability
+
+Use `--force-rerun` only when you explicitly want a from-scratch rerun of every assignment.
 
 ## Gate order per experiment
 
 For `object_main`, `ablation`, `routing_main`, `state_scaling`, and `robustness`, the stage runner applies the same serial gates:
 
 1. `tools/validate_run.py --mode dry`
-2. `scripts/run/run_experiment_matrix.py` with host-tuned `--max-workers`
+2. `scripts/run/run_experiment_matrix.py` with `--max-workers 6` by default for active reruns; if one stage hits contention, rerun only that stage at `--max-workers 4`
 3. `tools/validate_runtime_slice.py`
 4. `tools/validate_manifest_regression.py` for `object_main` and `ablation`
 5. `scripts/eval/promote_runs.py`
@@ -82,11 +91,11 @@ Figure notes and the main paper text stay in `pending rerun` language until gate
 ## Rerun order
 
 1. Incremental refresh:
-   `source_sync`
-   `full_mainline --max-workers 4`
+   `source_sync --mode official`
+   `full_mainline --mode official --max-workers 6`
 2. Full fresh rerun:
-   `source_sync`
-   `full_mainline --force-rerun --max-workers 4`
+   `source_sync --mode official`
+   `full_mainline --mode official --force-rerun --max-workers 6`
 
 ## Review bundles
 

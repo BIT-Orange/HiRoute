@@ -67,6 +67,10 @@ def _query_count_for_run(run_dir: Path, cache: dict[str, int]) -> int:
     return cache[cache_key]
 
 
+def _is_state_only_experiment(experiment: dict) -> bool:
+    return str(experiment.get("measurement_mode", "") or "").strip().lower() == "state_only"
+
+
 def main() -> int:
     args = parse_args()
     experiment = load_experiment(args.experiment)
@@ -88,6 +92,7 @@ def main() -> int:
     promoted_run_ids = {row["run_id"] for row in scoped_rows}
     query_count_cache: dict[str, int] = {}
     errors: list[str] = []
+    state_only = _is_state_only_experiment(experiment)
 
     for aggregate_path in aggregate_paths:
         aggregate_errors: list[str] = []
@@ -151,7 +156,7 @@ def main() -> int:
             if row.get("query_count"):
                 try:
                     declared_query_count = int(float(row["query_count"]))
-                    if declared_query_count <= 0:
+                    if not state_only and declared_query_count <= 0:
                         aggregate_errors.append(
                             f"{aggregate_path.relative_to(repo_root())}: row {index} query_count must be positive"
                         )
