@@ -1433,18 +1433,7 @@ def _object_main_full(args: argparse.Namespace) -> dict[str, Any]:
     )
     previous = _load_stage_status(stage)
     experiment_path, experiment = _load_experiment("object_main")
-    requested_matrix = [
-        {
-            "scheme": scheme,
-            "topology_id": experiment["topology_id"],
-            "seed": 1,
-            "manifest_size": manifest_size,
-            "budget": 0,
-            "variant": "",
-        }
-        for scheme in experiment["schemes"]
-        for manifest_size in experiment["manifest_sizes"]
-    ]
+    requested_matrix = _generic_requested_matrix(experiment)
     simulation_fp = _simulation_fingerprint(experiment_path, experiment, requested_matrix)
     stage_contract_fp = _stage_contract_fingerprint(stage, experiment_path, experiment, requested_matrix)
     rerun_simulation = _simulation_rerun_required(args, previous, dataset_fp, binary_fp, simulation_fp)
@@ -1843,18 +1832,7 @@ def _ablation_full(args: argparse.Namespace) -> dict[str, Any]:
     )
     previous = _load_stage_status(stage)
     experiment_path, experiment = _load_experiment("ablation")
-    requested_matrix = [
-        {
-            "scheme": scheme,
-            "topology_id": experiment["topology_id"],
-            "seed": 1,
-            "manifest_size": manifest_size,
-            "budget": 0,
-            "variant": "",
-        }
-        for scheme in experiment["schemes"]
-        for manifest_size in experiment["manifest_sizes"]
-    ]
+    requested_matrix = _generic_requested_matrix(experiment)
     simulation_fp = _simulation_fingerprint(experiment_path, experiment, requested_matrix)
     stage_contract_fp = _stage_contract_fingerprint(stage, experiment_path, experiment, requested_matrix)
     rerun_simulation = _simulation_rerun_required(args, previous, dataset_fp, binary_fp, simulation_fp)
