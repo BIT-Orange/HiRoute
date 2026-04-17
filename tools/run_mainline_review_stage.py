@@ -2265,6 +2265,8 @@ def _generic_full_experiment_stage(
     if status["completed_run_ids"]:
         status["representative_run"] = status["completed_run_ids"][0]
         checks.append(f"representative_run: {status['representative_run']}")
+    status["decision"] = "completed"
+    status["stage_decision"] = "completed"
     checks.append(f"reused_run_count: {len(status['skipped_runs'])}")
     checks.append(f"newly_executed_run_count: {len(status['newly_executed_runs'])}")
     status["aggregate_outputs"] = [str(path) for path in experiment.get("outputs", [])]
