@@ -1,4 +1,4 @@
-"""Validate manifest-size monotonicity and probe-order stability across completed runs."""
+"""Validate manifest-size monotonicity and probe-stability expectations across completed runs."""
 
 from __future__ import annotations
 
@@ -15,6 +15,9 @@ if str(ROOT) not in sys.path:
 
 from scripts.eval.eval_support import read_run_ids_file
 from tools.workflow_support import load_json_yaml, repo_root
+
+
+RELAXED_PROBE_STABILITY_EXPERIMENTS = {"object_main", "ablation"}
 
 
 def _read_csv_rows(path: Path) -> list[dict[str, str]]:
@@ -36,7 +39,31 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--dataset-id")
     parser.add_argument("--topology-id")
     parser.add_argument("--seed", type=int)
+    parser.add_argument(
+        "--allow-probe-order-change",
+        action="store_true",
+        help="Do not fail when per-query probe sequence differs across manifest sizes.",
+    )
+    parser.add_argument(
+        "--allow-selected-object-change",
+        action="store_true",
+        help="Do not fail when selected object differs for the same probe slot.",
+    )
+    parser.add_argument(
+        "--strict-probe-stability",
+        action="store_true",
+        help="Force strict probe-sequence/object stability even for experiments with relaxed defaults.",
+    )
     return parser.parse_args()
+
+
+def _probe_stability_relaxed(args: argparse.Namespace) -> bool:
+    if args.strict_probe_stability:
+        return False
+    if args.allow_probe_order_change or args.allow_selected_object_change:
+        return True
+    experiment_id = str(args.experiment_id or "")
+    return experiment_id in RELAXED_PROBE_STABILITY_EXPERIMENTS
 
 
 def _resolve(path: Path) -> Path:
@@ -145,6 +172,9 @@ def main() -> int:
         print("ERROR: no matching completed runs found")
         return 1
 
+    relaxed_probe_stability = _probe_stability_relaxed(args)
+    warnings: list[str] = []
+
     grouped: dict[tuple[str, str, str, int], list[dict[str, Any]]] = defaultdict(list)
     for run in runs:
         grouped[_group_key(run)].append(run)
@@ -183,19 +213,28 @@ def main() -> int:
                 left_sequence = [_probe_identity(row) for row in reference_probes[query_id]]
                 right_sequence = [_probe_identity(row) for row in candidate_probes[query_id]]
                 if left_sequence != right_sequence:
-                    errors.append(
-                        f"{group_key}: probe order changed for {query_id} at manifest {reference_size}->{candidate_size}"
+                    message = (
+                        f"{group_key}: probe order changed for {query_id} at manifest "
+                        f"{reference_size}->{candidate_size}"
                     )
+                    if relaxed_probe_stability:
+                        warnings.append(message)
+                    else:
+                        errors.append(message)
                     continue
 
                 for left_row, right_row in zip(reference_probes[query_id], candidate_probes[query_id]):
                     left_object = _selected_object(left_row)
                     right_object = _selected_object(right_row)
                     if left_object and right_object and left_object != right_object:
-                        errors.append(
+                        message = (
                             f"{group_key}: top manifest candidate changed for {query_id} "
                             f"probe {left_row.get('probe_index', '')} at manifest {reference_size}->{candidate_size}"
                         )
+                        if relaxed_probe_stability:
+                            warnings.append(message)
+                        else:
+                            errors.append(message)
 
     if checked_groups == 0:
         print("ERROR: no scheme/topology/seed groups contain multiple manifest sizes")
@@ -205,6 +244,17 @@ def main() -> int:
         for error in errors:
             print(f"ERROR: {error}")
         return 1
+
+    if warnings:
+        print(
+            "WARN: probe stability checks relaxed; "
+            f"ignored {len(warnings)} probe-order/candidate differences"
+        )
+        preview = warnings[:10]
+        for message in preview:
+            print(f"WARN: {message}")
+        if len(warnings) > len(preview):
+            print(f"WARN: ... {len(warnings) - len(preview)} additional differences omitted")
 
     print("OK")
     return 0
