@@ -390,6 +390,8 @@ def _collect_external_bundle_state(config: dict[str, Any]) -> dict[str, Any]:
         "aggregate_outputs": [
             "results/aggregate/mainline/object_main_manifest_sweep.csv",
             "results/aggregate/mainline/failure_breakdown.csv",
+            "results/aggregate/mainline/object_main_discovery_reply_stage_matrix.csv",
+            "results/aggregate/mainline/object_main_discovery_reply_stage_matrix.trace.json",
             "results/aggregate/mainline/ablation_summary.csv",
             "results/aggregate/mainline/routing_support.csv",
             "review_artifacts/object_main/aggregate/object_main_decision.json",

@@ -58,6 +58,99 @@ def _load_run_rows(run_ids_file: Path) -> list[dict[str, str]]:
     return rows
 
 
+def _split_source_run_ids(raw_value: str) -> set[str]:
+    return {value for value in str(raw_value).split("|") if value}
+
+
+def _as_int(raw_value: Any) -> int:
+    try:
+        return int(float(raw_value))
+    except (TypeError, ValueError):
+        return 0
+
+
+def _as_float(raw_value: Any) -> float:
+    try:
+        return float(raw_value)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _discovery_matrix_path(experiment: dict[str, Any]) -> Path:
+    matrix_filenames = {
+        "discovery_reply_stage_matrix.csv",
+        f"{experiment.get('experiment_id', '')}_discovery_reply_stage_matrix.csv",
+    }
+    for output in experiment.get("outputs", []):
+        output_path = _resolve(Path(str(output)))
+        if output_path.name in matrix_filenames:
+            return output_path
+    return repo_root() / "results" / "aggregate" / "mainline" / f"{experiment['experiment_id']}_discovery_reply_stage_matrix.csv"
+
+
+def _discovery_reply_stage_digest(
+    experiment: dict[str, Any],
+    source_run_ids: list[str],
+) -> dict[str, Any]:
+    matrix_path = _discovery_matrix_path(experiment)
+    try:
+        matrix_relpath = str(matrix_path.relative_to(repo_root()))
+    except ValueError:
+        matrix_relpath = str(matrix_path)
+
+    digest: dict[str, Any] = {
+        "matrix_csv": matrix_relpath,
+        "matrix_exists": matrix_path.exists(),
+        "scoped_row_count": 0,
+        "legacy_inferred_row_count": 0,
+        "legacy_inferred_count_sum": 0,
+        "legacy_inferred_rate_sum": 0.0,
+        "top_reason_rows": [],
+    }
+    if not matrix_path.exists():
+        return digest
+
+    stage_run_ids = set(source_run_ids)
+    scoped_rows: list[dict[str, str]] = []
+    for row in read_csv(matrix_path):
+        row_run_ids = _split_source_run_ids(row.get("source_run_ids", ""))
+        if row_run_ids and row_run_ids.issubset(stage_run_ids):
+            scoped_rows.append(row)
+
+    digest["scoped_row_count"] = len(scoped_rows)
+    if not scoped_rows:
+        return digest
+
+    legacy_rows = [
+        row
+        for row in scoped_rows
+        if str(row.get("reply_reason_code", "")).strip().lower() == "legacy_inferred"
+    ]
+    digest["legacy_inferred_row_count"] = len(legacy_rows)
+    digest["legacy_inferred_count_sum"] = sum(_as_int(row.get("count", 0)) for row in legacy_rows)
+    digest["legacy_inferred_rate_sum"] = round(
+        sum(_as_float(row.get("rate", 0.0)) for row in legacy_rows),
+        6,
+    )
+
+    ranked = sorted(
+        scoped_rows,
+        key=lambda row: _as_int(row.get("count", 0)),
+        reverse=True,
+    )[:6]
+    digest["top_reason_rows"] = [
+        {
+            "failure_stage": row.get("failure_stage", ""),
+            "reply_status": row.get("reply_status", ""),
+            "reply_reason_code": row.get("reply_reason_code", ""),
+            "count": _as_int(row.get("count", 0)),
+            "rate": round(_as_float(row.get("rate", 0.0)), 6),
+        }
+        for row in ranked
+    ]
+    return digest
+
+
 def _collect_query_rows(run_rows: list[dict[str, str]]) -> list[dict[str, Any]]:
     query_rows: list[dict[str, Any]] = []
     for run_row in run_rows:
@@ -233,7 +326,11 @@ def _first_choice_gap(row: dict[str, Any]) -> float:
     return float(row["mean_success_at_1"]) - float(row["first_fetch_relevant_rate"])
 
 
-def _object_main_decision(rows: list[dict[str, Any]], wiring_report: dict[str, Any]) -> dict[str, Any]:
+def _object_main_decision(
+    rows: list[dict[str, Any]],
+    wiring_report: dict[str, Any],
+    discovery_digest: dict[str, Any],
+) -> dict[str, Any]:
     index = _row_index(rows)
     required = [
         ("hiroute", 1),
@@ -257,6 +354,7 @@ def _object_main_decision(rows: list[dict[str, Any]], wiring_report: dict[str, A
                 "hiroute_reaches_ceiling_at_manifest1": False,
                 "oracle_lower_byte_upper_bound": False,
                 "wiring_report_status": str(wiring_report.get("overall_status", "unknown")),
+                "discovery_reply_stage_matrix_digest": discovery_digest,
                 "baseline_details": {
                     "inf_tag_forwarding": {
                         "catch_up_manifest": 0,
@@ -408,6 +506,7 @@ def _object_main_decision(rows: list[dict[str, Any]], wiring_report: dict[str, A
             "hiroute_terminal_vs_first_fetch_gap": hiroute_support_gap,
             "hiroute_manifest_rescue_signal": hiroute_manifest_rescue_signal,
             "wiring_report_status": wiring_status,
+            "discovery_reply_stage_matrix_digest": discovery_digest,
             "baseline_details": baseline_details,
         },
         "representative_runs": representative_runs,
@@ -603,6 +702,10 @@ def _ablation_decision(rows: list[dict[str, Any]], wiring_report: dict[str, Any]
 
 def _stdout_lines_for_object_main(payload: dict[str, Any]) -> list[str]:
     baseline_details = payload["detail"]["baseline_details"]
+    discovery_digest = payload.get("detail", {}).get("discovery_reply_stage_matrix_digest", {})
+    legacy_rows = int(discovery_digest.get("legacy_inferred_row_count", 0) or 0)
+    legacy_counts = int(discovery_digest.get("legacy_inferred_count_sum", 0) or 0)
+    matrix_csv = str(discovery_digest.get("matrix_csv", ""))
     return [
         f"decision: {payload['decision']}",
         f"figure_guidance: {', '.join(payload['figure_guidance']) if payload['figure_guidance'] else '(none)'}",
@@ -619,6 +722,11 @@ def _stdout_lines_for_object_main(payload: dict[str, Any]) -> list[str]:
             f"{'yes' if payload['detail']['oracle_lower_byte_upper_bound'] else 'no'}"
         ),
         f"Q4. Figure 5 更适合的标题: {payload['figure_title_guidance']}",
+        (
+            "Q5. discovery matrix 是否仍依赖 legacy_inferred: "
+            f"{'yes' if legacy_rows > 0 or legacy_counts > 0 else 'no'}"
+        ),
+        f"Q6. discovery matrix 引用路径: {matrix_csv}",
     ]
 
 
@@ -650,7 +758,8 @@ def main() -> int:
     wiring_report = _load_json(args.wiring_report)
 
     if args.stage == "object_main" and experiment.get("experiment_id") == "object_main":
-        decision_payload = _object_main_decision(summary_rows, wiring_report)
+        discovery_digest = _discovery_reply_stage_digest(experiment, source_run_ids)
+        decision_payload = _object_main_decision(summary_rows, wiring_report, discovery_digest)
         stdout_lines = _stdout_lines_for_object_main
     elif args.stage == "ablation" and experiment.get("experiment_id") == "ablation":
         decision_payload = _ablation_decision(summary_rows, wiring_report)

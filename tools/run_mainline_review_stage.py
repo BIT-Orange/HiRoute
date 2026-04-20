@@ -139,6 +139,7 @@ STAGE_CONTRACT_FILE_MAP = {
     "object_main": [
         "scripts/eval/build_object_main_manifest_sweep.py",
         "scripts/eval/build_failure_breakdown.py",
+        "scripts/eval/build_discovery_reply_stage_matrix.py",
         "scripts/eval/build_stage_decision.py",
     ],
     "ablation_quick": [
@@ -1642,6 +1643,8 @@ def _object_main_full(args: argparse.Namespace) -> dict[str, Any]:
     status["aggregate_outputs"] = [
         "results/aggregate/mainline/object_main_manifest_sweep.csv",
         "results/aggregate/mainline/failure_breakdown.csv",
+        "results/aggregate/mainline/object_main_discovery_reply_stage_matrix.csv",
+        "results/aggregate/mainline/object_main_discovery_reply_stage_matrix.trace.json",
         str(wiring_report.relative_to(repo_root())),
         str(decision_json.relative_to(repo_root())),
         str(decision_json.with_suffix(".stdout.txt").relative_to(repo_root())),

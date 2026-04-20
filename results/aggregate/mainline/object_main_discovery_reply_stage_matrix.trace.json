@@ -1,0 +1,42 @@
+{
+  "experiment_id": "object_main",
+  "aggregate_csv": "results/aggregate/mainline/object_main_discovery_reply_stage_matrix.csv",
+  "generated_at": "2026-04-20T08:56:29Z",
+  "row_count": 2,
+  "rows": [
+    {
+      "row_index": 0,
+      "locator": {
+        "scheme": "hiroute",
+        "topology_id": "rf_3967_exodus_compact",
+        "budget": "0",
+        "manifest_size": "1"
+      },
+      "source_run_ids": [
+        "object_main__hiroute__smartcity__rf_3967_exodus_compact__manifest1__seed1__20260420_082517"
+      ],
+      "source_run_dirs": [
+        "runs/completed/object_main__hiroute__smartcity__rf_3967_exodus_compact__manifest1__seed1__20260420_082517"
+      ],
+      "source_query_count_total": 240,
+      "row_query_count": "240"
+    },
+    {
+      "row_index": 1,
+      "locator": {
+        "scheme": "hiroute",
+        "topology_id": "rf_3967_exodus_compact",
+        "budget": "0",
+        "manifest_size": "1"
+      },
+      "source_run_ids": [
+        "object_main__hiroute__smartcity__rf_3967_exodus_compact__manifest1__seed1__20260420_082517"
+      ],
+      "source_run_dirs": [
+        "runs/completed/object_main__hiroute__smartcity__rf_3967_exodus_compact__manifest1__seed1__20260420_082517"
+      ],
+      "source_query_count_total": 240,
+      "row_query_count": "240"
+    }
+  ]
+}

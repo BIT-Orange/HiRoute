@@ -104,7 +104,8 @@ def main() -> int:
     experiment = load_experiment(args.experiment)
     rows = require_rows(experiment, args.registry_source)
     query_frame = log_frame(rows, "query_log.csv")
-    probe_frame = log_frame(rows, "probe_log.csv")
+    # Prefer raw probe logs because canonical normalization drops reply status/reason fields.
+    probe_frame = log_frame(rows, "probe_log.csv", raw=True)
 
     if query_frame.empty:
         print("ERROR: no canonical query logs found")

@@ -24,6 +24,7 @@
   "outputs": [
     "results/aggregate/mainline/object_main_manifest_sweep.csv",
     "results/aggregate/mainline/failure_breakdown.csv",
+    "results/aggregate/mainline/object_main_discovery_reply_stage_matrix.csv",
     "results/figures/mainline/fig_object_manifest_sweep.pdf"
   ],
   "promotion_rule": {
