@@ -9,6 +9,7 @@
 #include "ns3/random-variable-stream.h"
 
 #include "ns3/ndnSIM/model/hiroute-dataset-reader.hpp"
+#include "ns3/ndnSIM/model/hiroute-embedding-store.hpp"
 #include "ns3/ndnSIM/model/hiroute-manifest-entry.hpp"
 #include "ns3/ndnSIM/model/hiroute-object-record.hpp"
 #include "ns3/ndnSIM/model/hiroute-tlv.hpp"
@@ -78,6 +79,9 @@ private:
   semanticFacetScore(const HiRouteObjectRecord& object, const HiRouteDiscoveryRequest& request) const;
 
   double
+  semanticVectorScore(const HiRouteObjectRecord& object, const HiRouteDiscoveryRequest& request) const;
+
+  double
   localRankScore(const std::string& objectId,
                  const std::map<std::string, uint32_t>& bestRankByObjectId) const;
 
@@ -108,6 +112,8 @@ private:
   std::string m_prefix;
   std::string m_domainId;
   std::string m_objectsCsvPath;
+  std::string m_objectEmbeddingsCsvPath;
+  std::string m_queryEmbeddingsCsvPath;
   std::string m_controllerLocalIndexCsvPath;
   std::string m_qrelsObjectCsvPath;
   std::string m_manifestDebugCsvPath;
@@ -121,6 +127,8 @@ private:
   Time m_staleAfter = Seconds(0);
   double m_staleDropProbability = 0.0;
   Ptr<UniformRandomVariable> m_rand;
+  HiRouteEmbeddingStore m_objectEmbeddings;
+  HiRouteEmbeddingStore m_queryEmbeddings;
 
   std::map<std::string, HiRouteObjectRecord> m_objectsById;
   std::map<std::string, HiRouteObjectRecord> m_objectsByName;

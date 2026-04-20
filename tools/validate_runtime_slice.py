@@ -156,7 +156,7 @@ def main() -> int:
             combined_object_confusers.update(weak_object_support)
             if zone_constraint_coverage < 1.0:
                 errors.append(f"{row['run_id']}: object slice zone_constraint coverage={zone_constraint_coverage:.3f}")
-            if relevant_support != {1, 2}:
+            if relevant_support != {1}:
                 errors.append(f"{row['run_id']}: object relevant-domain support={sorted(relevant_support)}")
             if len(weak_object_support) <= 1:
                 errors.append(f"{row['run_id']}: object confuser-object support collapsed={sorted(weak_object_support)}")

@@ -36,6 +36,18 @@ HiRouteDiscoveryEngine::SetWeights(const Weights& weights)
   m_weights = weights;
 }
 
+void
+HiRouteDiscoveryEngine::SetQueryEmbeddings(const HiRouteEmbeddingStore* embeddings)
+{
+  m_queryEmbeddings = embeddings;
+}
+
+void
+HiRouteDiscoveryEngine::SetSummaryEmbeddings(const HiRouteEmbeddingStore* embeddings)
+{
+  m_summaryEmbeddings = embeddings;
+}
+
 std::vector<HiRouteDiscoveryEngine::Candidate>
 HiRouteDiscoveryEngine::RankCandidates(const std::vector<const HiRouteSummaryEntry*>& pool,
                                        const HiRouteDiscoveryRequest& request,
@@ -132,37 +144,51 @@ double
 HiRouteDiscoveryEngine::computeSemanticScore(const HiRouteSummaryEntry& entry,
                                              const HiRouteDiscoveryRequest& request) const
 {
-  double score = 0.0;
+  double vectorScore = 0.0;
+  if (m_queryEmbeddings != nullptr && m_summaryEmbeddings != nullptr) {
+    const auto* queryVector = m_queryEmbeddings->Find(request.queryEmbeddingRow);
+    const auto* summaryVector = m_summaryEmbeddings->Find(entry.centroidRow);
+    if (queryVector != nullptr && summaryVector != nullptr) {
+      vectorScore =
+        0.5 * (HiRouteEmbeddingStore::NormalizedCosine(*queryVector, *summaryVector) + 1.0);
+    }
+  }
+
+  double frontierHint = 0.0;
+  double tagHint = 0.0;
+  double radiusHint = 0.0;
 
   if (!request.frontierHintCellId.empty()) {
     if (entry.cellId == request.frontierHintCellId) {
-      score += 0.45;
+      frontierHint = 1.0;
     }
     else if (entry.parentId == request.frontierHintCellId) {
-      score += 0.35;
+      frontierHint = 0.75;
     }
     else if (request.frontierHintCellId.rfind(entry.cellId + "-", 0) == 0) {
-      score += 0.2;
+      frontierHint = 0.45;
     }
   }
 
   if (!request.intentFacet.empty()) {
     if (entry.semanticTagBitmap.count(request.intentFacet) > 0) {
-      score += 0.45;
+      tagHint = 1.0;
     }
     else if (entry.semanticTagBitmap.empty()) {
-      score += 0.12;
+      tagHint = 0.2;
     }
   }
 
   if (entry.radius <= 0.0) {
-    score += 0.2;
+    radiusHint = 1.0;
   }
   else {
-    score += 0.2 * (1.0 / (1.0 + entry.radius));
+    radiusHint = 1.0 / (1.0 + entry.radius);
   }
 
-  return std::min(1.0, score);
+  const double score =
+    0.78 * vectorScore + 0.12 * frontierHint + 0.06 * tagHint + 0.04 * radiusHint;
+  return std::min(1.0, std::max(0.0, score));
 }
 
 double

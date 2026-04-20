@@ -265,7 +265,7 @@ def _audit_bundle_v3(
         )
     if object_summary["zone_constraint_coverage"] < 1.0:
         errors.append(f"{bundle_id}: {object_tier} zone_constraint_coverage={object_summary['zone_constraint_coverage']}")
-    if {int(value) for value in summary[object_tier]["relevant_domain_count_support"]} != {1, 2}:
+    if {int(value) for value in summary[object_tier]["relevant_domain_count_support"]} != {1}:
         errors.append(f"{bundle_id}: {object_tier} relevant_domain_count_support={sorted({int(value) for value in summary[object_tier]['relevant_domain_count_support']})}")
     if len({int(value) for value in summary[object_tier]["confuser_object_count_support"]}) <= 1:
         errors.append(f"{bundle_id}: {object_tier} confuser_object_count_support collapsed")

@@ -36,9 +36,12 @@ outputs:
   qrels_domain_csv: data/processed/smartcity/qrels_domain.csv
   object_embeddings_npy: data/processed/smartcity/object_embeddings.npy
   query_embeddings_npy: data/processed/smartcity/query_embeddings.npy
+  object_embeddings_csv: data/processed/smartcity/object_embeddings.csv
+  query_embeddings_csv: data/processed/smartcity/query_embeddings.csv
   object_embedding_index_csv: data/processed/smartcity/object_embedding_index.csv
   query_embedding_index_csv: data/processed/smartcity/query_embedding_index.csv
   summary_embeddings_npy: data/processed/smartcity/summary_embeddings.npy
+  summary_embeddings_csv: data/processed/smartcity/summary_embeddings.csv
   summary_embedding_index_csv: data/processed/smartcity/summary_embedding_index.csv
   hslsa_csv: data/processed/smartcity/hslsa_export.csv
   controller_local_index_csv: data/processed/smartcity/controller_local_index.csv

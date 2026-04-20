@@ -23,8 +23,11 @@ REQUIRED_COLUMNS = {
     "queries_csv": ["query_id", "query_text", "service_constraint", "ambiguity_level"],
     "qrels_object_csv": ["query_id", "object_id", "relevance"],
     "qrels_domain_csv": ["query_id", "domain_id", "is_relevant_domain"],
+    "object_embeddings_csv": ["object_id", "object_text_id", "embedding_row", "embedding_vector"],
+    "query_embeddings_csv": ["query_id", "query_text_id", "embedding_row", "embedding_vector"],
     "object_embedding_index_csv": ["object_id", "object_text_id", "embedding_row"],
     "query_embedding_index_csv": ["query_id", "query_text_id", "embedding_row"],
+    "summary_embeddings_csv": ["centroid_row", "domain_id", "level", "cell_id", "embedding_vector"],
     "summary_embedding_index_csv": ["centroid_row", "domain_id", "level", "cell_id"],
     "hslsa_csv": ["domain_id", "level", "cell_id", "controller_prefix", "centroid_row"],
     "controller_local_index_csv": ["domain_id", "cell_id", "object_id", "local_rank_hint"],
@@ -144,10 +147,16 @@ def main() -> int:
 
     if len(object_embeddings) != len(list(csv.DictReader(output_path(manifest, "object_embedding_index_csv").open("r", newline="", encoding="utf-8")))):
         raise ValueError("object embedding index count mismatch")
+    if len(object_embeddings) != len(list(csv.DictReader(output_path(manifest, "object_embeddings_csv").open("r", newline="", encoding="utf-8")))):
+        raise ValueError("object embedding csv count mismatch")
     if len(query_embeddings) != len(list(csv.DictReader(output_path(manifest, "query_embedding_index_csv").open("r", newline="", encoding="utf-8")))):
         raise ValueError("query embedding index count mismatch")
+    if len(query_embeddings) != len(list(csv.DictReader(output_path(manifest, "query_embeddings_csv").open("r", newline="", encoding="utf-8")))):
+        raise ValueError("query embedding csv count mismatch")
     if len(summary_embeddings) != len(list(csv.DictReader(output_path(manifest, "summary_embedding_index_csv").open("r", newline="", encoding="utf-8")))):
         raise ValueError("summary embedding index count mismatch")
+    if len(summary_embeddings) != len(list(csv.DictReader(output_path(manifest, "summary_embeddings_csv").open("r", newline="", encoding="utf-8")))):
+        raise ValueError("summary embedding csv count mismatch")
 
     for bundle_id, bundle in manifest.get("topology", {}).get("query_bundles", {}).items():
         _validate_csv(_resolve(bundle["queries_csv"]), ["query_id", "split", "workload_tier", "intent_facet"])

@@ -4,6 +4,7 @@
 
 #include "ns3/ndnSIM/model/ndn-common.hpp"
 
+#include <limits>
 #include <map>
 #include <string>
 
@@ -30,7 +31,7 @@ public:
   std::string valueType;
   uint64_t objectVersion = 0;
   std::string objectTextId;
-  uint32_t embeddingIndex = 0;
+  uint32_t embeddingIndex = std::numeric_limits<uint32_t>::max();
 
   static HiRouteObjectRecord
   FromCsvRow(const std::map<std::string, std::string>& row);

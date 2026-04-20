@@ -30,6 +30,14 @@ getUint64(const std::map<std::string, std::string>& row, const std::string& key)
   return value.empty() ? 0ull : static_cast<uint64_t>(std::strtoull(value.c_str(), nullptr, 10));
 }
 
+uint32_t
+getOptionalUint32(const std::map<std::string, std::string>& row, const std::string& key,
+                  uint32_t fallback)
+{
+  const auto value = getString(row, key);
+  return value.empty() ? fallback : static_cast<uint32_t>(std::strtoul(value.c_str(), nullptr, 10));
+}
+
 } // namespace
 
 HiRouteObjectRecord
@@ -53,7 +61,7 @@ HiRouteObjectRecord::FromCsvRow(const std::map<std::string, std::string>& row)
   record.valueType = getString(row, "value_type");
   record.objectVersion = getUint64(row, "object_version");
   record.objectTextId = getString(row, "object_text_id");
-  record.embeddingIndex = getUint32(row, "embedding_index");
+  record.embeddingIndex = getOptionalUint32(row, "embedding_index", record.embeddingIndex);
   return record;
 }
 

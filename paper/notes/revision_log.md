@@ -1,5 +1,15 @@
 # Revision Log
 
+## 2026-04-19
+
+- Adopted Phase 2 metric semantics (documented in `docs/metrics/metric_semantics.md`): `handleFetchReply` at `ns-3/src/ndnSIM/apps/hiroute-ingress-app.cpp:1047` uses `isStrongRelevantObject` (qrel grade `>= 2`) uniformly for `firstFetchRelevant`, sequential manifest fallback, and terminal `finishActiveQuery` outcome. Expect `success_at_1` for `hiroute` on the compact `object_main` workload to drop from the current sealed `1.0` into the `0.6–0.8` band once the full rerun completes; Phase 1 sealed aggregates remain authoritative until then.
+- Added `cumulative_manifest_fetches` column to the `query_log.csv` schema produced by the ingress app. The new counter increments at both manifest-fallback sites (`hiroute-ingress-app.cpp:974` and `:1060`) and is reset only when a fresh `ActiveQueryState` starts, so cross-probe manifest rescue is now observable.
+- Split `manifest_rescue_rate` into `within_reply_manifest_rescue_rate` and `cross_probe_manifest_rescue_rate` across `build_object_main_manifest_sweep.py`, `build_ablation_summary.py`, `aggregate_query_metrics.py`, `build_stage_decision.py`, and `build_stage_quick_summary.py`. Legacy `manifest_rescue_rate` is aliased to `within_reply_manifest_rescue_rate` for one release cycle. Stage gating (`hiroute_manifest_rescue_signal`, `hiroute_support_signal`) now accepts either rescue variant, so a cross-probe rescue regime (where each probe returns a fresh manifest) is no longer silently coded as "no signal".
+- Rewrote `paper/notes/claim_c002.md` to "domain-selection dominated" so the text matches the current sealed `failure_breakdown.csv` (wrong_object = 0 across schemes; the only non-zero term is inf_tag_forwarding wrong_domain = 0.0917).
+- Extended `paper/notes/fig_robustness.md` interpretation to make the controller_down scenario explicitly HiRoute-specific (central_directory does not depend on per-domain controllers) and to flag that the current stale_summaries parameters (`staleDropProbability=0.5`, `manifestSize=5`) are a weak stressor.
+- Extended `paper/notes/fig_deadline_summary.md` interpretation to call out HiRoute's structural controller-to-ingress RTT as the source of its higher latency on the routing-support workload, so captions do not read the gap as an optimization opportunity.
+- Outstanding work before promotion: full `object_main` / `ablation` / `robustness` rerun under the Phase 2 semantics; object_main workload redesign per `/object-main-redesign`; adversarial `stale_summaries` variant in `configs/experiments/robustness.yaml`; and paper caption pass after all reruns land under a clean tree.
+
 ## 2026-03-12
 
 - Initialized the paper-side workflow for figure-to-claim traceability.

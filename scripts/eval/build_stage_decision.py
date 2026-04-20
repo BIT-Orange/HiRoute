@@ -71,6 +71,9 @@ def _collect_query_rows(run_rows: list[dict[str, str]]) -> list[dict[str, Any]]:
                     "success_at_1": float(row.get("success_at_1") or 0),
                     "first_fetch_relevant": float(row.get("first_fetch_relevant") or 0),
                     "manifest_fetch_index": float(row.get("manifest_fetch_index") or 0),
+                    "cumulative_manifest_fetches": float(
+                        row.get("cumulative_manifest_fetches") or 0
+                    ),
                     "failure_type": row.get("failure_type", ""),
                     "discovery_bytes_total": float(row.get("discovery_tx_bytes") or 0)
                     + float(row.get("discovery_rx_bytes") or 0),
@@ -102,6 +105,22 @@ def _group_rows(query_rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 ),
                 "manifest_rescue_rate": round(
                     sum(1 for row in rows if row["success_at_1"] == 1 and row["manifest_fetch_index"] > 0)
+                    / query_count,
+                    6,
+                ),
+                "within_reply_manifest_rescue_rate": round(
+                    sum(1 for row in rows if row["success_at_1"] == 1 and row["manifest_fetch_index"] > 0)
+                    / query_count,
+                    6,
+                ),
+                "cross_probe_manifest_rescue_rate": round(
+                    sum(
+                        1
+                        for row in rows
+                        if row["success_at_1"] == 1
+                        and row["cumulative_manifest_fetches"] > 0
+                        and row["manifest_fetch_index"] == 0
+                    )
                     / query_count,
                     6,
                 ),
@@ -321,8 +340,14 @@ def _object_main_decision(rows: list[dict[str, Any]], wiring_report: dict[str, A
         for row in inf_rows
     )
     hiroute_support_gap = any(_first_choice_gap(index[("hiroute", manifest)]) >= SUCCESS_TOLERANCE for manifest in (1, 2, 3))
+    # Phase 2: accept either within-reply or cross-probe rescue as a hiroute manifest signal.
     hiroute_manifest_rescue_signal = any(
-        float(index[("hiroute", manifest)]["manifest_rescue_rate"]) >= SUCCESS_TOLERANCE
+        max(
+            float(index[("hiroute", manifest)].get("within_reply_manifest_rescue_rate", 0.0)),
+            float(index[("hiroute", manifest)].get("cross_probe_manifest_rescue_rate", 0.0)),
+            float(index[("hiroute", manifest)]["manifest_rescue_rate"]),
+        )
+        >= SUCCESS_TOLERANCE
         for manifest in (1, 2, 3)
     )
 

@@ -30,6 +30,14 @@ getUint64(const std::map<std::string, std::string>& row, const std::string& key)
   return value.empty() ? 0ull : static_cast<uint64_t>(std::strtoull(value.c_str(), nullptr, 10));
 }
 
+uint32_t
+getOptionalUint32(const std::map<std::string, std::string>& row, const std::string& key,
+                  uint32_t fallback)
+{
+  const auto value = getString(row, key);
+  return value.empty() ? fallback : static_cast<uint32_t>(std::strtoul(value.c_str(), nullptr, 10));
+}
+
 } // namespace
 
 HiRouteQueryRecord
@@ -48,7 +56,7 @@ HiRouteQueryRecord::FromCsvRow(const std::map<std::string, std::string>& row)
   record.queryFamily = getString(row, "query_family");
   record.workloadTier = getString(row, "workload_tier");
   record.intentFacet = getString(row, "intent_facet");
-  record.embeddingIndex = getUint32(row, "embedding_index");
+  record.embeddingIndex = getOptionalUint32(row, "embedding_index", record.embeddingIndex);
   record.groundTruthCount = getUint32(row, "ground_truth_count");
   record.intendedDomainCount = getUint32(row, "intended_domain_count");
   record.difficulty = getString(row, "difficulty");

@@ -4,6 +4,7 @@
 
 #include "ns3/ndnSIM/model/ndn-common.hpp"
 
+#include <limits>
 #include <map>
 #include <string>
 
@@ -25,7 +26,7 @@ public:
   std::string queryFamily;
   std::string workloadTier;
   std::string intentFacet;
-  uint32_t embeddingIndex = 0;
+  uint32_t embeddingIndex = std::numeric_limits<uint32_t>::max();
   uint32_t groundTruthCount = 0;
   uint32_t intendedDomainCount = 0;
   std::string difficulty;

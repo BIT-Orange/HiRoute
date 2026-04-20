@@ -22,6 +22,10 @@ from tools.workflow_support import read_csv, write_csv
 LOGGER = logging.getLogger("build_hierarchy_and_hslsa")
 
 
+def _format_embedding_vector(vector: np.ndarray) -> str:
+    return "|".join(f"{float(value):.8f}" for value in vector.tolist())
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--dataset-config", default="configs/datasets/smartcity_v1.yaml", type=Path)
@@ -223,6 +227,17 @@ def main() -> int:
                 )
 
     np.save(output_path(manifest, "summary_embeddings_npy"), np.vstack(summary_embeddings).astype(np.float32))
+    write_csv(
+        output_path(manifest, "summary_embeddings_csv"),
+        ["centroid_row", "domain_id", "level", "cell_id", "embedding_vector"],
+        [
+            {
+                **row,
+                "embedding_vector": _format_embedding_vector(summary_embeddings[index]),
+            }
+            for index, row in enumerate(summary_index_rows)
+        ],
+    )
     write_csv(output_path(manifest, "summary_embedding_index_csv"), ["centroid_row", "domain_id", "level", "cell_id"], summary_index_rows)
     write_csv(
         output_path(manifest, "hslsa_csv"),

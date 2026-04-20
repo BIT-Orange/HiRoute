@@ -99,6 +99,10 @@ HiRouteIngressApp::GetTypeId()
       .AddAttribute("QueryCsvPath", "Path to queries_master.csv",
                     StringValue("../data/processed/ndnsim/queries_master.csv"),
                     MakeStringAccessor(&HiRouteIngressApp::m_queryCsvPath), MakeStringChecker())
+      .AddAttribute("QueryEmbeddingsCsvPath", "Path to query_embeddings.csv",
+                    StringValue("../data/processed/ndnsim/query_embeddings.csv"),
+                    MakeStringAccessor(&HiRouteIngressApp::m_queryEmbeddingsCsvPath),
+                    MakeStringChecker())
       .AddAttribute("QueryEmbeddingIndexCsvPath", "Path to query_embedding_index.csv",
                     StringValue("../data/processed/ndnsim/query_embedding_index.csv"),
                     MakeStringAccessor(&HiRouteIngressApp::m_queryEmbeddingIndexCsvPath),
@@ -107,12 +111,20 @@ HiRouteIngressApp::GetTypeId()
                     StringValue("../data/processed/eval/qrels_object.csv"),
                     MakeStringAccessor(&HiRouteIngressApp::m_qrelsObjectCsvPath),
                     MakeStringChecker())
+      .AddAttribute("QrelsDomainCsvPath", "Path to qrels_domain.csv",
+                    StringValue("../data/processed/eval/qrels_domain.csv"),
+                    MakeStringAccessor(&HiRouteIngressApp::m_qrelsDomainCsvPath),
+                    MakeStringChecker())
       .AddAttribute("ObjectsCsvPath", "Path to objects_master.csv",
                     StringValue("../data/processed/ndnsim/objects_master.csv"),
                     MakeStringAccessor(&HiRouteIngressApp::m_objectsCsvPath), MakeStringChecker())
       .AddAttribute("SummaryCsvPath", "Path to hslsa_export.csv",
                     StringValue("../data/processed/ndnsim/hslsa_export.csv"),
                     MakeStringAccessor(&HiRouteIngressApp::m_summaryCsvPath), MakeStringChecker())
+      .AddAttribute("SummaryEmbeddingsCsvPath", "Path to summary_embeddings.csv",
+                    StringValue("../data/processed/ndnsim/summary_embeddings.csv"),
+                    MakeStringAccessor(&HiRouteIngressApp::m_summaryEmbeddingsCsvPath),
+                    MakeStringChecker())
       .AddAttribute("TopologyMappingCsvPath", "Path to topology_mapping.csv",
                     StringValue("../data/processed/ndnsim/topology_mapping_rf_3967_exodus.csv"),
                     MakeStringAccessor(&HiRouteIngressApp::m_topologyMappingCsvPath), MakeStringChecker())
@@ -228,6 +240,10 @@ void
 HiRouteIngressApp::loadInputs()
 {
   m_summaryStore.LoadFromCsv(m_summaryCsvPath);
+  m_queryEmbeddings.LoadFromCsv(m_queryEmbeddingsCsvPath);
+  m_summaryEmbeddings.LoadFromCsv(m_summaryEmbeddingsCsvPath, "centroid_row");
+  m_discoveryEngine.SetQueryEmbeddings(&m_queryEmbeddings);
+  m_discoveryEngine.SetSummaryEmbeddings(&m_summaryEmbeddings);
   loadTopologyMapping();
 
   std::map<std::string, uint32_t> queryEmbeddingRows;
@@ -257,9 +273,13 @@ HiRouteIngressApp::loadInputs()
   });
 
   m_rankedQrels.clear();
+  m_confuserObjectCountByQuery.clear();
   for (const auto& row : HiRouteDatasetReader::ReadCsvRows(m_qrelsObjectCsvPath)) {
     const auto relevance = static_cast<uint32_t>(std::strtoul(GetFieldOrEmpty(row, "relevance").c_str(), nullptr, 10));
     m_rankedQrels[GetFieldOrEmpty(row, "query_id")].push_back({GetFieldOrEmpty(row, "object_id"), relevance});
+    if (relevance == 1) {
+      ++m_confuserObjectCountByQuery[GetFieldOrEmpty(row, "query_id")];
+    }
   }
   for (auto& item : m_rankedQrels) {
     std::sort(item.second.begin(), item.second.end(), [] (const auto& left, const auto& right) {
@@ -268,6 +288,22 @@ HiRouteIngressApp::loadInputs()
       }
       return left.first < right.first;
     });
+  }
+
+  m_relevantDomainsByQuery.clear();
+  m_confuserDomainCountByQuery.clear();
+  for (const auto& row : HiRouteDatasetReader::ReadCsvRows(m_qrelsDomainCsvPath)) {
+    const auto queryId = GetFieldOrEmpty(row, "query_id");
+    const auto domainId = GetFieldOrEmpty(row, "domain_id");
+    if (queryId.empty() || domainId.empty()) {
+      continue;
+    }
+    if (GetFieldOrEmpty(row, "is_relevant_domain") == "1") {
+      m_relevantDomainsByQuery[queryId].insert(domainId);
+    }
+    else {
+      ++m_confuserDomainCountByQuery[queryId];
+    }
   }
 
   m_canonicalByObjectId.clear();
@@ -326,9 +362,14 @@ HiRouteIngressApp::openLogs()
   if (queryNeedsHeader) {
     appendRow(m_queryLog, {"query_id", "scheme", "ingress_node_id", "start_time_ms", "remote_probes",
                            "discovery_bytes", "candidate_shrinkage_ratio", "latency_ms",
-                           "success_at_1", "manifest_hit_at_r", "ndcg_at_r", "failure_type",
-                           "fetched_object_id",
-                           "first_fetch_relevant", "manifest_fetch_index"});
+                           "success_at_1", "final_end_to_end_success", "manifest_hit_at_r",
+                           "ndcg_at_r", "failure_type", "failure_stage", "fetched_object_id",
+                           "first_fetch_relevant", "first_manifest_top1_correct",
+                           "manifest_fetch_index", "manifest_rescue_rank",
+                           "cumulative_manifest_fetches",
+                           "first_probe_relevant_domain_hit", "first_probe_domain_rank",
+                           "num_relevant_domains", "num_confuser_domains",
+                           "num_confuser_objects"});
   }
   if (probeNeedsHeader) {
     appendRow(m_probeLog, {"query_id", "scheme", "probe_index", "controller_prefix", "cell_id",
@@ -831,6 +872,50 @@ HiRouteIngressApp::controllerHopCost(const std::string& controllerPrefix) const
   return best;
 }
 
+uint32_t
+HiRouteIngressApp::firstRelevantProbeRank(const std::string& queryId) const
+{
+  auto it = m_relevantDomainsByQuery.find(queryId);
+  if (it == m_relevantDomainsByQuery.end() || it->second.empty()) {
+    return 0;
+  }
+  for (size_t index = 0; index < m_activeQuery.probedDomainIds.size(); ++index) {
+    if (it->second.count(m_activeQuery.probedDomainIds[index]) > 0) {
+      return static_cast<uint32_t>(index + 1);
+    }
+  }
+  return 0;
+}
+
+std::string
+HiRouteIngressApp::classifyFailureStage(bool success) const
+{
+  if (success) {
+    return "success";
+  }
+
+  const auto relevantProbeRank = firstRelevantProbeRank(m_activeQuery.query.queryId);
+  if (m_activeQuery.failureType == "fetch_timeout") {
+    return "fetch";
+  }
+  if (m_activeQuery.failureType == "no_reply" && m_activeQuery.phase == Phase::WaitingFetch) {
+    return "fetch";
+  }
+  if (m_activeQuery.failureType == "wrong_object") {
+    return "local_resolution";
+  }
+  if (m_activeQuery.failureType == "wrong_domain" && relevantProbeRank > 0) {
+    return "local_resolution";
+  }
+  if (m_activeQuery.failureType == "predicate_miss") {
+    return "domain_selection";
+  }
+  if (relevantProbeRank > 0) {
+    return "local_resolution";
+  }
+  return "domain_selection";
+}
+
 void
 HiRouteIngressApp::sendDiscoveryProbe()
 {
@@ -865,6 +950,7 @@ HiRouteIngressApp::sendDiscoveryProbe()
 
   m_activeQuery.phase = Phase::WaitingDiscovery;
   ++m_activeQuery.remoteProbes;
+  m_activeQuery.probedDomainIds.push_back(target.domainId);
   m_activeQuery.discoveryBytes += parameters.size();
   m_transmittedInterests(interest, this, m_face);
   m_appLink->onReceiveInterest(*interest);
@@ -971,6 +1057,7 @@ HiRouteIngressApp::onPhaseTimeout()
   if (usesSequentialManifestFallback() &&
       m_activeQuery.manifestFetchIndex + 1 < m_activeQuery.manifest.size()) {
     ++m_activeQuery.manifestFetchIndex;
+    ++m_activeQuery.cumulativeManifestFetches;
     sendFetchInterest(m_activeQuery.manifest[m_activeQuery.manifestFetchIndex]);
     return;
   }
@@ -1044,7 +1131,10 @@ HiRouteIngressApp::handleFetchReply(shared_ptr<const Data> data)
   const auto name = data->getName().toUri();
   auto objectIt = m_objectIdByCanonicalName.find(name);
   const auto objectId = objectIt == m_objectIdByCanonicalName.end() ? std::string() : objectIt->second;
-  const bool relevant = isRelevantObject(m_activeQuery.query.queryId, objectId);
+  // Phase 2 semantics (grade >= 2): this one boolean drives firstFetchRelevant,
+  // sequential manifest fallback, and the terminal finishActiveQuery outcome. See
+  // docs/metrics/metric_semantics.md section "Strict relevance at 3 call sites".
+  const bool relevant = isStrongRelevantObject(m_activeQuery.query.queryId, objectId);
   if (!m_activeQuery.firstFetchRecorded) {
     m_activeQuery.firstFetchRelevant = relevant;
     m_activeQuery.firstFetchRecorded = true;
@@ -1058,6 +1148,7 @@ HiRouteIngressApp::handleFetchReply(shared_ptr<const Data> data)
       usesSequentialManifestFallback() &&
       m_activeQuery.manifestFetchIndex + 1 < m_activeQuery.manifest.size()) {
     ++m_activeQuery.manifestFetchIndex;
+    ++m_activeQuery.cumulativeManifestFetches;
     sendFetchInterest(m_activeQuery.manifest[m_activeQuery.manifestFetchIndex]);
     return;
   }
@@ -1086,6 +1177,13 @@ HiRouteIngressApp::finishActiveQuery(bool success, const std::string& fetchedObj
   if (m_activeQuery.failureType.empty()) {
     m_activeQuery.failureType = success ? "none" : "wrong_object";
   }
+  const auto relevantProbeRank = firstRelevantProbeRank(m_activeQuery.query.queryId);
+  const auto firstProbeRelevantDomainHit = relevantProbeRank == 1 ? "1" : "0";
+  const auto relevantDomainCount =
+    static_cast<uint32_t>(m_relevantDomainsByQuery[m_activeQuery.query.queryId].size());
+  const auto confuserDomainCount = m_confuserDomainCountByQuery[m_activeQuery.query.queryId];
+  const auto confuserObjectCount = m_confuserObjectCountByQuery[m_activeQuery.query.queryId];
+  const auto failureStage = classifyFailureStage(success);
 
   appendRow(m_queryLog,
             {m_activeQuery.query.queryId,
@@ -1097,12 +1195,22 @@ HiRouteIngressApp::finishActiveQuery(bool success, const std::string& fetchedObj
              std::to_string(candidateShrinkage),
              std::to_string(latencyMs),
              success ? "1" : "0",
+             success ? "1" : "0",
              m_activeQuery.manifestHit ? "1" : "0",
              std::to_string(computeNdcgAtR(m_activeQuery.query.queryId, m_activeQuery.manifest)),
              m_activeQuery.failureType,
+             failureStage,
              fetchedObjectId,
              m_activeQuery.firstFetchRecorded ? (m_activeQuery.firstFetchRelevant ? "1" : "0") : "",
-             std::to_string(m_activeQuery.manifestFetchIndex)});
+             m_activeQuery.firstFetchRecorded ? (m_activeQuery.firstFetchRelevant ? "1" : "0") : "",
+             std::to_string(m_activeQuery.manifestFetchIndex),
+             std::to_string(m_activeQuery.manifestFetchIndex),
+             std::to_string(m_activeQuery.cumulativeManifestFetches),
+             firstProbeRelevantDomainHit,
+             std::to_string(relevantProbeRank),
+             std::to_string(relevantDomainCount),
+             std::to_string(confuserDomainCount),
+             std::to_string(confuserObjectCount)});
 
   m_activeQuery = ActiveQueryState();
   scheduleNextQuery(MilliSeconds(1));
@@ -1164,6 +1272,18 @@ HiRouteIngressApp::isRelevantObject(const std::string& queryId, const std::strin
   }
   return std::any_of(it->second.begin(), it->second.end(), [&] (const auto& item) {
     return item.first == objectId && item.second > 0;
+  });
+}
+
+bool
+HiRouteIngressApp::isStrongRelevantObject(const std::string& queryId, const std::string& objectId) const
+{
+  auto it = m_rankedQrels.find(queryId);
+  if (it == m_rankedQrels.end()) {
+    return false;
+  }
+  return std::any_of(it->second.begin(), it->second.end(), [&] (const auto& item) {
+    return item.first == objectId && item.second >= 2;
   });
 }
 

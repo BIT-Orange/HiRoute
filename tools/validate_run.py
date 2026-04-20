@@ -27,6 +27,21 @@ def _resolve(path_str: str) -> Path:
     return repo_root() / path
 
 
+def _resolve_input_path(experiment: dict[str, Any], field: str) -> Path | None:
+    inputs = experiment.get("inputs", {})
+    input_path = inputs.get(field)
+    if input_path:
+        return _resolve(str(input_path))
+    dataset_config = experiment.get("configs", {}).get("dataset")
+    if not dataset_config:
+        return None
+    dataset_manifest = load_json_yaml(_resolve(str(dataset_config)))
+    output_path = (dataset_manifest.get("outputs", {}) or {}).get(field)
+    if not output_path:
+        return None
+    return _resolve(str(output_path))
+
+
 def _allow_dirty_worktree_override() -> bool:
     return os.environ.get("HIROUTE_ALLOW_DIRTY_WORKTREE", "").strip().lower() in {
         "1",
@@ -390,12 +405,16 @@ def validate_context(
     ]
     if experiment.get("runner", {}).get("type") == "ndnsim":
         required_inputs.extend(["query_embedding_index_csv", "controller_local_index_csv"])
+        if experiment.get("dataset_id") == "smartcity":
+            required_inputs.extend(
+                ["query_embeddings_csv", "object_embeddings_csv", "summary_embeddings_csv"]
+            )
     for field in required_inputs:
-        input_path = inputs.get(field)
-        if not input_path:
+        input_path = _resolve_input_path(experiment, field)
+        if input_path is None:
             errors.append(f"missing inputs.{field}")
             continue
-        if not _resolve(input_path).exists():
+        if not input_path.exists():
             errors.append(f"missing input file: {input_path}")
 
     if configs.get("topology") and _resolve(configs["topology"]).exists():

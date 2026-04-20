@@ -27,6 +27,8 @@ OBJECT_MAIN_FIELDS = [
     "mean_success_at_1",
     "first_fetch_relevant_rate",
     "manifest_rescue_rate",
+    "within_reply_manifest_rescue_rate",
+    "cross_probe_manifest_rescue_rate",
     "mean_manifest_fetch_index_success_only",
     "failure_rate_wrong_domain",
     "failure_rate_wrong_object",
@@ -47,6 +49,8 @@ ABLATION_FIELDS = [
     "mean_success_at_1",
     "first_fetch_relevant_rate",
     "manifest_rescue_rate",
+    "within_reply_manifest_rescue_rate",
+    "cross_probe_manifest_rescue_rate",
     "mean_manifest_fetch_index_success_only",
     "failure_rate_wrong_domain",
     "failure_rate_wrong_object",
@@ -101,6 +105,9 @@ def _collect_query_rows(run_rows: list[dict[str, str]]) -> list[dict[str, Any]]:
                     "success_at_1": float(row.get("success_at_1") or 0),
                     "first_fetch_relevant": float(row.get("first_fetch_relevant") or 0),
                     "manifest_fetch_index": float(row.get("manifest_fetch_index") or 0),
+                    "cumulative_manifest_fetches": float(
+                        row.get("cumulative_manifest_fetches") or 0
+                    ),
                     "failure_type": row.get("failure_type", ""),
                     "discovery_bytes_total": float(row.get("discovery_tx_bytes") or 0)
                     + float(row.get("discovery_rx_bytes") or 0),
@@ -134,6 +141,22 @@ def _group_rows(query_rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 ),
                 "manifest_rescue_rate": round(
                     sum(1 for row in rows if row["success_at_1"] == 1 and row["manifest_fetch_index"] > 0)
+                    / query_count,
+                    6,
+                ),
+                "within_reply_manifest_rescue_rate": round(
+                    sum(1 for row in rows if row["success_at_1"] == 1 and row["manifest_fetch_index"] > 0)
+                    / query_count,
+                    6,
+                ),
+                "cross_probe_manifest_rescue_rate": round(
+                    sum(
+                        1
+                        for row in rows
+                        if row["success_at_1"] == 1
+                        and row["cumulative_manifest_fetches"] > 0
+                        and row["manifest_fetch_index"] == 0
+                    )
                     / query_count,
                     6,
                 ),
@@ -242,7 +265,12 @@ def _object_main_decision(rows: list[dict[str, Any]]) -> tuple[str, dict[str, An
     distributed_rows = [hiroute_m1, inf_m1, index[("central_directory", 1)]]
     all_high_success = all(float(row["mean_success_at_1"]) >= 0.99 for row in distributed_rows)
     hiroute_support_signal = any(
-        float(row["manifest_rescue_rate"]) >= 0.02
+        max(
+            float(row.get("within_reply_manifest_rescue_rate", 0.0)),
+            float(row.get("cross_probe_manifest_rescue_rate", 0.0)),
+            float(row["manifest_rescue_rate"]),
+        )
+        >= 0.02
         or (float(row["mean_success_at_1"]) - float(row["first_fetch_relevant_rate"])) >= 0.02
         for row in hiroute_sweep
     )

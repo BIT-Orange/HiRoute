@@ -18,6 +18,7 @@ from tools.workflow_support import isoformat_z, load_json_yaml, read_csv, repo_r
 
 SUCCESS_TOLERANCE = 0.02
 FAILURE_TOLERANCE = 0.02
+RESCUE_TOLERANCE = 0.02
 BYTES_ADVANTAGE_THRESHOLD = 0.10
 PROBE_ADVANTAGE_THRESHOLD = 0.5
 
@@ -126,6 +127,27 @@ def _collect_run_report(row: dict[str, str]) -> tuple[dict[str, Any], dict[str, 
     metrics = {
         "mean_success_at_1": round(sum(float(entry.get("success_at_1") or 0) for entry in query_rows) / len(query_rows), 6) if query_rows else 0.0,
         **failure_rates,
+        "within_reply_manifest_rescue_rate": round(
+            sum(
+                1
+                for entry in query_rows
+                if float(entry.get("success_at_1") or 0) == 1.0
+                and float(entry.get("manifest_fetch_index") or 0) > 0
+            )
+            / len(query_rows),
+            6,
+        ) if query_rows else 0.0,
+        "cross_probe_manifest_rescue_rate": round(
+            sum(
+                1
+                for entry in query_rows
+                if float(entry.get("success_at_1") or 0) == 1.0
+                and float(entry.get("cumulative_manifest_fetches") or 0) > 0
+                and float(entry.get("manifest_fetch_index") or 0) == 0.0
+            )
+            / len(query_rows),
+            6,
+        ) if query_rows else 0.0,
         "mean_discovery_bytes": round(
             sum(float(entry.get("discovery_tx_bytes") or 0) + float(entry.get("discovery_rx_bytes") or 0) for entry in query_rows) / len(query_rows),
             6,
@@ -188,11 +210,17 @@ def _scheme_report(
     }
     success_values = [float(metrics["mean_success_at_1"]) for metrics in per_manifest.values()]
     failure_values = [_total_failure_rate(metrics) for metrics in per_manifest.values()]
+    rescue_values = [
+        float(metrics.get("within_reply_manifest_rescue_rate", 0.0))
+        + float(metrics.get("cross_probe_manifest_rescue_rate", 0.0))
+        for metrics in per_manifest.values()
+    ]
     bytes_values = [float(metrics["mean_discovery_bytes"]) for metrics in per_manifest.values()]
     probe_values = [float(metrics["mean_probe_count"]) for metrics in per_manifest.values()]
     effect_visible = (
         (max(success_values) - min(success_values) >= SUCCESS_TOLERANCE)
         or (max(failure_values) - min(failure_values) >= FAILURE_TOLERANCE)
+        or (max(rescue_values) - min(rescue_values) >= RESCUE_TOLERANCE)
         or (_relative_spread(bytes_values) >= BYTES_ADVANTAGE_THRESHOLD)
         or (max(probe_values) - min(probe_values) >= PROBE_ADVANTAGE_THRESHOLD)
     ) if per_manifest else False
@@ -206,10 +234,10 @@ def _scheme_report(
         reason = "runtime config evidence incomplete" if suspicious_runs else f"missing manifest sizes: {missing_manifest_sizes}"
     elif effect_visible:
         classification = "wiring_ok_and_effect_visible"
-        reason = "manifest_size is recorded and observable metrics vary across sweep points"
+        reason = "manifest_size is recorded and observable terminal, rescue, or cost metrics vary across sweep points"
     else:
         classification = "wiring_ok_but_metric_invariant"
-        reason = "manifest_size is recorded, but success/failure/cost metrics are invariant across sweep points"
+        reason = "manifest_size is recorded, but success/failure/rescue/cost metrics are invariant across sweep points"
 
     return {
         "scheme": scheme,

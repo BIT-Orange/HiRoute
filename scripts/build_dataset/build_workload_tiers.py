@@ -66,7 +66,9 @@ def render_query_text(
     if style == "semantic_brief":
         if tier in {"routing_hard_v3", "routing_main"}:
             return f"{freshness_phrase} {intent_phrase} {service_phrase} near {zone_type_phrase}"
-        if tier in {"object_hard_v3", "object_main"}:
+        if tier == "object_main":
+            return f"{freshness_phrase} {service_phrase} for {zone_type_phrase}"
+        if tier == "object_hard_v3":
             return f"{freshness_phrase} {intent_phrase} {service_phrase} for {zone_type_phrase}"
         return f"{freshness_phrase} {service_phrase} in {zone_type_phrase}"
     if tier in {"routing_hard_v3", "routing_main"}:
@@ -74,7 +76,9 @@ def render_query_text(
             f"need {service_phrase} updates for {intent_phrase} conditions around "
             f"{zone_type_phrase} with {freshness_phrase} freshness"
         )
-    if tier in {"object_hard_v3", "object_main"}:
+    if tier == "object_main":
+        return f"need {service_phrase} options around {zone_type_phrase} with {freshness_phrase} freshness"
+    if tier == "object_hard_v3":
         return (
             f"need the most relevant {service_phrase} readings for {intent_phrase} around "
             f"{zone_type_phrase} with {freshness_phrase} freshness"

@@ -560,12 +560,40 @@ def _generate_v3_queries(manifest: dict[str, Any], rules: dict[str, Any]) -> int
                         semantic_group = [row for row in group_rows if row["_role"] == "semantic_near_miss"]
                         constraint_group = [row for row in group_rows if row["_role"] == "constraint_near_miss"]
                         naming_group = [row for row in group_rows if row["_role"] == "naming_confuser"]
-                        if target_group and semantic_group and (constraint_group or naming_group):
+                        weak_pool = sorted(
+                            [
+                                row
+                                for row in candidate_pool
+                                if row["object_id"] != target["object_id"]
+                            ],
+                            key=lambda row: (
+                                0 if row.get("confuser_group_id") == target["confuser_group_id"] else 1,
+                                0
+                                if row.get("semantic_intent_family", row.get("semantic_facet", ""))
+                                == key[3]
+                                else 1,
+                                0
+                                if row["_role"] == "naming_confuser"
+                                else 1
+                                if row["_role"] == "target"
+                                else 2
+                                if row["_role"] == "semantic_near_miss"
+                                else 3,
+                                row["object_id"],
+                            ),
+                        )
+                        if (
+                            target_group
+                            and semantic_group
+                            and (constraint_group or naming_group)
+                            and len(weak_pool) >= 6
+                        ):
                             groups[target["confuser_group_id"]] = {
                                 "targets": sorted(target_group, key=lambda row: row["object_id"]),
                                 "semantic_confusers": sorted(semantic_group, key=lambda row: row["object_id"]),
                                 "constraint_confusers": sorted(constraint_group, key=lambda row: row["object_id"]),
                                 "naming_confusers": sorted(naming_group, key=lambda row: row["object_id"]),
+                                "weak_pool": weak_pool,
                             }
                     if not groups:
                         continue
@@ -680,13 +708,10 @@ def _generate_v3_queries(manifest: dict[str, Any], rules: dict[str, Any]) -> int
                         tier_index,
                     )
                     selected_domains = _stable_sample(list(eligible_domains), relevant_count, tier_index)
-                    selected_confusers = _stable_sample(
-                        [domain_id for domain_id in eligible_domains if domain_id not in set(selected_domains)],
-                        confuser_domain_count,
-                        tier_index + 5,
-                    )
+                    selected_confusers = _stable_sample([], confuser_domain_count, tier_index + 5)
                     relevant_objects = []
                     weak_objects = []
+                    weak_object_floor = int(tier_rules.get("confuser_objects_per_query_min", 6))
                     for domain_slot, domain_id in enumerate(selected_domains):
                         payload = eligible_domains[domain_id]
                         group_ids = sorted(payload["groups"])
@@ -695,29 +720,14 @@ def _generate_v3_queries(manifest: dict[str, Any], rules: dict[str, Any]) -> int
                         chosen_target = _stable_row_sample(group_payload["targets"], 1, tier_index + domain_slot)
                         relevant_objects.extend(chosen_target)
                         selected_zone_tokens.extend(zone_slot_token(row["zone_id"]) for row in chosen_target)
-                        weak_objects.extend(_stable_row_sample(group_payload["semantic_confusers"], 3, tier_index + domain_slot))
-                        weak_objects.extend(_stable_row_sample(group_payload["constraint_confusers"], 1, tier_index + domain_slot))
-                        weak_objects.extend(_stable_row_sample(group_payload["naming_confusers"], 1, tier_index + domain_slot))
-                        extra_candidates = [
-                            row
-                            for row in payload["candidate_pool"]
-                            if row["_role"] == "target" and row["confuser_group_id"] != group_id
-                        ]
-                        same_family_extras = [
-                            row
-                            for row in extra_candidates
-                            if row.get("semantic_intent_family", row.get("semantic_facet", "")) == family
-                        ]
-                        extra_limit = int(tier_rules.get("confuser_objects_per_query_min", 4)) - 4 + (tier_index % 3)
-                        weak_objects.extend(_stable_row_sample(same_family_extras or extra_candidates, max(0, extra_limit), tier_index + domain_slot + 2))
-                    for domain_slot, domain_id in enumerate(selected_confusers):
-                        payload = eligible_domains[domain_id]
-                        fallback_pool = [
-                            row
-                            for row in payload["candidate_pool"]
-                            if row.get("semantic_intent_family", row.get("semantic_facet", "")) != family or row["_role"] != "target"
-                        ]
-                        weak_objects.extend(_stable_row_sample(fallback_pool or payload["candidate_pool"], 1, tier_index + domain_slot + 7))
+                        weak_limit = min(
+                            len(group_payload["weak_pool"]),
+                            weak_object_floor + (tier_index % 3),
+                        )
+                        weak_window = group_payload["weak_pool"][: min(len(group_payload["weak_pool"]), weak_limit + 2)]
+                        weak_offset_span = max(1, len(weak_window) - weak_limit + 1)
+                        weak_offset = (tier_index + domain_slot) % weak_offset_span
+                        weak_objects.extend(weak_window[weak_offset : weak_offset + weak_limit])
                     mix = tier_rules["manifest_difficulty_mix"]
                     manifest_difficulty = pick_style(mix, tier_index)
                 else:

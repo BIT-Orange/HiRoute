@@ -180,6 +180,14 @@ HiRouteControllerApp::GetTypeId()
       .AddAttribute("ObjectsCsvPath", "Path to objects_master.csv",
                     StringValue("../data/processed/ndnsim/objects_master.csv"),
                     MakeStringAccessor(&HiRouteControllerApp::m_objectsCsvPath), MakeStringChecker())
+      .AddAttribute("ObjectEmbeddingsCsvPath", "Path to object_embeddings.csv",
+                    StringValue("../data/processed/ndnsim/object_embeddings.csv"),
+                    MakeStringAccessor(&HiRouteControllerApp::m_objectEmbeddingsCsvPath),
+                    MakeStringChecker())
+      .AddAttribute("QueryEmbeddingsCsvPath", "Path to query_embeddings.csv",
+                    StringValue("../data/processed/ndnsim/query_embeddings.csv"),
+                    MakeStringAccessor(&HiRouteControllerApp::m_queryEmbeddingsCsvPath),
+                    MakeStringChecker())
       .AddAttribute("ControllerLocalIndexCsvPath", "Path to controller_local_index.csv",
                     StringValue("../data/processed/ndnsim/controller_local_index.csv"),
                     MakeStringAccessor(&HiRouteControllerApp::m_controllerLocalIndexCsvPath),
@@ -298,6 +306,8 @@ void
 HiRouteControllerApp::loadInputs()
 {
   const bool oracleController = m_oracleMode || m_prefix.find("/oracle/") != std::string::npos;
+  m_objectEmbeddings.LoadFromCsv(m_objectEmbeddingsCsvPath);
+  m_queryEmbeddings.LoadFromCsv(m_queryEmbeddingsCsvPath);
   m_objectsById.clear();
   m_objectsByName.clear();
   m_objectsByCell.clear();
@@ -402,6 +412,18 @@ HiRouteControllerApp::semanticFacetScore(const HiRouteObjectRecord& object,
     return 0.15;
   }
   return 0.0;
+}
+
+double
+HiRouteControllerApp::semanticVectorScore(const HiRouteObjectRecord& object,
+                                          const HiRouteDiscoveryRequest& request) const
+{
+  const auto* queryVector = m_queryEmbeddings.Find(request.queryEmbeddingRow);
+  const auto* objectVector = m_objectEmbeddings.Find(object.embeddingIndex);
+  if (queryVector == nullptr || objectVector == nullptr) {
+    return 0.0;
+  }
+  return 0.5 * (HiRouteEmbeddingStore::NormalizedCosine(*queryVector, *objectVector) + 1.0);
 }
 
 double
@@ -515,23 +537,23 @@ HiRouteControllerApp::evaluateCandidates(const HiRouteDiscoveryRequest& request,
       continue;
     }
 
-    double score = 0.75;
-    score += localRankScore(objectId, lookup.bestRankByObjectId);
-    score += 0.9 * semanticFacetScore(object, request);
+    double score = 2.5 * semanticVectorScore(object, request);
+    score += 0.3 * localRankScore(objectId, lookup.bestRankByObjectId);
+    score += 0.08 * semanticFacetScore(object, request);
     if (!request.predicate.serviceConstraint.empty() &&
         object.serviceClass == request.predicate.serviceConstraint) {
-      score += 0.45;
+      score += 0.05;
     }
     if (!request.predicate.freshnessConstraint.empty() &&
         object.freshnessClass == request.predicate.freshnessConstraint) {
-      score += 0.2;
+      score += 0.03;
     }
     if (!request.predicate.zoneTypeConstraint.empty() &&
         object.zoneType == request.predicate.zoneTypeConstraint) {
-      score += 0.2;
+      score += 0.02;
     }
     if (MatchesZoneConstraint(object.zoneId, request.predicate.zoneConstraint)) {
-      score += 0.3;
+      score += 0.02;
     }
     evaluation.ranked.push_back({object, score});
   }

@@ -3,6 +3,7 @@
 #define NDNSIM_HIROUTE_DISCOVERY_ENGINE_HPP
 
 #include "ns3/ndnSIM/model/ndn-common.hpp"
+#include "hiroute-embedding-store.hpp"
 #include "hiroute-reliability-cache.hpp"
 #include "hiroute-summary-store.hpp"
 #include "hiroute-tlv.hpp"
@@ -35,6 +36,12 @@ public:
   void
   SetWeights(const Weights& weights);
 
+  void
+  SetQueryEmbeddings(const HiRouteEmbeddingStore* embeddings);
+
+  void
+  SetSummaryEmbeddings(const HiRouteEmbeddingStore* embeddings);
+
   std::vector<Candidate>
   RankCandidates(const std::vector<const HiRouteSummaryEntry*>& pool,
                  const HiRouteDiscoveryRequest& request,
@@ -59,6 +66,8 @@ private:
 
 private:
   Weights m_weights;
+  const HiRouteEmbeddingStore* m_queryEmbeddings = nullptr;
+  const HiRouteEmbeddingStore* m_summaryEmbeddings = nullptr;
 };
 
 } // namespace hiroute

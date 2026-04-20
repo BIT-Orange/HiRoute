@@ -56,7 +56,7 @@
     "ns3_root": "ns-3",
     "build_before_run": true,
     "params": {
-      "stopSeconds": 8,
+      "stopSeconds": 40,
       "manifestSize": 1,
       "probeBudget": 5,
       "queryLimitPerIngress": 0,

@@ -23,6 +23,10 @@ LOGGER = logging.getLogger("embed_texts")
 DEFAULT_DIM = 384
 
 
+def _format_embedding_vector(vector: np.ndarray) -> str:
+    return "|".join(f"{float(value):.8f}" for value in vector.tolist())
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", default="configs/datasets/smartcity_v1.yaml", type=Path)
@@ -112,29 +116,54 @@ def main() -> int:
     np.save(output_path(manifest, "object_embeddings_npy"), object_embeddings)
     np.save(output_path(manifest, "query_embeddings_npy"), query_embeddings)
 
+    object_index_rows = [
+        {
+            "object_id": row["object_id"],
+            "object_text_id": row["object_text_id"],
+            "embedding_row": index,
+        }
+        for index, row in enumerate(ordered_objects)
+    ]
+    query_index_rows = [
+        {
+            "query_id": row["query_id"],
+            "query_text_id": row["query_text_id"],
+            "embedding_row": index,
+        }
+        for index, row in enumerate(ordered_queries)
+    ]
+
+    write_csv(
+        output_path(manifest, "object_embeddings_csv"),
+        ["object_id", "object_text_id", "embedding_row", "embedding_vector"],
+        [
+            {
+                **index_row,
+                "embedding_vector": _format_embedding_vector(object_embeddings[index]),
+            }
+            for index, index_row in enumerate(object_index_rows)
+        ],
+    )
+    write_csv(
+        output_path(manifest, "query_embeddings_csv"),
+        ["query_id", "query_text_id", "embedding_row", "embedding_vector"],
+        [
+            {
+                **index_row,
+                "embedding_vector": _format_embedding_vector(query_embeddings[index]),
+            }
+            for index, index_row in enumerate(query_index_rows)
+        ],
+    )
     write_csv(
         output_path(manifest, "object_embedding_index_csv"),
         ["object_id", "object_text_id", "embedding_row"],
-        [
-            {
-                "object_id": row["object_id"],
-                "object_text_id": row["object_text_id"],
-                "embedding_row": index,
-            }
-            for index, row in enumerate(ordered_objects)
-        ],
+        object_index_rows,
     )
     write_csv(
         output_path(manifest, "query_embedding_index_csv"),
         ["query_id", "query_text_id", "embedding_row"],
-        [
-            {
-                "query_id": row["query_id"],
-                "query_text_id": row["query_text_id"],
-                "embedding_row": index,
-            }
-            for index, row in enumerate(ordered_queries)
-        ],
+        query_index_rows,
     )
     for bundle_id, bundle in manifest.get("topology", {}).get("query_bundles", {}).items():
         bundle_queries = read_csv(

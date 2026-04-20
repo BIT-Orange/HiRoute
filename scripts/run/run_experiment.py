@@ -79,6 +79,7 @@ QUERY_LOG_FIELDS = [
     "end_time_ms",
     "latency_ms",
     "success_at_1",
+    "final_end_to_end_success",
     "manifest_hit_at_3",
     "manifest_hit_at_5",
     "ndcg_at_5",
@@ -91,8 +92,17 @@ QUERY_LOG_FIELDS = [
     "fetch_tx_bytes",
     "fetch_rx_bytes",
     "failure_type",
+    "failure_stage",
     "first_fetch_relevant",
+    "first_manifest_top1_correct",
     "manifest_fetch_index",
+    "manifest_rescue_rank",
+    "cumulative_manifest_fetches",
+    "first_probe_relevant_domain_hit",
+    "first_probe_domain_rank",
+    "num_relevant_domains",
+    "num_confuser_domains",
+    "num_confuser_objects",
 ]
 
 PROBE_LOG_FIELDS = [
@@ -158,6 +168,42 @@ def _resolve(path_str: str) -> Path:
     return path if path.is_absolute() else repo_root() / path
 
 
+def _record_input_path(experiment: dict[str, Any], key: str, resolved_path: Path) -> None:
+    try:
+        encoded = str(resolved_path.relative_to(repo_root()))
+    except ValueError:
+        encoded = str(resolved_path)
+    experiment.setdefault("inputs", {})[key] = encoded
+
+
+def _dataset_manifest_for_experiment(experiment: dict[str, Any]) -> dict[str, Any]:
+    cached = experiment.get("_dataset_manifest_obj")
+    if isinstance(cached, dict):
+        return cached
+    dataset_config = experiment.get("configs", {}).get("dataset")
+    if not dataset_config:
+        manifest: dict[str, Any] = {}
+    else:
+        manifest = load_json_yaml(_resolve(str(dataset_config)))
+    experiment["_dataset_manifest_obj"] = manifest
+    return manifest
+
+
+def _input_path(experiment: dict[str, Any], key: str) -> Path:
+    inputs = experiment.setdefault("inputs", {})
+    if key in inputs and inputs[key]:
+        resolved = _resolve(str(inputs[key]))
+        _record_input_path(experiment, key, resolved)
+        return resolved
+    dataset_manifest = _dataset_manifest_for_experiment(experiment)
+    output_path = (dataset_manifest.get("outputs", {}) or {}).get(key)
+    if not output_path:
+        raise KeyError(f"missing experiment input and dataset output for {key}")
+    resolved = _resolve(str(output_path))
+    _record_input_path(experiment, key, resolved)
+    return resolved
+
+
 def _is_truthy(value: Any) -> bool:
     if isinstance(value, bool):
         return value
@@ -197,13 +243,12 @@ def _load_jsonl(path: Path) -> list[dict[str, Any]]:
 
 
 def _load_dataset_context(experiment: dict[str, Any]) -> dict[str, Any]:
-    inputs = experiment["inputs"]
-    objects = read_csv(_resolve(inputs["objects_csv"]))
-    queries = read_csv(_resolve(inputs["queries_csv"]))
-    qrels_object = read_csv(_resolve(inputs["qrels_object_csv"]))
-    qrels_domain = read_csv(_resolve(inputs["qrels_domain_csv"]))
-    topology = read_csv(_resolve(inputs["topology_mapping_csv"]))
-    hslsa = read_csv(_resolve(inputs["hslsa_csv"]))
+    objects = read_csv(_input_path(experiment, "objects_csv"))
+    queries = read_csv(_input_path(experiment, "queries_csv"))
+    qrels_object = read_csv(_input_path(experiment, "qrels_object_csv"))
+    qrels_domain = read_csv(_input_path(experiment, "qrels_domain_csv"))
+    topology = read_csv(_input_path(experiment, "topology_mapping_csv"))
+    hslsa = read_csv(_input_path(experiment, "hslsa_csv"))
 
     object_by_id = {row["object_id"]: row for row in objects}
     relevant_objects: dict[str, list[dict[str, str]]] = {}
@@ -377,6 +422,7 @@ def _generate_mock_outputs(
                 "end_time_ms": end_time_ms,
                 "latency_ms": latency_ms,
                 "success_at_1": 1 if success else 0,
+                "final_end_to_end_success": 1 if success else 0,
                 "manifest_hit_at_3": manifest_hit_3,
                 "manifest_hit_at_5": manifest_hit_5,
                 "ndcg_at_5": ndcg_at_5,
@@ -389,8 +435,21 @@ def _generate_mock_outputs(
                 "fetch_tx_bytes": fetch_tx_bytes,
                 "fetch_rx_bytes": fetch_rx_bytes,
                 "failure_type": failure_type,
+                "failure_stage": "success" if success else "domain_selection",
                 "first_fetch_relevant": first_fetch_relevant,
+                "first_manifest_top1_correct": first_fetch_relevant,
                 "manifest_fetch_index": manifest_fetch_index,
+                "manifest_rescue_rank": manifest_fetch_index,
+                "cumulative_manifest_fetches": manifest_fetch_index,
+                "first_probe_relevant_domain_hit": 1
+                if num_remote_probes > 0 and final_domain_id in relevant_domains
+                else 0,
+                "first_probe_domain_rank": 1
+                if num_remote_probes > 0 and final_domain_id in relevant_domains
+                else 0,
+                "num_relevant_domains": len(relevant_domains),
+                "num_confuser_domains": 0,
+                "num_confuser_objects": 0,
             }
         )
 
@@ -504,7 +563,7 @@ def _normalize_ndnsim_query_log(
     _copy_raw_if_needed(query_log_path)
     object_by_id = {
         row["object_id"]: row
-        for row in read_csv(_resolve(experiment["inputs"]["objects_csv"]))
+        for row in read_csv(_input_path(experiment, "objects_csv"))
     }
     normalized = []
     for row in rows:
@@ -524,6 +583,7 @@ def _normalize_ndnsim_query_log(
                 "end_time_ms": round(start_time_ms + latency_ms, 3),
                 "latency_ms": latency_ms,
                 "success_at_1": int(row.get("success_at_1", 0)),
+                "final_end_to_end_success": int(row.get("success_at_1", 0)),
                 "manifest_hit_at_3": int(row.get("manifest_hit_at_r", 0)),
                 "manifest_hit_at_5": int(row.get("manifest_hit_at_r", 0)),
                 "ndcg_at_5": float(row.get("ndcg_at_r") or 0.0),
@@ -538,8 +598,17 @@ def _normalize_ndnsim_query_log(
                 "failure_type": "success"
                 if str(row.get("success_at_1", "0")) == "1"
                 else row.get("failure_type", "unknown"),
+                "failure_stage": row.get("failure_stage", ""),
                 "first_fetch_relevant": int(row.get("first_fetch_relevant") or 0),
+                "first_manifest_top1_correct": int(row.get("first_fetch_relevant") or 0),
                 "manifest_fetch_index": int(row.get("manifest_fetch_index") or 0),
+                "manifest_rescue_rank": int(row.get("manifest_fetch_index") or 0),
+                "cumulative_manifest_fetches": int(row.get("cumulative_manifest_fetches") or 0),
+                "first_probe_relevant_domain_hit": int(row.get("first_probe_relevant_domain_hit") or 0),
+                "first_probe_domain_rank": int(row.get("first_probe_domain_rank") or 0),
+                "num_relevant_domains": int(row.get("num_relevant_domains") or 0),
+                "num_confuser_domains": int(row.get("num_confuser_domains") or 0),
+                "num_confuser_objects": int(row.get("num_confuser_objects") or 0),
             }
         )
     write_csv(query_log_path, QUERY_LOG_FIELDS, normalized)
@@ -626,10 +695,9 @@ def _stable_query_slot(query_id: str, modulo: int) -> int:
 
 
 def _prepare_runtime_inputs(experiment: dict[str, Any], run_dir: Path) -> dict[str, Path]:
-    inputs = experiment["inputs"]
     query_filters = experiment.get("query_filters", {}) or {}
     selected_budget = int(experiment.get("_selected_budget") or 0)
-    topology_rows = read_csv(_resolve(inputs["topology_mapping_csv"]))
+    topology_rows = read_csv(_input_path(experiment, "topology_mapping_csv"))
     active_domains = sorted({row["domain_id"] for row in topology_rows if row["domain_id"]})
     active_domain_set = set(active_domains)
     ingress_nodes = sorted(row["node_id"] for row in topology_rows if row["role"] == "ingress")
@@ -637,7 +705,7 @@ def _prepare_runtime_inputs(experiment: dict[str, Any], run_dir: Path) -> dict[s
     runtime_paths: dict[str, Path] = {}
 
     def _write_runtime_copy(input_key: str, rows: list[dict[str, Any]], fieldnames: list[str] | None = None) -> Path:
-        source_path = _resolve(inputs[input_key])
+        source_path = _input_path(experiment, input_key)
         runtime_path = run_dir / f"{source_path.stem}_runtime{source_path.suffix}"
         actual_fieldnames = fieldnames or (list(rows[0].keys()) if rows else [])
         write_csv(runtime_path, actual_fieldnames, rows)
@@ -645,19 +713,32 @@ def _prepare_runtime_inputs(experiment: dict[str, Any], run_dir: Path) -> dict[s
         experiment[f"_runtime_{input_key}"] = str(runtime_path.relative_to(repo_root()))
         return runtime_path
 
-    object_rows = read_csv(_resolve(inputs["objects_csv"]))
+    object_rows = read_csv(_input_path(experiment, "objects_csv"))
     object_rows = [row for row in object_rows if row["domain_id"] in active_domain_set]
     active_object_ids = {row["object_id"] for row in object_rows}
     if object_rows:
         _write_runtime_copy("objects_csv", object_rows)
+    object_embedding_rows = read_csv(_input_path(experiment, "object_embeddings_csv"))
+    filtered_object_embeddings = [
+        row for row in object_embedding_rows if row["object_id"] in active_object_ids
+    ]
+    if filtered_object_embeddings:
+        _write_runtime_copy("object_embeddings_csv", filtered_object_embeddings)
 
-    summary_rows = read_csv(_resolve(inputs["hslsa_csv"]))
+    summary_rows = read_csv(_input_path(experiment, "hslsa_csv"))
     summary_rows = [row for row in summary_rows if row["domain_id"] in active_domain_set]
     summary_rows = _filter_summary_budget(summary_rows, selected_budget)
     if summary_rows:
         _write_runtime_copy("hslsa_csv", summary_rows)
+    active_centroid_rows = {row["centroid_row"] for row in summary_rows}
+    summary_embedding_rows = read_csv(_input_path(experiment, "summary_embeddings_csv"))
+    filtered_summary_embeddings = [
+        row for row in summary_embedding_rows if row["centroid_row"] in active_centroid_rows
+    ]
+    if filtered_summary_embeddings:
+        _write_runtime_copy("summary_embeddings_csv", filtered_summary_embeddings)
 
-    controller_rows = read_csv(_resolve(inputs["controller_local_index_csv"]))
+    controller_rows = read_csv(_input_path(experiment, "controller_local_index_csv"))
     controller_rows = [
         row
         for row in controller_rows
@@ -666,7 +747,7 @@ def _prepare_runtime_inputs(experiment: dict[str, Any], run_dir: Path) -> dict[s
     if controller_rows:
         _write_runtime_copy("controller_local_index_csv", controller_rows)
 
-    qrels_domain_rows = read_csv(_resolve(inputs["qrels_domain_csv"]))
+    qrels_domain_rows = read_csv(_input_path(experiment, "qrels_domain_csv"))
     relevant_domains_by_query: dict[str, set[str]] = defaultdict(set)
     for row in qrels_domain_rows:
         if row["is_relevant_domain"] == "1":
@@ -677,7 +758,7 @@ def _prepare_runtime_inputs(experiment: dict[str, Any], run_dir: Path) -> dict[s
         for query_id, relevant_domains in relevant_domains_by_query.items()
         if relevant_domains and relevant_domains.issubset(active_domain_set)
     }
-    query_rows = read_csv(_resolve(inputs["queries_csv"]))
+    query_rows = read_csv(_input_path(experiment, "queries_csv"))
     filtered_queries = [row for row in query_rows if row["query_id"] in eligible_queries]
     allowed_splits = {str(value) for value in query_filters.get("splits", [])}
     if allowed_splits:
@@ -719,7 +800,7 @@ def _prepare_runtime_inputs(experiment: dict[str, Any], run_dir: Path) -> dict[s
     if filtered_qrels_domain:
         _write_runtime_copy("qrels_domain_csv", filtered_qrels_domain)
 
-    qrels_object_rows = read_csv(_resolve(inputs["qrels_object_csv"]))
+    qrels_object_rows = read_csv(_input_path(experiment, "qrels_object_csv"))
     filtered_qrels_object = [
         row
         for row in qrels_object_rows
@@ -764,12 +845,22 @@ def _prepare_runtime_inputs(experiment: dict[str, Any], run_dir: Path) -> dict[s
     if filtered_queries:
         _write_runtime_copy("queries_csv", filtered_queries)
 
-    query_embedding_rows = read_csv(_resolve(inputs["query_embedding_index_csv"]))
+    query_embedding_rows = read_csv(_input_path(experiment, "query_embedding_index_csv"))
     filtered_query_embeddings = [
         row for row in query_embedding_rows if row["query_id"] in {row["query_id"] for row in filtered_queries}
     ]
     if filtered_query_embeddings:
         _write_runtime_copy("query_embedding_index_csv", filtered_query_embeddings)
+    allowed_query_ids = {row["query_id"] for row in filtered_queries}
+    allowed_embedding_rows = {row["embedding_row"] for row in filtered_query_embeddings}
+    query_embedding_value_rows = read_csv(_input_path(experiment, "query_embeddings_csv"))
+    filtered_query_embedding_values = [
+        row
+        for row in query_embedding_value_rows
+        if row["query_id"] in allowed_query_ids and row["embedding_row"] in allowed_embedding_rows
+    ]
+    if filtered_query_embedding_values:
+        _write_runtime_copy("query_embeddings_csv", filtered_query_embedding_values)
 
     return runtime_paths
 
@@ -807,13 +898,17 @@ def _ndnsim_command(
     command = [
         str(binary),
         f"--topology={_resolve(topology_config['annotated_topology_path'])}",
-        f"--topologyMapping={_resolve(experiment['inputs']['topology_mapping_csv'])}",
-        f"--objectsCsv={runtime_paths.get('objects_csv', _resolve(experiment['inputs']['objects_csv']))}",
-        f"--queryCsv={runtime_paths.get('queries_csv', _resolve(experiment['inputs']['queries_csv']))}",
-        f"--queryEmbeddingIndexCsv={runtime_paths.get('query_embedding_index_csv', _resolve(experiment['inputs']['query_embedding_index_csv']))}",
-        f"--qrelsObjectCsv={runtime_paths.get('qrels_object_csv', _resolve(experiment['inputs']['qrels_object_csv']))}",
-        f"--summaryCsv={runtime_paths.get('hslsa_csv', _resolve(experiment['inputs']['hslsa_csv']))}",
-        f"--controllerLocalIndexCsv={runtime_paths.get('controller_local_index_csv', _resolve(experiment['inputs']['controller_local_index_csv']))}",
+        f"--topologyMapping={_input_path(experiment, 'topology_mapping_csv')}",
+        f"--objectsCsv={runtime_paths.get('objects_csv', _input_path(experiment, 'objects_csv'))}",
+        f"--objectEmbeddingsCsv={runtime_paths.get('object_embeddings_csv', _input_path(experiment, 'object_embeddings_csv'))}",
+        f"--queryCsv={runtime_paths.get('queries_csv', _input_path(experiment, 'queries_csv'))}",
+        f"--queryEmbeddingsCsv={runtime_paths.get('query_embeddings_csv', _input_path(experiment, 'query_embeddings_csv'))}",
+        f"--queryEmbeddingIndexCsv={runtime_paths.get('query_embedding_index_csv', _input_path(experiment, 'query_embedding_index_csv'))}",
+        f"--qrelsObjectCsv={runtime_paths.get('qrels_object_csv', _input_path(experiment, 'qrels_object_csv'))}",
+        f"--qrelsDomainCsv={runtime_paths.get('qrels_domain_csv', _input_path(experiment, 'qrels_domain_csv'))}",
+        f"--summaryCsv={runtime_paths.get('hslsa_csv', _input_path(experiment, 'hslsa_csv'))}",
+        f"--summaryEmbeddingsCsv={runtime_paths.get('summary_embeddings_csv', _input_path(experiment, 'summary_embeddings_csv'))}",
+        f"--controllerLocalIndexCsv={runtime_paths.get('controller_local_index_csv', _input_path(experiment, 'controller_local_index_csv'))}",
         f"--runDir={run_dir}",
         f"--topologyId={experiment['topology_id']}",
         f"--scheme={_scheme_runtime_alias(scheme)}",
@@ -1034,11 +1129,14 @@ def main() -> int:
             )
     for input_key in [
         "objects_csv",
+        "object_embeddings_csv",
         "queries_csv",
+        "query_embeddings_csv",
         "query_embedding_index_csv",
         "qrels_object_csv",
         "qrels_domain_csv",
         "hslsa_csv",
+        "summary_embeddings_csv",
         "controller_local_index_csv",
     ]:
         runtime_key = f"_runtime_{input_key}"

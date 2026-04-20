@@ -1,6 +1,82 @@
 # Metric Semantics Reference
 
-Last updated: 2026-04-15 (PHASE 1)
+Last updated: 2026-04-19 (PHASE 2 scheduled; PHASE 1 baseline preserved below)
+
+## Phase 2 semantics (2026-04-19, pending rerun)
+
+The following semantics are **scheduled** and take effect only after the next full rerun
+(`tools/run_mainline_review_stage.sh full_mainline --max-workers 1` plus downstream
+aggregation). Until rerun lands, Phase 1 semantics below remain authoritative for all
+sealed aggregates in `results/aggregate/mainline/`.
+
+### Strict relevance at 3 call sites
+
+`ns-3/src/ndnSIM/apps/hiroute-ingress-app.cpp:1047` computes `relevant` via
+`isStrongRelevantObject(queryId, objectId)` (grade `>= 2` qrel). Because that boolean
+then drives three distinct decisions:
+
+1. `firstFetchRelevant` recording at line 1049 — first-fetch quality metric tightens.
+2. Manifest fallback decision at line 1057-1063 — sequential fallback now continues past
+   any grade-1 (loosely relevant) match and only stops at a grade-2 match.
+3. Terminal `finishActiveQuery(relevant, …)` at line 1072 — `success_at_1` tightens to
+   "strongly relevant fetch," not "any-grade fetch."
+
+Expected aggregate impact (pending rerun confirmation):
+
+- `hiroute` `success_at_1` currently `1.0` on the compact `object_main` workload is
+  expected to drop to roughly the `0.6–0.8` band because some queries whose terminal
+  fetch is grade-1 (loosely relevant) but not grade-2 will now be counted as
+  `wrong_object`.
+- `first_fetch_relevant_rate` for `hiroute` currently `0.620833` will move, likely
+  downward.
+- `central_directory` is expected to stay near `1.0` since its oracle ranking surfaces
+  the highest-graded qrel first.
+
+The rerun must complete under a clean git tree per CLAUDE.md before any of these numbers
+can be promoted to paper-facing text.
+
+### New derived rescue metrics
+
+The next aggregate rebuild introduces two derived rate metrics that together replace the
+current ambiguous `manifest_rescue_rate`:
+
+- `within_reply_manifest_rescue_rate` — `(success_at_1 == 1) & (manifest_fetch_index > 0)`.
+  Measures rescue that happens by advancing through the current discovery reply's manifest
+  without issuing a new probe. This is the semantic the Python scripts
+  (`build_object_main_manifest_sweep.py:69`, `build_ablation_summary.py:73`) intended all
+  along.
+- `cross_probe_manifest_rescue_rate` —
+  `(success_at_1 == 1) & (cumulative_manifest_fetches > 0) & (manifest_fetch_index == 0)`.
+  Measures rescue that requires a fresh probe because the previous probe's full manifest
+  was exhausted. Requires the new `cumulative_manifest_fetches` column (see below).
+
+The legacy `manifest_rescue_rate` column remains in outputs for one release cycle for
+backward compatibility; consumers should migrate to the two split metrics.
+
+### New C++ log column
+
+`ns-3/src/ndnSIM/apps/hiroute-ingress-app.cpp` will append a new query-log column
+`cumulative_manifest_fetches` that counts manifest-entry advances across all probes of a
+single query. Unlike `manifest_fetch_index`, this counter is **not reset** on new
+discovery replies, so cross-probe rescue becomes observable. Validation gates that
+checksum the log schema must accept the new column.
+
+### aggregate_query_metrics.py manifest_rescue_rate status
+
+A prior revision of `aggregate_query_metrics.py` is documented in the Phase 1 section
+below (line describing `(manifest_hit_at_5 == 1) & (success_at_1 == 0)`) as having an
+inverted definition. That earlier bug is **no longer present**: the current
+`aggregate_query_metrics.py:92` defines
+`manifest_rescue = (success_at_1 == 1) & (manifest_fetch_index > 0)`, which matches
+`build_object_main_manifest_sweep.py:69` and `build_ablation_summary.py:73`. The Phase 1
+annotation is retained below for historical record.
+
+In Phase 2 the three builders gain the two split metrics
+(`within_reply_manifest_rescue_rate`, `cross_probe_manifest_rescue_rate`) and
+legacy `manifest_rescue_rate` is retained as an alias of `within_reply_manifest_rescue_rate`
+during the deprecation window.
+
+---
 
 ## Query-level metrics (from C++ ingress query_log.csv)
 

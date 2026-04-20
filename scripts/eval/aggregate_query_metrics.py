@@ -34,10 +34,13 @@ OUTPUT_FIELDS = [
     "run_count",
     "query_count",
     "mean_success_at_1",
+    "final_end_to_end_success_rate",
     "ci_success_at_1",
     "first_fetch_relevant_rate",
+    "first_manifest_top1_correct_rate",
     "ci_first_fetch_relevant_rate",
     "mean_manifest_fetch_index_success_only",
+    "mean_manifest_rescue_rank_success_only",
     "mean_manifest_hit_at_5",
     "mean_ndcg_at_5",
     "mean_num_remote_probes",
@@ -52,6 +55,17 @@ OUTPUT_FIELDS = [
     "ci_relevant_domain_reached_at_k",
     "best_object_chosen_given_relevant_domain",
     "manifest_rescue_rate",
+    "within_reply_manifest_rescue_rate",
+    "cross_probe_manifest_rescue_rate",
+    "mean_cumulative_manifest_fetches_success_only",
+    "first_probe_relevant_domain_hit_rate",
+    "mean_first_probe_domain_rank",
+    "failure_stage_domain_selection_rate",
+    "failure_stage_local_resolution_rate",
+    "failure_stage_fetch_rate",
+    "mean_num_relevant_domains",
+    "mean_num_confuser_domains",
+    "mean_num_confuser_objects",
     "effective_exported_summaries_total",
     "effective_exported_summaries_per_domain_mean",
     "source_run_ids",
@@ -88,8 +102,44 @@ def main() -> int:
     frame["discovery_rx_bytes"] = pd.to_numeric(frame["discovery_rx_bytes"], errors="coerce").fillna(0.0)
     frame["first_fetch_relevant"] = pd.to_numeric(frame.get("first_fetch_relevant", 0), errors="coerce").fillna(0.0)
     frame["manifest_fetch_index"] = pd.to_numeric(frame.get("manifest_fetch_index", 0), errors="coerce").fillna(0.0)
+    frame["first_probe_relevant_domain_hit"] = pd.to_numeric(
+        frame.get("first_probe_relevant_domain_hit", 0), errors="coerce"
+    ).fillna(0.0)
+    frame["first_probe_domain_rank"] = pd.to_numeric(
+        frame.get("first_probe_domain_rank", 0), errors="coerce"
+    ).fillna(0.0)
+    frame["num_relevant_domains"] = pd.to_numeric(
+        frame.get("num_relevant_domains", 0), errors="coerce"
+    ).fillna(0.0)
+    frame["num_confuser_domains"] = pd.to_numeric(
+        frame.get("num_confuser_domains", 0), errors="coerce"
+    ).fillna(0.0)
+    frame["num_confuser_objects"] = pd.to_numeric(
+        frame.get("num_confuser_objects", 0), errors="coerce"
+    ).fillna(0.0)
+    frame["cumulative_manifest_fetches"] = pd.to_numeric(
+        frame.get("cumulative_manifest_fetches", 0), errors="coerce"
+    ).fillna(0.0)
+    frame["failure_stage_domain_selection"] = (
+        frame.get("failure_stage", pd.Series(index=frame.index, dtype=str)) == "domain_selection"
+    ).astype(float)
+    frame["failure_stage_local_resolution"] = (
+        frame.get("failure_stage", pd.Series(index=frame.index, dtype=str)) == "local_resolution"
+    ).astype(float)
+    frame["failure_stage_fetch"] = (
+        frame.get("failure_stage", pd.Series(index=frame.index, dtype=str)) == "fetch"
+    ).astype(float)
     frame["discovery_bytes_total"] = frame["discovery_tx_bytes"] + frame["discovery_rx_bytes"]
-    frame["manifest_rescue"] = ((frame["success_at_1"] == 1) & (frame["manifest_fetch_index"] > 0)).astype(float)
+    # Phase 2 rescue split (see docs/metrics/metric_semantics.md).
+    frame["within_reply_manifest_rescue"] = (
+        (frame["success_at_1"] == 1) & (frame["manifest_fetch_index"] > 0)
+    ).astype(float)
+    frame["cross_probe_manifest_rescue"] = (
+        (frame["success_at_1"] == 1)
+        & (frame["cumulative_manifest_fetches"] > 0)
+        & (frame["manifest_fetch_index"] == 0)
+    ).astype(float)
+    frame["manifest_rescue"] = frame["within_reply_manifest_rescue"]
 
     if not probe_frame.empty:
         probe_frame = probe_frame.copy()
@@ -114,7 +164,7 @@ def main() -> int:
         if probe_summary:
             frame = frame.merge(pd.DataFrame(probe_summary), on=["run_id", "query_id", "registry_topology_id"], how="left")
     if "relevant_domain_reached_at_1" not in frame.columns:
-        frame["relevant_domain_reached_at_1"] = 0.0
+        frame["relevant_domain_reached_at_1"] = frame["first_probe_relevant_domain_hit"]
     if "relevant_domain_reached_at_k" not in frame.columns:
         frame["relevant_domain_reached_at_k"] = 0.0
 
@@ -166,14 +216,22 @@ def main() -> int:
                 "run_count": len(run_ids),
                 "query_count": int(len(group)),
                 "mean_success_at_1": round(group["success_at_1"].mean(), 6),
+                "final_end_to_end_success_rate": round(group["success_at_1"].mean(), 6),
                 "ci_success_at_1": round(
                     bootstrap_mean_ci(group["success_at_1"], bootstrap_replicates), 6
                 ),
                 "first_fetch_relevant_rate": round(group["first_fetch_relevant"].mean(), 6),
+                "first_manifest_top1_correct_rate": round(group["first_fetch_relevant"].mean(), 6),
                 "ci_first_fetch_relevant_rate": round(
                     bootstrap_mean_ci(group["first_fetch_relevant"], bootstrap_replicates, seed=6), 6
                 ),
                 "mean_manifest_fetch_index_success_only": round(
+                    group.loc[group["success_at_1"] == 1, "manifest_fetch_index"].mean()
+                    if (group["success_at_1"] == 1).any()
+                    else 0.0,
+                    6,
+                ),
+                "mean_manifest_rescue_rank_success_only": round(
                     group.loc[group["success_at_1"] == 1, "manifest_fetch_index"].mean()
                     if (group["success_at_1"] == 1).any()
                     else 0.0,
@@ -206,6 +264,37 @@ def main() -> int:
                     6,
                 ),
                 "manifest_rescue_rate": round(group["manifest_rescue"].mean(), 6),
+                "within_reply_manifest_rescue_rate": round(
+                    group["within_reply_manifest_rescue"].mean(), 6
+                ),
+                "cross_probe_manifest_rescue_rate": round(
+                    group["cross_probe_manifest_rescue"].mean(), 6
+                ),
+                "mean_cumulative_manifest_fetches_success_only": round(
+                    group.loc[group["success_at_1"] == 1, "cumulative_manifest_fetches"].mean()
+                    if (group["success_at_1"] == 1).any()
+                    else 0.0,
+                    6,
+                ),
+                "first_probe_relevant_domain_hit_rate": round(
+                    group["first_probe_relevant_domain_hit"].mean(), 6
+                ),
+                "mean_first_probe_domain_rank": round(
+                    group.loc[group["first_probe_domain_rank"] > 0, "first_probe_domain_rank"].mean()
+                    if (group["first_probe_domain_rank"] > 0).any()
+                    else 0.0,
+                    6,
+                ),
+                "failure_stage_domain_selection_rate": round(
+                    group["failure_stage_domain_selection"].mean(), 6
+                ),
+                "failure_stage_local_resolution_rate": round(
+                    group["failure_stage_local_resolution"].mean(), 6
+                ),
+                "failure_stage_fetch_rate": round(group["failure_stage_fetch"].mean(), 6),
+                "mean_num_relevant_domains": round(group["num_relevant_domains"].mean(), 6),
+                "mean_num_confuser_domains": round(group["num_confuser_domains"].mean(), 6),
+                "mean_num_confuser_objects": round(group["num_confuser_objects"].mean(), 6),
                 "effective_exported_summaries_total": round(sum(state_totals) / len(state_totals), 6) if state_totals else 0.0,
                 "effective_exported_summaries_per_domain_mean": round(sum(state_per_domain) / len(state_per_domain), 6) if state_per_domain else 0.0,
                 "source_run_ids": "|".join(run_ids),

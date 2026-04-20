@@ -10,6 +10,7 @@
 
 #include "ns3/ndnSIM/model/hiroute-dataset-reader.hpp"
 #include "ns3/ndnSIM/model/hiroute-discovery-engine.hpp"
+#include "ns3/ndnSIM/model/hiroute-embedding-store.hpp"
 #include "ns3/ndnSIM/model/hiroute-object-record.hpp"
 #include "ns3/ndnSIM/model/hiroute-query-record.hpp"
 #include "ns3/ndnSIM/model/hiroute-reliability-cache.hpp"
@@ -86,6 +87,7 @@ private:
     Phase phase = Phase::Idle;
     std::vector<HiRouteManifestEntry> manifest;
     size_t manifestFetchIndex = 0;
+    size_t cumulativeManifestFetches = 0;
     bool firstFetchRelevant = false;
     bool firstFetchRecorded = false;
     uint32_t remoteProbes = 0;
@@ -94,6 +96,7 @@ private:
     uint32_t replanCount = 0;
     std::string failureType;
     std::string fetchedObjectId;
+    std::vector<std::string> probedDomainIds;
     std::set<std::string> attemptedProbeKeys;
     EventId timeoutEvent;
   };
@@ -157,6 +160,9 @@ private:
   bool
   isRelevantObject(const std::string& queryId, const std::string& objectId) const;
 
+  bool
+  isStrongRelevantObject(const std::string& queryId, const std::string& objectId) const;
+
   std::string
   topRelevantObject(const std::string& queryId) const;
 
@@ -175,12 +181,21 @@ private:
   uint32_t
   controllerHopCost(const std::string& controllerPrefix) const;
 
+  uint32_t
+  firstRelevantProbeRank(const std::string& queryId) const;
+
+  std::string
+  classifyFailureStage(bool success) const;
+
 private:
   std::string m_queryCsvPath;
+  std::string m_queryEmbeddingsCsvPath;
   std::string m_queryEmbeddingIndexCsvPath;
   std::string m_qrelsObjectCsvPath;
+  std::string m_qrelsDomainCsvPath;
   std::string m_objectsCsvPath;
   std::string m_summaryCsvPath;
+  std::string m_summaryEmbeddingsCsvPath;
   std::string m_topologyMappingCsvPath;
   std::string m_runDirectory;
   std::string m_probePlanDebugCsvPath;
@@ -198,9 +213,14 @@ private:
   HiRouteSummaryStore m_summaryStore;
   HiRouteDiscoveryEngine m_discoveryEngine;
   HiRouteReliabilityCache m_reliabilityCache;
+  HiRouteEmbeddingStore m_queryEmbeddings;
+  HiRouteEmbeddingStore m_summaryEmbeddings;
   std::vector<HiRouteQueryRecord> m_queries;
   size_t m_nextQueryIndex = 0;
   std::map<std::string, std::vector<std::pair<std::string, uint32_t>>> m_rankedQrels;
+  std::map<std::string, std::set<std::string>> m_relevantDomainsByQuery;
+  std::map<std::string, uint32_t> m_confuserDomainCountByQuery;
+  std::map<std::string, uint32_t> m_confuserObjectCountByQuery;
   std::map<std::string, std::string> m_canonicalByObjectId;
   std::map<std::string, std::string> m_objectIdByCanonicalName;
   std::map<std::string, std::string> m_controllerNodeIdByPrefix;

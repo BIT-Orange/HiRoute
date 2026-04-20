@@ -33,9 +33,13 @@ struct HiRouteScenarioConfig {
   std::string topologyMappingCsv = "../data/processed/ndnsim/topology_mapping_rf_3967_exodus.csv";
   std::string objectsCsv = "../data/processed/ndnsim/objects_master.csv";
   std::string queryCsv = "../data/processed/ndnsim/queries_master.csv";
+  std::string queryEmbeddingsCsv = "../data/processed/ndnsim/query_embeddings.csv";
   std::string queryEmbeddingIndexCsv = "../data/processed/ndnsim/query_embedding_index.csv";
   std::string qrelsObjectCsv = "../data/processed/eval/qrels_object.csv";
+  std::string qrelsDomainCsv = "../data/processed/eval/qrels_domain.csv";
+  std::string objectEmbeddingsCsv = "../data/processed/ndnsim/object_embeddings.csv";
   std::string summaryCsv = "../data/processed/ndnsim/hslsa_export.csv";
+  std::string summaryEmbeddingsCsv = "../data/processed/ndnsim/summary_embeddings.csv";
   std::string controllerLocalIndexCsv = "../data/processed/ndnsim/controller_local_index.csv";
   std::string runDir = "../runs/pending/ndnsim-smoke";
   std::string probePlanDebugCsv = "";
@@ -332,9 +336,13 @@ RunHiRouteScenario(int argc, char* argv[], HiRouteScenarioMode mode)
   cmd.AddValue("topologyMapping", "Topology mapping csv", config.topologyMappingCsv);
   cmd.AddValue("objectsCsv", "objects_master.csv path", config.objectsCsv);
   cmd.AddValue("queryCsv", "queries_master.csv path", config.queryCsv);
+  cmd.AddValue("queryEmbeddingsCsv", "query embeddings csv path", config.queryEmbeddingsCsv);
   cmd.AddValue("queryEmbeddingIndexCsv", "query embedding index path", config.queryEmbeddingIndexCsv);
   cmd.AddValue("qrelsObjectCsv", "qrels_object.csv path", config.qrelsObjectCsv);
+  cmd.AddValue("qrelsDomainCsv", "qrels_domain.csv path", config.qrelsDomainCsv);
+  cmd.AddValue("objectEmbeddingsCsv", "object embeddings csv path", config.objectEmbeddingsCsv);
   cmd.AddValue("summaryCsv", "hslsa_export.csv path", config.summaryCsv);
+  cmd.AddValue("summaryEmbeddingsCsv", "summary embeddings csv path", config.summaryEmbeddingsCsv);
   cmd.AddValue("controllerLocalIndexCsv", "controller_local_index.csv path",
                config.controllerLocalIndexCsv);
   cmd.AddValue("runDir", "Output run directory", config.runDir);
@@ -408,6 +416,10 @@ RunHiRouteScenario(int argc, char* argv[], HiRouteScenarioMode mode)
       controllerHelper.SetAttribute("Prefix", StringValue(summaryControllerPrefix(GetFieldOrEmpty(row, "domain_id"))));
       controllerHelper.SetAttribute("DomainId", StringValue(GetFieldOrEmpty(row, "domain_id")));
       controllerHelper.SetAttribute("ObjectsCsvPath", StringValue(config.objectsCsv));
+      controllerHelper.SetAttribute("ObjectEmbeddingsCsvPath",
+                                    StringValue(config.objectEmbeddingsCsv));
+      controllerHelper.SetAttribute("QueryEmbeddingsCsvPath",
+                                    StringValue(config.queryEmbeddingsCsv));
       controllerHelper.SetAttribute("ControllerLocalIndexCsvPath",
                                     StringValue(config.controllerLocalIndexCsv));
       controllerHelper.SetAttribute("ManifestDebugCsvPath",
@@ -459,6 +471,8 @@ RunHiRouteScenario(int argc, char* argv[], HiRouteScenarioMode mode)
   oracleHelper.SetAttribute("Prefix", StringValue(config.oraclePrefix));
   oracleHelper.SetAttribute("OracleMode", BooleanValue(true));
   oracleHelper.SetAttribute("ObjectsCsvPath", StringValue(config.objectsCsv));
+  oracleHelper.SetAttribute("ObjectEmbeddingsCsvPath", StringValue(config.objectEmbeddingsCsv));
+  oracleHelper.SetAttribute("QueryEmbeddingsCsvPath", StringValue(config.queryEmbeddingsCsv));
   oracleHelper.SetAttribute("ControllerLocalIndexCsvPath", StringValue(config.controllerLocalIndexCsv));
   oracleHelper.SetAttribute("QrelsObjectCsvPath", StringValue(config.qrelsObjectCsv));
   oracleHelper.SetAttribute("ManifestDebugCsvPath", StringValue(config.controllerManifestDebugCsv));
@@ -479,6 +493,10 @@ RunHiRouteScenario(int argc, char* argv[], HiRouteScenarioMode mode)
       producerHelper.SetAttribute("Prefix", StringValue(summaryControllerPrefix(item.first)));
       producerHelper.SetAttribute("DomainId", StringValue(item.first));
       producerHelper.SetAttribute("ObjectsCsvPath", StringValue(config.objectsCsv));
+      producerHelper.SetAttribute("ObjectEmbeddingsCsvPath",
+                                  StringValue(config.objectEmbeddingsCsv));
+      producerHelper.SetAttribute("QueryEmbeddingsCsvPath",
+                                  StringValue(config.queryEmbeddingsCsv));
       producerHelper.SetAttribute("ControllerLocalIndexCsvPath",
                                   StringValue(config.controllerLocalIndexCsv));
       producerHelper.SetAttribute("ManifestDebugCsvPath",
@@ -541,11 +559,16 @@ RunHiRouteScenario(int argc, char* argv[], HiRouteScenarioMode mode)
 
     AppHelper ingressHelper(ingressType);
     ingressHelper.SetAttribute("QueryCsvPath", StringValue(config.queryCsv));
+    ingressHelper.SetAttribute("QueryEmbeddingsCsvPath",
+                               StringValue(config.queryEmbeddingsCsv));
     ingressHelper.SetAttribute("QueryEmbeddingIndexCsvPath",
                                StringValue(config.queryEmbeddingIndexCsv));
     ingressHelper.SetAttribute("QrelsObjectCsvPath", StringValue(config.qrelsObjectCsv));
+    ingressHelper.SetAttribute("QrelsDomainCsvPath", StringValue(config.qrelsDomainCsv));
     ingressHelper.SetAttribute("ObjectsCsvPath", StringValue(config.objectsCsv));
     ingressHelper.SetAttribute("SummaryCsvPath", StringValue(config.summaryCsv));
+    ingressHelper.SetAttribute("SummaryEmbeddingsCsvPath",
+                               StringValue(config.summaryEmbeddingsCsv));
     ingressHelper.SetAttribute("TopologyMappingCsvPath", StringValue(config.topologyMappingCsv));
     ingressHelper.SetAttribute("RunDirectory", StringValue(config.runDir));
     ingressHelper.SetAttribute("ProbePlanDebugCsvPath", StringValue(config.probePlanDebugCsv));

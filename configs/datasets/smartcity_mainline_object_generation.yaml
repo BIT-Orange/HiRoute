@@ -86,9 +86,9 @@ semantic_intent_families:
     - stadium_dispersal_noise
     - construction_residual_noise
 confuser_policy:
-  semantic_near_miss_per_target: 3
+  semantic_near_miss_per_target: 4
   constraint_near_miss_per_target: 1
-  naming_confuser_per_target: 1
+  naming_confuser_per_target: 2
 difficulty_mixture:
   routing_hard: 0.4
   object_hard: 0.4

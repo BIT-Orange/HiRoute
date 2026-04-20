@@ -15,9 +15,9 @@ workload_tiers:
   object_main:
     dev: 40
     test: 240
-    relevant_domains_range: [1, 2]
-    confuser_domains_range: [0, 1]
-    confuser_objects_per_query_min: 4
+    relevant_domains_range: [1, 1]
+    confuser_domains_range: [0, 0]
+    confuser_objects_per_query_min: 6
     manifest_difficulty_mix:
       easy: 0.2
       medium: 0.4
