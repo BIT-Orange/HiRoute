@@ -19,6 +19,7 @@ SCRIPT_MAP = {
     "exp_main_v1": [
         "scripts/eval/aggregate_query_metrics.py",
         "scripts/eval/build_failure_breakdown.py",
+        "scripts/eval/build_discovery_reply_stage_matrix.py",
         "scripts/eval/build_candidate_shrinkage.py",
         "scripts/eval/build_deadline_summary.py",
     ],
@@ -36,41 +37,50 @@ SCRIPT_MAP = {
     ],
     "exp_routing_main_v2": [
         "scripts/eval/aggregate_query_metrics.py",
+        "scripts/eval/build_discovery_reply_stage_matrix.py",
         "scripts/eval/build_candidate_shrinkage.py",
         "scripts/eval/build_deadline_summary.py",
     ],
     "exp_object_main_v2": [
         "scripts/eval/build_failure_breakdown.py",
+        "scripts/eval/build_discovery_reply_stage_matrix.py",
     ],
     "exp_ablation_v2": [
         "scripts/eval/build_ablation_summary.py",
+        "scripts/eval/build_discovery_reply_stage_matrix.py",
     ],
     "exp_sanity_appendix_v2": [
         "scripts/eval/aggregate_query_metrics.py",
     ],
     "exp_routing_main_v3": [
         "scripts/eval/aggregate_query_metrics.py",
+        "scripts/eval/build_discovery_reply_stage_matrix.py",
         "scripts/eval/build_candidate_shrinkage.py",
         "scripts/eval/build_deadline_summary.py",
     ],
     "exp_routing_main_v3_compact": [
         "scripts/eval/aggregate_query_metrics.py",
+        "scripts/eval/build_discovery_reply_stage_matrix.py",
         "scripts/eval/build_candidate_shrinkage.py",
         "scripts/eval/build_deadline_summary.py",
     ],
     "exp_object_main_v3": [
         "scripts/eval/build_object_main_manifest_sweep.py",
         "scripts/eval/build_failure_breakdown.py",
+        "scripts/eval/build_discovery_reply_stage_matrix.py",
     ],
     "exp_object_main_v3_compact": [
         "scripts/eval/build_object_main_manifest_sweep.py",
         "scripts/eval/build_failure_breakdown.py",
+        "scripts/eval/build_discovery_reply_stage_matrix.py",
     ],
     "exp_ablation_v3": [
         "scripts/eval/build_ablation_summary.py",
+        "scripts/eval/build_discovery_reply_stage_matrix.py",
     ],
     "exp_ablation_v3_compact": [
         "scripts/eval/build_ablation_summary.py",
+        "scripts/eval/build_discovery_reply_stage_matrix.py",
     ],
     "exp_scaling_v3": [
         "scripts/eval/build_state_scaling_summary.py",
@@ -86,15 +96,18 @@ SCRIPT_MAP = {
     ],
     "routing_main": [
         "scripts/eval/aggregate_query_metrics.py",
+        "scripts/eval/build_discovery_reply_stage_matrix.py",
         "scripts/eval/build_candidate_shrinkage.py",
         "scripts/eval/build_deadline_summary.py",
     ],
     "object_main": [
         "scripts/eval/build_object_main_manifest_sweep.py",
         "scripts/eval/build_failure_breakdown.py",
+        "scripts/eval/build_discovery_reply_stage_matrix.py",
     ],
     "ablation": [
         "scripts/eval/build_ablation_summary.py",
+        "scripts/eval/build_discovery_reply_stage_matrix.py",
     ],
     "state_scaling": [
         "scripts/eval/build_state_scaling_summary.py",

@@ -94,6 +94,10 @@ private:
     uint64_t discoveryBytes = 0;
     bool manifestHit = false;
     uint32_t replanCount = 0;
+    HiRouteDiscoveryStatus lastDiscoveryStatus = HiRouteDiscoveryStatus::Ok;
+    std::string lastDiscoveryReason;
+    std::string lastDiscoverySelectedCellId;
+    double lastDiscoveryLocalConfidence = 0.0;
     std::string failureType;
     std::string fetchedObjectId;
     std::vector<std::string> probedDomainIds;

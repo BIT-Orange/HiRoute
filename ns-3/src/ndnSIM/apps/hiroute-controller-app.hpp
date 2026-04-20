@@ -96,8 +96,8 @@ private:
   appendManifestDebugRow(const HiRouteDiscoveryRequest& request, const std::string& frontierHintCellId,
                          const CandidateLookup& lookup, const CandidateEvaluation& evaluation) const;
 
-  std::vector<HiRouteManifestEntry>
-  buildManifest(const HiRouteDiscoveryRequest& request) const;
+  HiRouteDiscoveryReply
+  buildDiscoveryReply(const HiRouteDiscoveryRequest& request) const;
 
   std::vector<HiRouteManifestEntry>
   buildOracleManifest(const HiRouteDiscoveryRequest& request) const;

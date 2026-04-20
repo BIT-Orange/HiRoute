@@ -700,7 +700,9 @@ RunHiRouteScenario(int argc, char* argv[], HiRouteScenarioMode mode)
                      "fetched_object_id"});
     ensureCsvHeader(config.runDir + "/probe_log.csv",
                     {"query_id", "scheme", "probe_index", "controller_prefix", "cell_id",
-                     "reply_entries", "selected_object_id", "success"});
+                     "reply_entries", "selected_object_id", "success", "reply_status",
+                     "reply_reason_code", "reply_selected_cell_id",
+                     "reply_local_confidence"});
     ensureCsvHeader(config.runDir + "/search_trace.csv",
                     {"query_id", "scheme", "stage", "candidate_count", "selected_count",
                      "frontier_size", "timestamp_ms"});

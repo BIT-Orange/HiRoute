@@ -86,6 +86,41 @@ joinTokens(const std::vector<std::string>& values)
   return joined;
 }
 
+std::string
+discoveryStatusToString(HiRouteDiscoveryStatus status)
+{
+  switch (status) {
+    case HiRouteDiscoveryStatus::Ok:
+      return "ok";
+    case HiRouteDiscoveryStatus::EmptyManifest:
+      return "empty_manifest";
+    case HiRouteDiscoveryStatus::PredicateMismatch:
+      return "predicate_mismatch";
+    case HiRouteDiscoveryStatus::CellMissing:
+      return "cell_missing";
+    case HiRouteDiscoveryStatus::InternalError:
+      return "internal_error";
+    default:
+      return "internal_error";
+  }
+}
+
+std::string
+failureTypeForDiscoveryStatus(HiRouteDiscoveryStatus status, const std::string& reasonCode)
+{
+  if (status == HiRouteDiscoveryStatus::PredicateMismatch) {
+    return "predicate_miss";
+  }
+  if (reasonCode == "zone_mismatch" || reasonCode == "zone_type_mismatch" ||
+      reasonCode == "service_mismatch" || reasonCode == "freshness_mismatch") {
+    return "predicate_miss";
+  }
+  if (status == HiRouteDiscoveryStatus::InternalError) {
+    return "no_reply";
+  }
+  return "wrong_domain";
+}
+
 } // namespace
 
 TypeId
@@ -373,7 +408,9 @@ HiRouteIngressApp::openLogs()
   }
   if (probeNeedsHeader) {
     appendRow(m_probeLog, {"query_id", "scheme", "probe_index", "controller_prefix", "cell_id",
-                           "reply_entries", "selected_object_id", "success"});
+                           "reply_entries", "selected_object_id", "success", "reply_status",
+                           "reply_reason_code", "reply_selected_cell_id",
+                           "reply_local_confidence"});
   }
   if (searchNeedsHeader) {
     appendRow(m_searchTraceLog, {"query_id", "scheme", "stage", "candidate_count",
@@ -1078,6 +1115,11 @@ HiRouteIngressApp::handleDiscoveryReply(shared_ptr<const Data> data)
   }
 
   const auto reply = HiRouteTlv::DecodeDiscoveryReply(data->getContent().blockFromValue());
+  m_activeQuery.lastDiscoveryStatus = reply.status;
+  m_activeQuery.lastDiscoveryReason =
+    reply.reasonCode.empty() ? discoveryStatusToString(reply.status) : reply.reasonCode;
+  m_activeQuery.lastDiscoverySelectedCellId = reply.selectedCellId;
+  m_activeQuery.lastDiscoveryLocalConfidence = reply.localConfidence;
   m_activeQuery.manifest = reply.manifest;
   m_activeQuery.manifestFetchIndex = 0;
   m_activeQuery.manifestHit = false;
@@ -1096,24 +1138,30 @@ HiRouteIngressApp::handleDiscoveryReply(shared_ptr<const Data> data)
              m_activeQuery.plan.probes[m_activeQuery.probeIndex].cellId,
              std::to_string(reply.manifest.size()),
              reply.manifest.empty() ? std::string() : reply.manifest.front().objectId,
-             reply.manifest.empty() ? "0" : "1"});
+             reply.manifest.empty() ? "0" : "1",
+             discoveryStatusToString(reply.status),
+             m_activeQuery.lastDiscoveryReason,
+             reply.selectedCellId,
+             std::to_string(reply.localConfidence)});
   logSearchStage(m_activeQuery.query.queryId, "manifest_candidates", reply.manifest.size(),
                  reply.manifest.empty() ? 0u : 1u, reply.manifest.size(),
                  Simulator::Now().GetMilliSeconds());
 
   if (reply.manifest.empty()) {
+    const auto terminalFailure =
+      failureTypeForDiscoveryStatus(reply.status, m_activeQuery.lastDiscoveryReason);
     if (usesAdaptiveReliability()) {
-      if (advanceToNextProbe("wrong_domain")) {
+      if (advanceToNextProbe(terminalFailure)) {
         return;
       }
-      m_activeQuery.failureType = "wrong_domain";
+      m_activeQuery.failureType = terminalFailure;
       finishActiveQuery(false, "");
       return;
     }
-    if (advanceToNextStaticProbe("wrong_domain")) {
+    if (advanceToNextStaticProbe(terminalFailure)) {
       return;
     }
-    m_activeQuery.failureType = "wrong_domain";
+    m_activeQuery.failureType = terminalFailure;
     finishActiveQuery(false, "");
     return;
   }

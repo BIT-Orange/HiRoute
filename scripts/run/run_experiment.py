@@ -536,6 +536,19 @@ def _parse_controller_domain(controller_prefix: str) -> str:
     return parts[1] if len(parts) >= 2 else ""
 
 
+def _parse_domain_from_cell_id(cell_id: str) -> str:
+    if not cell_id:
+        return ""
+    if cell_id.endswith("-root"):
+        return cell_id[: -len("-root")]
+    parts = cell_id.split("-")
+    if len(parts) >= 2 and parts[0] == "domain":
+        return f"{parts[0]}-{parts[1]}"
+    if cell_id.startswith("domain-") and len(parts) >= 2:
+        return "-".join(parts[:2])
+    return ""
+
+
 def _copy_raw_if_needed(path: Path) -> Path:
     raw_path = path.with_suffix(path.suffix + ".raw")
     if not raw_path.exists():
@@ -629,16 +642,26 @@ def _normalize_ndnsim_probe_log(run_dir: Path, scheme: str, seed: int) -> None:
     _copy_raw_if_needed(probe_log_path)
     normalized = []
     for row in rows:
+        selected_cell_id = row.get("reply_selected_cell_id", "") or row.get("cell_id", "")
+        target_domain_id = _parse_controller_domain(row.get("controller_prefix", ""))
+        if not target_domain_id:
+            target_domain_id = _parse_domain_from_cell_id(selected_cell_id)
+
+        reply_status = str(row.get("reply_status", "")).strip().lower()
+        success_flag = str(row.get("success", "")).strip()
+        reply_entries = int(float(row.get("reply_entries") or 0))
+        accepted = 1 if success_flag == "1" or reply_entries > 0 or reply_status == "ok" else 0
+
         normalized.append(
             {
                 "query_id": row["query_id"],
                 "scheme": scheme,
                 "seed": seed,
                 "probe_index": row.get("probe_index", "0"),
-                "target_domain_id": _parse_controller_domain(row.get("controller_prefix", "")),
-                "target_cell_id": row.get("cell_id", ""),
+                "target_domain_id": target_domain_id,
+                "target_cell_id": selected_cell_id,
                 "probe_latency_ms": 0,
-                "accepted": 1 if str(row.get("reply_entries", "0")) != "0" else 0,
+                "accepted": accepted,
             }
         )
     write_csv(probe_log_path, PROBE_LOG_FIELDS, normalized)

@@ -159,6 +159,38 @@ DomainRootForCellId(const std::string& cellId)
   return cellId.substr(0, secondDash) + "-root";
 }
 
+HiRouteDiscoveryStatus
+StatusFromZeroReason(const std::string& zeroReason)
+{
+  if (zeroReason == "zone_mismatch" || zeroReason == "zone_type_mismatch" ||
+      zeroReason == "service_mismatch" || zeroReason == "freshness_mismatch") {
+    return HiRouteDiscoveryStatus::PredicateMismatch;
+  }
+  if (zeroReason == "cell_missing" || zeroReason == "descendant_miss") {
+    return HiRouteDiscoveryStatus::CellMissing;
+  }
+  return HiRouteDiscoveryStatus::EmptyManifest;
+}
+
+std::string
+ReasonForStatus(HiRouteDiscoveryStatus status)
+{
+  switch (status) {
+    case HiRouteDiscoveryStatus::Ok:
+      return "ok";
+    case HiRouteDiscoveryStatus::EmptyManifest:
+      return "empty_manifest";
+    case HiRouteDiscoveryStatus::PredicateMismatch:
+      return "predicate_mismatch";
+    case HiRouteDiscoveryStatus::CellMissing:
+      return "cell_missing";
+    case HiRouteDiscoveryStatus::InternalError:
+      return "internal_error";
+    default:
+      return "internal_error";
+  }
+}
+
 } // namespace
 
 NS_OBJECT_ENSURE_REGISTERED(HiRouteControllerApp);
@@ -297,8 +329,7 @@ HiRouteControllerApp::OnInterest(shared_ptr<const Interest> interest)
 
   const auto request =
     HiRouteTlv::DecodeDiscoveryRequest(interest->getApplicationParameters().blockFromValue());
-  HiRouteDiscoveryReply reply;
-  reply.manifest = buildManifest(request);
+  const auto reply = buildDiscoveryReply(request);
   sendDiscoveryReply(interest, reply);
 }
 
@@ -661,11 +692,27 @@ HiRouteControllerApp::appendManifestDebugRow(const HiRouteDiscoveryRequest& requ
      evaluation.zeroReason});
 }
 
-std::vector<HiRouteManifestEntry>
-HiRouteControllerApp::buildManifest(const HiRouteDiscoveryRequest& request) const
+HiRouteDiscoveryReply
+HiRouteControllerApp::buildDiscoveryReply(const HiRouteDiscoveryRequest& request) const
 {
+  HiRouteDiscoveryReply reply;
+  reply.selectedCellId = request.frontierHintCellId;
+
   if (m_oracleMode || m_prefix.find("/oracle/") != std::string::npos) {
-    return buildOracleManifest(request);
+    reply.manifest = buildOracleManifest(request);
+    if (!reply.manifest.empty()) {
+      if (reply.selectedCellId.empty()) {
+        reply.selectedCellId = reply.manifest.front().cellId;
+      }
+      reply.localConfidence = reply.manifest.front().confidenceScore;
+      reply.status = HiRouteDiscoveryStatus::Ok;
+      reply.reasonCode = ReasonForStatus(reply.status);
+    }
+    else {
+      reply.status = HiRouteDiscoveryStatus::EmptyManifest;
+      reply.reasonCode = ReasonForStatus(reply.status);
+    }
+    return reply;
   }
 
   const auto lookup = resolveCandidateLookup(request.frontierHintCellId);
@@ -686,8 +733,7 @@ HiRouteControllerApp::buildManifest(const HiRouteDiscoveryRequest& request) cons
     ranked.resize(resultLimit);
   }
 
-  std::vector<HiRouteManifestEntry> manifest;
-  manifest.reserve(ranked.size());
+  reply.manifest.reserve(ranked.size());
   for (const auto& item : ranked) {
     HiRouteManifestEntry entry;
     entry.canonicalName = item.object.canonicalName;
@@ -695,7 +741,7 @@ HiRouteControllerApp::buildManifest(const HiRouteDiscoveryRequest& request) cons
     entry.domainId = item.object.domainId;
     entry.cellId = request.frontierHintCellId;
     entry.objectId = item.object.objectId;
-    manifest.push_back(entry);
+    reply.manifest.push_back(entry);
   }
 
   if (!m_manifestDebugCsvPath.empty()) {
@@ -708,11 +754,30 @@ HiRouteControllerApp::buildManifest(const HiRouteDiscoveryRequest& request) cons
     }
   }
 
-  if (m_staleAfter > Seconds(0) && Simulator::Now() >= m_staleAfter && !manifest.empty() &&
+  if (m_staleAfter > Seconds(0) && Simulator::Now() >= m_staleAfter && !reply.manifest.empty() &&
       m_rand->GetValue(0.0, 1.0) < m_staleDropProbability) {
-    manifest.erase(manifest.begin());
+    reply.manifest.erase(reply.manifest.begin());
   }
-  return manifest;
+
+  if (!reply.manifest.empty()) {
+    if (reply.selectedCellId.empty()) {
+      reply.selectedCellId = reply.manifest.front().cellId;
+    }
+    reply.localConfidence = reply.manifest.front().confidenceScore;
+    reply.status = HiRouteDiscoveryStatus::Ok;
+    reply.reasonCode = ReasonForStatus(reply.status);
+    return reply;
+  }
+
+  if (!evaluation.zeroReason.empty()) {
+    reply.status = StatusFromZeroReason(evaluation.zeroReason);
+    reply.reasonCode = evaluation.zeroReason;
+    return reply;
+  }
+
+  reply.status = HiRouteDiscoveryStatus::EmptyManifest;
+  reply.reasonCode = ReasonForStatus(reply.status);
+  return reply;
 }
 
 std::vector<HiRouteManifestEntry>
