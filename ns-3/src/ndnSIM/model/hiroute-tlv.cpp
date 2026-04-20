@@ -12,6 +12,50 @@ namespace hiroute {
 
 namespace {
 
+uint32_t
+encodeDiscoveryStatus(HiRouteDiscoveryStatus status)
+{
+  return static_cast<uint32_t>(status);
+}
+
+HiRouteDiscoveryStatus
+decodeDiscoveryStatus(uint64_t raw)
+{
+  switch (raw) {
+    case 0:
+      return HiRouteDiscoveryStatus::Ok;
+    case 1:
+      return HiRouteDiscoveryStatus::EmptyManifest;
+    case 2:
+      return HiRouteDiscoveryStatus::PredicateMismatch;
+    case 3:
+      return HiRouteDiscoveryStatus::CellMissing;
+    case 4:
+      return HiRouteDiscoveryStatus::InternalError;
+    default:
+      return HiRouteDiscoveryStatus::InternalError;
+  }
+}
+
+std::string
+defaultReasonCodeForStatus(HiRouteDiscoveryStatus status)
+{
+  switch (status) {
+    case HiRouteDiscoveryStatus::Ok:
+      return "ok";
+    case HiRouteDiscoveryStatus::EmptyManifest:
+      return "empty_manifest";
+    case HiRouteDiscoveryStatus::PredicateMismatch:
+      return "predicate_mismatch";
+    case HiRouteDiscoveryStatus::CellMissing:
+      return "cell_missing";
+    case HiRouteDiscoveryStatus::InternalError:
+      return "internal_error";
+    default:
+      return "internal_error";
+  }
+}
+
 Block
 encodePredicate(const HiRoutePredicateHeader& predicate)
 {
@@ -213,6 +257,18 @@ Block
 HiRouteTlv::EncodeDiscoveryReply(const HiRouteDiscoveryReply& reply)
 {
   auto block = ::ndn::makeEmptyBlock(tlv::HiRouteDiscoveryReply);
+  block.push_back(::ndn::makeNonNegativeIntegerBlock(tlv::ReplyStatus,
+                                                     encodeDiscoveryStatus(reply.status)));
+  if (!reply.selectedCellId.empty()) {
+    block.push_back(::ndn::makeStringBlock(tlv::ReplySelectedCellId, reply.selectedCellId));
+  }
+  if (!reply.reasonCode.empty()) {
+    block.push_back(::ndn::makeStringBlock(tlv::ReplyReasonCode, reply.reasonCode));
+  }
+  if (reply.localConfidence != 0.0) {
+    block.push_back(::ndn::encoding::makeDoubleBlock(tlv::ReplyLocalConfidence,
+                                                     reply.localConfidence));
+  }
   for (const auto& entry : reply.manifest) {
     block.push_back(encodeManifestEntry(entry));
   }
@@ -228,13 +284,47 @@ HiRouteTlv::DecodeDiscoveryReply(const Block& block)
   }
 
   HiRouteDiscoveryReply reply;
+  bool hasStatus = false;
   auto parsed = block;
   parsed.parse();
   for (const auto& element : parsed.elements()) {
-    if (element.type() == tlv::ManifestEntry) {
-      reply.manifest.push_back(decodeManifestEntry(element));
+    switch (element.type()) {
+      case tlv::ReplyStatus:
+        reply.status = decodeDiscoveryStatus(::ndn::readNonNegativeInteger(element));
+        hasStatus = true;
+        break;
+      case tlv::ReplySelectedCellId:
+        reply.selectedCellId = ::ndn::readString(element);
+        break;
+      case tlv::ReplyReasonCode:
+        reply.reasonCode = ::ndn::readString(element);
+        break;
+      case tlv::ReplyLocalConfidence:
+        reply.localConfidence = ::ndn::encoding::readDouble(element);
+        break;
+      case tlv::ManifestEntry:
+        reply.manifest.push_back(decodeManifestEntry(element));
+        break;
+      default:
+        break;
     }
   }
+
+  // Backward compatibility for older replies that carried only manifest entries.
+  if (!hasStatus) {
+    reply.status = reply.manifest.empty() ? HiRouteDiscoveryStatus::EmptyManifest
+                                          : HiRouteDiscoveryStatus::Ok;
+  }
+  if (reply.selectedCellId.empty() && !reply.manifest.empty()) {
+    reply.selectedCellId = reply.manifest.front().cellId;
+  }
+  if (reply.localConfidence == 0.0 && !reply.manifest.empty()) {
+    reply.localConfidence = reply.manifest.front().confidenceScore;
+  }
+  if (reply.reasonCode.empty()) {
+    reply.reasonCode = defaultReasonCodeForStatus(reply.status);
+  }
+
   return reply;
 }
 

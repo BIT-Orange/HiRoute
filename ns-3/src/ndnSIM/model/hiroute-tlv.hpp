@@ -33,9 +33,21 @@ enum : uint32_t {
   CellId = 816,
   ObjectId = 817,
   PredicateHeader = 818,
-  IntentFacet = 819
+  IntentFacet = 819,
+  ReplyStatus = 820,
+  ReplyReasonCode = 821,
+  ReplySelectedCellId = 822,
+  ReplyLocalConfidence = 823
 };
 } // namespace tlv
+
+enum class HiRouteDiscoveryStatus : uint32_t {
+  Ok = 0,
+  EmptyManifest = 1,
+  PredicateMismatch = 2,
+  CellMissing = 3,
+  InternalError = 4,
+};
 
 struct HiRoutePredicateHeader {
   std::string zoneConstraint;
@@ -57,6 +69,10 @@ struct HiRouteDiscoveryRequest {
 };
 
 struct HiRouteDiscoveryReply {
+  HiRouteDiscoveryStatus status = HiRouteDiscoveryStatus::Ok;
+  std::string selectedCellId;
+  double localConfidence = 0.0;
+  std::string reasonCode;
   std::vector<HiRouteManifestEntry> manifest;
 };
 
