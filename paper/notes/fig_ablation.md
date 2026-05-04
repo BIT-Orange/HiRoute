@@ -2,9 +2,9 @@
 
 ## Paper binding
 
-- figure number: Figure 4
+- figure number: Figure 3
 - label: `fig:ablation`
-- caption target: `Mainline mechanism ablation at manifest size \`1\`, showing terminal success, first-fetch correctness, and discovery cost.`
+- caption target: `Diagnostic mechanism ablation at manifest size 1, showing terminal strong success, first-fetch strong correctness, and discovery cost.`
 
 ## Evidence binding
 
@@ -22,11 +22,12 @@
 
 ## Status
 
-- Route B main mechanism figure
+- Diagnostic/blocking under the local stage decision. `review_artifacts/ablation/aggregate/ablation_decision.json` currently reports `rerun_needed`.
 
 ## Interpretation
 
-- Figure 4 is the strongest paper-facing evidence for Route B.
-- The paper-facing reading is fixed even when exact values refresh: `full_hiroute` should be judged on terminal success and discovery cost, not on a claim that it necessarily improves first-fetch precision.
+- Figure 3 is a fixed-manifest diagnostic rather than a standalone proof of full-system superiority.
+- The local ablation decision is `rerun_needed`, so this figure must not be treated as paper-facing support until ablation is repaired or rerun cleanly.
+- The current reading is narrow: `full_hiroute` has the highest terminal strong success at manifest size 1, but the current gap is small and the discovery-byte ordering is not clean.
 - Panel B is included specifically to expose the difference between terminal success and first-fetch correctness. If those two orderings diverge, the text must say that the gain comes from bounded hierarchical search plus recovery rather than from superior first-choice object ranking alone.
-- `manifest_size=1` stays fixed because it is the sharpest setting for mechanism discrimination; wider fallback would make it easier for later recovery to conceal weak intermediate choices.
+- `manifest_size=1` remains the required compact paper-facing ablation slice; the current manifest-1 aggregate has only a small terminal-success separation and should not be used as the headline mechanism proof by itself.

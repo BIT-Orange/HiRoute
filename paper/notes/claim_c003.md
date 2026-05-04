@@ -2,7 +2,10 @@
 
 ## Text
 
-HiRoute keeps exported discovery state bounded by the configured summary budget, and the active mainline rerun reserves Figure 8 and Figure 9 to verify that bounded-state scaling and reliability-aware recovery still hold after the workload reset.
+HiRoute keeps exported discovery state bounded by the configured summary budget in the state-only
+scaling experiment. Figure 8 supports that bounded-state claim only; it does not measure query
+success, latency, or discovery bytes. Figure 9 is a diagnostic degradation profile for stale
+summaries and controller failures, not a clean robustness win or final promotion result.
 
 ## Supported by
 
@@ -16,8 +19,10 @@ HiRoute keeps exported discovery state bounded by the configured summary budget,
 
 ## Source runs
 
-- `state_scaling` and `robustness`
+- `state_scaling`
+- `robustness`, pending raw-run provenance repair or clean rerun
 
 ## Status
 
-pending mainline rerun
+Figure 8 support-only; Figure 9 diagnostic/blocking until robustness provenance and clean-promotion
+gates pass

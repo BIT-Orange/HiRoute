@@ -4,7 +4,7 @@
 
 - figure number: Figure 6
 - label: `fig:shrinkage`
-- caption target: `Candidate shrinkage under hierarchical filtering and refinement.`
+- caption target: `Diagnostic candidate contraction under hierarchical filtering and refinement.`
 
 ## Evidence binding
 
@@ -15,16 +15,15 @@
 
 ## Validation status
 
-- runtime slice: completed (`review_artifacts/object_ablation_routing/validation/routing_main_validate_runtime_slice.txt`)
-- aggregate traceability: completed (`review_artifacts/object_ablation_routing/validation/routing_main_validate_aggregate_traceability.txt`)
-- figure binding: blocked by routing headline failure (`review_artifacts/object_ablation_routing/validation/routing_main_validate_figures_routing_support.txt`)
+- aggregate traceability: current routing_main traceability passes after filtering staged search traces to query IDs present in `query_log.csv`
+- figure binding: still blocked by the routing_main promoted-run validation failure
 
 ## Status
 
-- completed on 2026-03-31 mainline rerun, but blocked as supporting-only evidence
+- diagnostic/blocking until routing query-count, figure-binding, and clean-promotion gates pass
 
 ## Interpretation
 
 - This is a mechanism-support figure paired with `fig_routing_support`.
 - The mainline rerun confirmed non-empty `zone_constraint` and preserved `2/3/4` domain-count support.
-- Candidate shrinkage traces are populated and traceable, but they cannot rescue Figure 4 as a paper headline while the routing-support aggregate remains fully degenerate on success and reach.
+- Candidate shrinkage traces are populated and traceable in the current diagnostic aggregate, but they remain support evidence. They help explain HiRoute's stronger first relevant-domain reach and lower probe count versus INF-style tag forwarding; they do not prove universally lower byte or latency cost.

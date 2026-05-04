@@ -2,10 +2,12 @@
 
 ## Text
 
-The active ablation claim is now bound to the mainline `ablation` rerun rather than to archived
-legacy figures. Figure 10 stays a mechanism figure at `manifest_size=1`, and its final wording
-must wait for the refreshed mainline slice before it can assert a stable gap between
-`full_hiroute` and `predicates_plus_flat`.
+The active ablation claim is bound to the mainline `ablation` aggregate rather than to archived
+legacy figures. In the current paper layout this is Figure 3, not Figure 10. The local ablation
+stage decision is `rerun_needed`, so the figure is only a fixed-manifest diagnostic: it may say
+that `full_hiroute` has the highest terminal strong success at manifest size 1 in the current
+local slice, but it must also say that the gap is small, the cost ordering is not clean, and the
+first-fetch ordering does not close a mechanism-superiority claim.
 
 ## Supported by
 
@@ -17,10 +19,9 @@ must wait for the refreshed mainline slice before it can assert a stable gap bet
 
 ## Source runs
 
-- Promoted runs for `ablation`
-- Legacy `exp_ablation_v2` and `exp_ablation_v3_compact` provenance is mapped through
-  `runs/registry/experiment_lineage.csv`
+- Current local `ablation` run IDs recorded in the aggregate trace
+- `review_artifacts/ablation/aggregate/ablation_decision.json`
 
 ## Status
 
-pending mainline rerun
+diagnostic/blocking; local stage decision is `rerun_needed`

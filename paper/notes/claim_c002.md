@@ -2,11 +2,13 @@
 
 ## Text
 
-On the active `smartcity` `object_main` workload, the failure mix is dominated by
-`domain_selection` failure, not by `wrong_object`. In the current sealed aggregate
-`failure_breakdown.csv`, `wrong_object` is zero for every scheme and every manifest size;
-the only non-zero failure component is `inf_tag_forwarding`'s `wrong_domain` rate of
-`0.091667`. `hiroute` and `central_directory` have no failures of either kind.
+On the active `smartcity` `object_main` workload, Figure 5 is support evidence for terminal
+recovery under bounded fallback rather than proof of local first-object ranking quality. The
+current local mainline `failure_breakdown.csv` is dominated by `predicate_miss` residual failures
+for the distributed schemes. `hiroute` has zero terminal `wrong_object` rows in this local
+aggregate, while `inf_tag_forwarding` still has non-zero terminal `wrong_object` rows. The paper
+therefore must not claim that HiRoute reduces "first returned object was wrong but later rescued"
+unless the metric is instrumented directly for that event.
 
 The corresponding figure is therefore interpreted as evidence about terminal recovery
 through sequential fallback rather than as evidence about local object-ranking quality
@@ -26,12 +28,10 @@ routing-support workload and should not be read as an independent effectiveness 
 
 ## Source runs
 
-- Promoted runs for `object_main` and `routing_main`
-- Legacy `exp_object_main_v2`, `exp_object_main_v3_compact`, and `exp_routing_main_v3_compact`
-  provenance is mapped through `runs/registry/experiment_lineage.csv`
+- `object_main` stage decision in `review_artifacts/object_main/aggregate/object_main_decision.json`
+- Diagnostic routing rows remain gated by the routing query-count failure before paper-facing use.
 
 ## Status
 
-revised (2026-04-19: reworded to "domain_selection_dominated"; aligned with current
-failure_breakdown.csv where wrong_object=0 and the only non-zero term is
-inf_tag_forwarding wrong_domain=0.0917)
+revised for the current local mainline aggregate; support-only until the worktree is clean and
+the readiness audit passes

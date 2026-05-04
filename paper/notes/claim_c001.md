@@ -2,10 +2,13 @@
 
 ## Text
 
-On the active `smartcity` `routing_main` workload, HiRoute is interpreted as a routing-support
-method rather than as a saturated end-to-end success claim. The mainline reading is that HiRoute
-reaches relevant domains with lower discovery waste than the flat semantic and admissible-control
-baselines, while the centralized directory remains the quality upper reference.
+On the active `smartcity` `routing_main` workload, HiRoute is interpreted as a diagnostic
+routing-support method rather than as a saturated end-to-end success claim. The current local
+budget-16 aggregate supports the narrow statement that HiRoute reaches a relevant domain more
+often than the distributed routing controls and uses fewer probes/bytes than the INF-style tag
+forwarding baseline. It does not support a blanket lower-cost claim against every control:
+`flood`, `predicates_only`, `random_admissible`, and the non-peer `central_directory` reference
+all have lower discovery-byte values in the current local slice.
 
 ## Supported by
 
@@ -18,10 +21,10 @@ baselines, while the centralized directory remains the quality upper reference.
 
 ## Source runs
 
-- Promoted runs for `routing_main` recorded in `runs/registry/promoted_runs.csv`
-- Legacy `exp_routing_main_v2` and `exp_routing_main_v3_compact` provenance is mapped through
-  `runs/registry/experiment_lineage.csv`
+- Diagnostic scoped run IDs in `review_artifacts/routing_main/run_ids.txt`
+- Current promoted-run figure gates still fail because several routing rows are below the
+  240-query threshold.
 
 ## Status
 
-revised
+diagnostic/blocking until the routing query-count and clean-promotion gates pass

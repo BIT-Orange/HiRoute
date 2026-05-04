@@ -4,7 +4,7 @@
 
 - figure number: Figure 7
 - label: `fig:latency`
-- caption target: `Deadline-sensitive latency evaluation.`
+- caption target: `Diagnostic deadline-sensitive latency evaluation on the routing-support workload.`
 
 ## Evidence binding
 
@@ -15,17 +15,16 @@
 
 ## Validation status
 
-- runtime slice: `review_artifacts/routing_main/validation/routing_main_validate_runtime_slice.txt`
-- aggregate traceability: `review_artifacts/routing_main/validation/routing_main_validate_aggregate_traceability.txt`
-- figure binding: `review_artifacts/routing_main/validation/routing_main_validate_figures.txt`
+- aggregate traceability: current routing_main traceability passes with the scoped run-id file
+- figure binding: current `tools/validate_figures.py` fails against `promoted_runs.csv` because the promoted routing_main run directories are stale/missing or below the configured 240-query threshold
 
 ## Status
 
-- diagnostic/support figure only
+- diagnostic/blocking until routing query-count, figure-binding, and clean-promotion gates pass
 
 ## Interpretation
 
-- This figure is support evidence for the reach-versus-latency tradeoff in the routing-support workload.
+- This figure is diagnostic support evidence for the reach-versus-latency tradeoff in the routing-support workload until the routing promotion/figure gate is repaired.
 - It should be interpreted together with first relevant-domain reach and discovery cost, not as an independent superiority result.
 - The paper-facing role of the right panel is diagnostic readability, which is why the bar chart is rendered horizontally to keep the deadline labels legible.
-- HiRoute inherits one additional structural controller-to-ingress round-trip per query (discovery reply, then object fetch), which is visible in the latency distribution. On the current sealed routing_support slice this produces `mean_latency_ms=240.825` for hiroute versus `191.008` for inf_tag_forwarding and `83.525` for central_directory, despite hiroute having the lowest probe count (`1.35`) and the smallest discovery byte payload (`227.758`). The deadline panel should be read with this structural RTT cost in mind rather than as an optimization gap, and the paper should not describe hiroute as having a latency advantage on this workload.
+- HiRoute inherits one additional structural controller-to-ingress round-trip per query (discovery reply, then object fetch), which is visible in the latency distribution. On the current routing-support slice this produces `mean_latency_ms=612.475` for hiroute versus `661.459` for inf_tag_forwarding and `83.700` for central_directory. The deadline panel should be read with this structural RTT cost and the non-peer centralized reference in mind, and the paper should not describe hiroute as having a universal latency advantage on this workload.

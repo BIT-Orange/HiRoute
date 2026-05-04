@@ -1,19 +1,25 @@
 # Metric Semantics Reference
 
-Last updated: 2026-04-19 (PHASE 2 scheduled; PHASE 1 baseline preserved below)
+Last updated: 2026-04-26 (strict/loose relevance split implemented)
 
-## Phase 2 semantics (2026-04-19, pending rerun)
+## TL;DR for paper-facing readers (read this first)
 
-The following semantics are **scheduled** and take effect only after the next full rerun
-(`tools/run_mainline_review_stage.sh full_mainline --max-workers 1` plus downstream
-aggregation). Until rerun lands, Phase 1 semantics below remain authoritative for all
-sealed aggregates in `results/aggregate/mainline/`.
+- `mean_success_at_1` (and the bare column `success_at_1`) is **terminal strong success after sequential manifest fallback completes**. It is **NOT** first-returned-object top-1 success. Paper text should use `terminal_strong_success_rate` (or the prose "terminal strong success") and never call this metric "top-1" or "first-object".
+- The actual first-choice quality metric is `first_fetch_relevant` / `first_fetch_strong_relevant_rate`. Paper-facing prose should be "first-fetch strong correctness".
+- `manifest_rescue_rate` is the legacy alias for `within_reply_manifest_rescue_rate`. The split into `within_reply_*` and `cross_probe_*` is the supported way to talk about rescue.
+- `wrong_object_rate` is terminal-state failure (no qrel-2 object after all fallback). It is NOT "first object was wrong but later rescued."
+- On the current `object_main` workload, `hiroute` failures are 100% `predicate_miss`; `wrong_object` and `wrong_domain` columns are zero. This means the manifest sweep is dominated by the predicate filter stage, so neither manifest size nor controller-side cosine has a chance to act inside admissible domains. Do not present `mean_success_at_1` movement across `manifest{1,2,3}` as evidence of object-stage ranking quality.
+
+## Phase 2 semantics
+
+The runtime now records strict and loose relevance separately. Paper-facing success
+should use strict relevance unless explicitly labeled as a loose diagnostic.
 
 ### Strict relevance at 3 call sites
 
-`ns-3/src/ndnSIM/apps/hiroute-ingress-app.cpp:1047` computes `relevant` via
-`isStrongRelevantObject(queryId, objectId)` (grade `>= 2` qrel). Because that boolean
-then drives three distinct decisions:
+`ns-3/src/ndnSIM/apps/hiroute-ingress-app.cpp:handleFetchReply()` computes a qrel
+grade through `objectRelevanceGrade(queryId, objectId)`. Grade `>= 2` is strict
+relevance; grade `> 0` is loose relevance. The strict boolean drives three decisions:
 
 1. `firstFetchRelevant` recording at line 1049 — first-fetch quality metric tightens.
 2. Manifest fallback decision at line 1057-1063 — sequential fallback now continues past
@@ -21,19 +27,16 @@ then drives three distinct decisions:
 3. Terminal `finishActiveQuery(relevant, …)` at line 1072 — `success_at_1` tightens to
    "strongly relevant fetch," not "any-grade fetch."
 
-Expected aggregate impact (pending rerun confirmation):
+The same query log also records diagnostic loose metrics:
 
-- `hiroute` `success_at_1` currently `1.0` on the compact `object_main` workload is
-  expected to drop to roughly the `0.6–0.8` band because some queries whose terminal
-  fetch is grade-1 (loosely relevant) but not grade-2 will now be counted as
-  `wrong_object`.
-- `first_fetch_relevant_rate` for `hiroute` currently `0.620833` will move, likely
-  downward.
-- `central_directory` is expected to stay near `1.0` since its oracle ranking surfaces
-  the highest-graded qrel first.
+- `terminal_loose_success` — whether any fetched object would have satisfied the older
+  loose qrel semantics during the terminal query attempt path.
+- `first_fetch_loose_relevant` — whether the first fetched object had qrel grade `> 0`.
+- `final_object_relevance_grade` — qrel grade of the final object passed to
+  `finishActiveQuery`, or `0` when no final object is recorded.
 
-The rerun must complete under a clean git tree per CLAUDE.md before any of these numbers
-can be promoted to paper-facing text.
+The rerun must complete under a clean git tree before any refreshed numbers can be
+promoted to paper-facing text.
 
 ### New derived rescue metrics
 
@@ -53,13 +56,12 @@ current ambiguous `manifest_rescue_rate`:
 The legacy `manifest_rescue_rate` column remains in outputs for one release cycle for
 backward compatibility; consumers should migrate to the two split metrics.
 
-### New C++ log column
+### C++ log columns
 
-`ns-3/src/ndnSIM/apps/hiroute-ingress-app.cpp` will append a new query-log column
-`cumulative_manifest_fetches` that counts manifest-entry advances across all probes of a
+`cumulative_manifest_fetches` counts manifest-entry advances across all probes of a
 single query. Unlike `manifest_fetch_index`, this counter is **not reset** on new
-discovery replies, so cross-probe rescue becomes observable. Validation gates that
-checksum the log schema must accept the new column.
+discovery replies, so cross-probe rescue is observable. The strict/loose diagnostic
+columns above are emitted in the same query log and normalized by `run_experiment.py`.
 
 ### aggregate_query_metrics.py manifest_rescue_rate status
 
@@ -71,9 +73,10 @@ inverted definition. That earlier bug is **no longer present**: the current
 `build_object_main_manifest_sweep.py:69` and `build_ablation_summary.py:73`. The Phase 1
 annotation is retained below for historical record.
 
-In Phase 2 the three builders gain the two split metrics
-(`within_reply_manifest_rescue_rate`, `cross_probe_manifest_rescue_rate`) and
-legacy `manifest_rescue_rate` is retained as an alias of `within_reply_manifest_rescue_rate`
+The aggregate builders emit strict/loose rates:
+`terminal_strong_success_rate`, `terminal_loose_success_rate`,
+`first_fetch_strong_relevant_rate`, and `first_fetch_loose_relevant_rate`. The legacy
+`manifest_rescue_rate` is retained as an alias of `within_reply_manifest_rescue_rate`
 during the deprecation window.
 
 ---
@@ -85,10 +88,10 @@ during the deprecation window.
 | Property | Value |
 |----------|-------|
 | C++ origin | `hiroute-ingress-app.cpp:finishActiveQuery()` |
-| True semantics | **Terminal end-to-end success** after all manifest fallback and probe replanning |
-| Paper name | ServiceSuccess@1 |
-| Paper definition | "whether the first fetched object satisfies the query" |
-| **Semantic gap** | **OVERSTATED** — paper says "first fetched" but code measures terminal outcome after all retries |
+| True semantics | **Terminal strict end-to-end success** after all manifest fallback and probe replanning |
+| Paper name | Terminal strong success |
+| Paper definition | Must be described as terminal success, not first-object top-1 success |
+| **Semantic gap** | Historical `success_at_1` name is overloaded; use `terminal_strong_success_rate` in paper-facing aggregates |
 | Values | 0 or 1 per query |
 | Notes | If manifest position 0 fails but position 2 succeeds via fallback, this records 1. To measure actual first-choice quality, use `first_fetch_relevant` instead. |
 
@@ -97,9 +100,18 @@ during the deprecation window.
 | Property | Value |
 |----------|-------|
 | C++ origin | `hiroute-ingress-app.cpp:handleFetchReply()` |
-| True semantics | Whether the **very first fetched object** (before any manifest fallback) was relevant |
+| True semantics | Whether the **very first fetched object** (before any manifest fallback) had qrel grade `>= 2` |
 | Values | 0, 1, or empty (if no fetch was ever attempted, e.g. predicate_miss) |
-| Notes | Recorded on the first `handleFetchReply` call per query. Not affected by subsequent manifest fallback or probe replanning. |
+| Notes | Recorded on the first `handleFetchReply` call per query. Use `first_fetch_loose_relevant` for the grade `> 0` diagnostic. |
+
+### terminal_loose_success / first_fetch_loose_relevant
+
+| Property | Value |
+|----------|-------|
+| C++ origin | `hiroute-ingress-app.cpp:handleFetchReply()` and `finishActiveQuery()` |
+| True semantics | Loose qrel grade `> 0` diagnostic; not the paper-facing strict success metric |
+| Values | 0 or 1 |
+| Notes | These fields explain how much apparent success came from older loose relevance semantics. They must not replace strict success unless the paper explicitly downscopes the claim. |
 
 ### manifest_fetch_index (NEW — added 2026-04-15)
 
@@ -134,7 +146,7 @@ during the deprecation window.
 |----------|-------|
 | True semantics | A manifest was received and objects were fetched, but all were irrelevant. Terminal state. |
 | C++ trigger | `handleFetchReply()` finds fetched object irrelevant after exhausting manifest fallback AND probe replanning |
-| Current status | **0.0 for all schemes in all experiments** — the workload has zero intra-domain object ambiguity |
+| Notes | This is a terminal failure state, not "the first returned object was wrong but later rescued." Use `first_fetch_strong_relevant_rate` and the rescue split to analyze first-choice object quality. |
 
 ### manifest_hit_at_r (CSV: manifest_hit_at_5)
 
@@ -177,27 +189,27 @@ during the deprecation window.
 | Property | Value |
 |----------|-------|
 | Script | `aggregate_query_metrics.py` |
-| True semantics | `success_at_1` conditioned on final domain being relevant (NaN otherwise) |
-| **Status** | VACUOUS — always 1.0 because success_at_1 is terminal (includes rescue) and wrong-domain queries are excluded |
+| True semantics | Terminal strong success conditioned on the final domain being strongly relevant |
+| **Semantic gap** | Despite the historical name, this is not a first-object or best-object ranking metric; it still inherits terminal fallback semantics from `success_at_1`. |
 
 ### manifest_rescue_rate
 
 | Property | Value |
 |----------|-------|
-| Script | `aggregate_query_metrics.py` line 79 |
-| True semantics | `(manifest_hit_at_5 == 1) & (success_at_1 == 0)` — manifest contained relevant object BUT query still failed |
-| **Semantic gap** | This is the **opposite** of manifest rescue. It measures failure despite manifest presence. True rescue would be `(manifest_fetch_index > 0) & (success_at_1 == 1)`. |
+| Script | `aggregate_query_metrics.py`, `build_object_main_manifest_sweep.py`, `build_ablation_summary.py` |
+| True semantics | Legacy alias for `within_reply_manifest_rescue_rate`: `(success_at_1 == 1) & (manifest_fetch_index > 0)` |
+| Notes | A prior Phase 1 revision used the opposite definition, `(manifest_hit_at_5 == 1) & (success_at_1 == 0)`. Current paper-facing analysis should use the split rescue columns. |
 
 ## CLAUDE.md instrumentation contract status
 
 | Required metric | Status |
 |----------------|--------|
-| `first_probe_relevant_domain_hit` | NOT IMPLEMENTED |
-| `first_probe_domain_rank` | NOT IMPLEMENTED |
+| `first_probe_relevant_domain_hit` | Implemented in the raw query log and promoted into object/ablation aggregates |
+| `first_probe_domain_rank` | Implemented in the raw query log and promoted into object/ablation aggregates |
 | `first_manifest_top1_correct` | **NOW AVAILABLE** as `first_fetch_relevant` |
-| `manifest_rescue_rank` | **NOW DERIVABLE** as `manifest_fetch_index` when `success_at_1 == 1` |
+| `manifest_rescue_rank` | **NOW DERIVABLE** as `manifest_fetch_index`/`mean_manifest_rescue_rank_success_only` when `success_at_1 == 1` |
 | `final_end_to_end_success` | Already exists as `success_at_1` (terminal) |
-| `failure_stage` | NOT IMPLEMENTED (would need domain_selection vs local_resolution) |
-| `num_relevant_domains` | NOT IMPLEMENTED |
-| `num_confuser_domains` | NOT IMPLEMENTED |
-| `num_confuser_objects` | NOT IMPLEMENTED |
+| `failure_stage` | Implemented in the raw query log and aggregated into domain-selection/local-resolution/fetch rates |
+| `num_relevant_domains` | Implemented in the raw query log and promoted into object/ablation aggregates |
+| `num_confuser_domains` | Implemented in the raw query log and promoted into object/ablation aggregates |
+| `num_confuser_objects` | Implemented in the raw query log and promoted into object/ablation aggregates |

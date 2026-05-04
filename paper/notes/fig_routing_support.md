@@ -2,9 +2,9 @@
 
 ## Paper binding
 
-- figure number: Figure 5
+- figure number: Figure 4
 - label: `fig:main`
-- caption target: `Mainline routing-support figure showing first relevant-domain reach, discovery cost, and staged candidate shrinkage under non-empty zone constraints.`
+- caption target: `Diagnostic routing-support evaluation showing first relevant-domain reach, discovery cost, and staged candidate contraction under non-empty zone constraints.`
 
 ## Evidence binding
 
@@ -16,17 +16,17 @@
 
 ## Validation status
 
-- runtime slice: `review_artifacts/routing_main/validation/routing_main_validate_runtime_slice.txt`
-- aggregate traceability: `review_artifacts/routing_main/validation/routing_main_validate_aggregate_traceability.txt`
-- figure binding: `review_artifacts/routing_main/validation/routing_main_validate_figures.txt`
+- aggregate traceability: current `tools/validate_aggregate_traceability.py --registry-source runs --run-ids-file review_artifacts/routing_main/run_ids.txt` passes for `routing_support.csv`, `candidate_shrinkage.csv`, and `deadline_summary.csv`
+- figure binding: current `tools/validate_figures.py` fails against `promoted_runs.csv` because the promoted routing_main run directories are stale/missing or below the configured 240-query threshold
 
 ## Status
 
-- support figure only
+- diagnostic/blocking until routing query-count, figure-binding, and clean-promotion gates pass
 
 ## Interpretation
 
-- Figure 5 is a routing-support figure rather than the paper's main end-to-end claim.
+- Figure 4 is a routing-support figure rather than the paper's main end-to-end claim. It remains diagnostic until the routing runs are promoted from a clean tree and the figure validator passes.
 - Its intended reading is limited to first relevant-domain reach, candidate narrowing, remote probes, and discovery bytes under non-empty zone constraints.
-- If terminal success is saturated across several schemes, that is not a problem for this figure as long as the support-side reach and cost panels still separate the hierarchical pipeline from flatter or random controls.
+- If terminal success is saturated across several schemes, that is not a problem for this figure as long as the support-side reach and candidate-contraction panels still separate the hierarchical pipeline from flatter or random controls.
 - The paper text should therefore avoid any phrasing that implies a fresh terminal-success win on this workload.
+- Current budget-16 data supports a first relevant-domain reach claim for HiRoute and a lower-byte claim versus INF-style tag forwarding, but it does not support a blanket lower-byte claim across all controls.
