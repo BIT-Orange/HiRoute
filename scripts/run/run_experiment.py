@@ -80,6 +80,7 @@ QUERY_LOG_FIELDS = [
     "latency_ms",
     "success_at_1",
     "final_end_to_end_success",
+    "terminal_loose_success",
     "manifest_hit_at_3",
     "manifest_hit_at_5",
     "ndcg_at_5",
@@ -95,6 +96,8 @@ QUERY_LOG_FIELDS = [
     "failure_stage",
     "first_fetch_relevant",
     "first_manifest_top1_correct",
+    "first_fetch_loose_relevant",
+    "final_object_relevance_grade",
     "manifest_fetch_index",
     "manifest_rescue_rank",
     "cumulative_manifest_fetches",
@@ -404,6 +407,7 @@ def _generate_mock_outputs(
                 first_fetch_relevant = 1
             else:
                 manifest_fetch_index = rng.randint(1, max(1, min(2, selected_manifest_size - 1)))
+        first_fetch_loose_relevant = first_fetch_relevant
         ndcg_at_5 = round(min(1.0, profile["ndcg_bias"] + rng.uniform(-0.12, 0.12)), 3) if manifest_hit_5 else 0.0
         num_remote_probes = max(0, int(round(profile["probe_bias"] + rng.uniform(-1.0, 2.0))))
         discovery_tx_bytes = int(profile["discovery_byte_bias"] + num_remote_probes * 48 + rng.uniform(0, 96))
@@ -423,6 +427,7 @@ def _generate_mock_outputs(
                 "latency_ms": latency_ms,
                 "success_at_1": 1 if success else 0,
                 "final_end_to_end_success": 1 if success else 0,
+                "terminal_loose_success": 1 if success else 0,
                 "manifest_hit_at_3": manifest_hit_3,
                 "manifest_hit_at_5": manifest_hit_5,
                 "ndcg_at_5": ndcg_at_5,
@@ -438,6 +443,8 @@ def _generate_mock_outputs(
                 "failure_stage": "success" if success else "domain_selection",
                 "first_fetch_relevant": first_fetch_relevant,
                 "first_manifest_top1_correct": first_fetch_relevant,
+                "first_fetch_loose_relevant": first_fetch_loose_relevant,
+                "final_object_relevance_grade": 2 if success else 0,
                 "manifest_fetch_index": manifest_fetch_index,
                 "manifest_rescue_rank": manifest_fetch_index,
                 "cumulative_manifest_fetches": manifest_fetch_index,
@@ -597,6 +604,7 @@ def _normalize_ndnsim_query_log(
                 "latency_ms": latency_ms,
                 "success_at_1": int(row.get("success_at_1", 0)),
                 "final_end_to_end_success": int(row.get("success_at_1", 0)),
+                "terminal_loose_success": int(row.get("terminal_loose_success") or row.get("success_at_1", 0)),
                 "manifest_hit_at_3": int(row.get("manifest_hit_at_r", 0)),
                 "manifest_hit_at_5": int(row.get("manifest_hit_at_r", 0)),
                 "ndcg_at_5": float(row.get("ndcg_at_r") or 0.0),
@@ -614,6 +622,10 @@ def _normalize_ndnsim_query_log(
                 "failure_stage": row.get("failure_stage", ""),
                 "first_fetch_relevant": int(row.get("first_fetch_relevant") or 0),
                 "first_manifest_top1_correct": int(row.get("first_fetch_relevant") or 0),
+                "first_fetch_loose_relevant": int(
+                    row.get("first_fetch_loose_relevant") or row.get("first_fetch_relevant") or 0
+                ),
+                "final_object_relevance_grade": int(row.get("final_object_relevance_grade") or 0),
                 "manifest_fetch_index": int(row.get("manifest_fetch_index") or 0),
                 "manifest_rescue_rank": int(row.get("manifest_fetch_index") or 0),
                 "cumulative_manifest_fetches": int(row.get("cumulative_manifest_fetches") or 0),

@@ -57,6 +57,12 @@ def main() -> int:
     if frame.empty:
         print("ERROR: staged search traces are missing")
         return 1
+    query_frame = log_frame(rows, "query_log.csv")
+    if query_frame.empty:
+        print("ERROR: query logs are missing")
+        return 1
+    valid_queries = query_frame[["run_id", "query_id"]].drop_duplicates()
+    frame = frame.merge(valid_queries, on=["run_id", "query_id"], how="inner")
 
     active_sweep_field = sweep_field(experiment)
     selected_budget = int(experiment.get("default_budget") or 0)

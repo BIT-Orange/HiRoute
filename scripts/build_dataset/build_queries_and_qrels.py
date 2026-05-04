@@ -350,6 +350,25 @@ def _object_role(object_id: str) -> str:
     }.get(token, "target")
 
 
+def _semantic_family(row: dict[str, str]) -> str:
+    return row.get("semantic_intent_family", row.get("semantic_facet", ""))
+
+
+def _is_observably_equivalent_naming_confuser(
+    weak_record: dict[str, str],
+    target_record: dict[str, str],
+) -> bool:
+    if weak_record.get("_role") != "naming_confuser":
+        return False
+    return (
+        weak_record.get("zone_id") == target_record.get("zone_id")
+        and weak_record.get("zone_type") == target_record.get("zone_type")
+        and weak_record.get("service_class") == target_record.get("service_class")
+        and weak_record.get("freshness_class") == target_record.get("freshness_class")
+        and _semantic_family(weak_record) == _semantic_family(target_record)
+    )
+
+
 def _parse_embedding_rows(index_path: Path, vector_path: Path, id_key: str) -> dict[str, np.ndarray]:
     rows = read_csv(index_path)
     vectors = np.load(vector_path)
@@ -750,8 +769,17 @@ def _generate_v3_queries(manifest: dict[str, Any], rules: dict[str, Any]) -> int
                     continue
 
                 ranked_by_object: dict[str, tuple[int, dict[str, str]]] = {}
+                promoted_naming_confusers = {
+                    record["object_id"]
+                    for record in weak_objects
+                    if any(
+                        _is_observably_equivalent_naming_confuser(record, target)
+                        for target in relevant_objects
+                    )
+                }
                 for record in weak_objects:
-                    ranked_by_object[record["object_id"]] = (1, record)
+                    relevance = 2 if record["object_id"] in promoted_naming_confusers else 1
+                    ranked_by_object[record["object_id"]] = (relevance, record)
                 for record in relevant_objects:
                     ranked_by_object[record["object_id"]] = (2, record)
                 relevant_objects = [

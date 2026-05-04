@@ -88,6 +88,9 @@ MARKERS = {
     "random_admissible": "v",
 }
 
+HIROUTE_SCHEMES = {"hiroute", "full_hiroute"}
+REFERENCE_SCHEMES = {"central_directory", "oracle"}
+
 MAIN_SCHEME_ORDER = [
     "predicates_only",
     "random_admissible",
@@ -165,6 +168,27 @@ def _scheme_color(scheme: str) -> str:
 
 def _scheme_label(scheme: str) -> str:
     return SCHEME_LABELS.get(scheme, scheme.replace("_", " "))
+
+
+def _is_hiroute_scheme(scheme: str) -> bool:
+    return scheme in HIROUTE_SCHEMES
+
+
+def _is_reference_scheme(scheme: str) -> bool:
+    return scheme in REFERENCE_SCHEMES
+
+
+def _apply_bar_emphasis(bars, schemes: list[str]) -> None:
+    for bar, scheme in zip(bars, schemes):
+        if _is_hiroute_scheme(scheme):
+            bar.set_edgecolor("#111111")
+            bar.set_linewidth(1.5)
+            bar.set_alpha(1.0)
+            bar.set_zorder(3)
+        elif _is_reference_scheme(scheme):
+            bar.set_edgecolor("#555555")
+            bar.set_linewidth(0.8)
+            bar.set_alpha(0.72)
 
 
 CURRENT_EXPERIMENT: dict | None = None
@@ -248,20 +272,29 @@ def _ordered_rows(frame: pd.DataFrame, order: list[str], column: str = "scheme")
 
 def _add_panel_label(axis: plt.Axes, label: str) -> None:
     axis.text(
-        -0.15,
-        1.05,
+        0.02,
+        0.98,
         label,
         transform=axis.transAxes,
         fontsize=11,
         fontweight="bold",
         va="top",
         ha="left",
+        bbox={"facecolor": "white", "edgecolor": "none", "alpha": 0.78, "pad": 1.5},
     )
 
 
-def _bar_panel(axis: plt.Axes, labels: list[str], values: list[float], errors: list[float], colors: list[str], ylabel: str) -> None:
+def _bar_panel(
+    axis: plt.Axes,
+    labels: list[str],
+    values: list[float],
+    errors: list[float],
+    colors: list[str],
+    ylabel: str,
+    schemes: list[str] | None = None,
+) -> None:
     x_positions = list(range(len(labels)))
-    axis.bar(
+    bars = axis.bar(
         x_positions,
         values,
         yerr=errors,
@@ -271,6 +304,8 @@ def _bar_panel(axis: plt.Axes, labels: list[str], values: list[float], errors: l
         width=0.68,
         linewidth=0,
     )
+    if schemes is not None:
+        _apply_bar_emphasis(bars, schemes)
     axis.set_xticks(x_positions)
     axis.set_xticklabels(labels, rotation=16, ha="right")
     axis.set_ylabel(ylabel)
@@ -292,15 +327,20 @@ def _line_panel(
         group = frame[frame["scheme"] == scheme].sort_values(x_column)
         if group.empty:
             continue
+        is_reference = _is_reference_scheme(scheme)
+        is_hiroute = _is_hiroute_scheme(scheme)
         axis.errorbar(
             group[x_column],
             group[y_column],
             yerr=group[yerr_column] if yerr_column and yerr_column in group.columns else None,
             color=_scheme_color(scheme),
             marker=MARKERS.get(scheme, "o"),
-            linewidth=2.0,
-            markersize=5.5,
+            linestyle="--" if is_reference else "-",
+            linewidth=2.7 if is_hiroute else 1.8 if is_reference else 2.0,
+            markersize=6.2 if is_hiroute else 5.5,
             capsize=3,
+            alpha=1.0 if is_hiroute else 0.68 if is_reference else 0.9,
+            zorder=4 if is_hiroute else 2,
             label=_scheme_label(scheme),
         )
     axis.set_xlabel(xlabel)
@@ -361,6 +401,7 @@ def _plot_compact_routing_support() -> None:
         panel_a_frame.get("ci_relevant_domain_reached_at_1", pd.Series(0.0, index=panel_a_frame.index)).tolist(),
         panel_a_colors,
         "Relevant-domain reach@1",
+        panel_a_frame["scheme"].tolist(),
     )
     axes[0].set_ylim(0, 0.8)
     _add_panel_label(axes[0], "A")
@@ -372,6 +413,7 @@ def _plot_compact_routing_support() -> None:
         panel_b_frame.get("ci_discovery_bytes", pd.Series(0.0, index=panel_b_frame.index)).tolist(),
         panel_b_colors,
         "Discovery bytes / query",
+        panel_b_frame["scheme"].tolist(),
     )
     _add_panel_label(axes[1], "B")
 
@@ -387,8 +429,9 @@ def _plot_compact_routing_support() -> None:
             group["mean_shrinkage_ratio"],
             color=_scheme_color(scheme),
             marker=MARKERS.get(scheme, "o"),
-            linewidth=2.0,
-            markersize=5.5,
+            linewidth=2.7 if _is_hiroute_scheme(scheme) else 2.0,
+            markersize=6.2 if _is_hiroute_scheme(scheme) else 5.5,
+            zorder=4 if _is_hiroute_scheme(scheme) else 2,
             label=_scheme_label(scheme),
         )
     axes[2].set_xticks(list(range(len(FIG4_STAGE_ORDER))))
@@ -432,15 +475,19 @@ def plot_main_success() -> None:
             continue
         if "budget" in group.columns:
             group = group.sort_values("budget")
+        is_hiroute = _is_hiroute_scheme(scheme)
+        is_reference = _is_reference_scheme(scheme)
         ax.errorbar(
             group["mean_discovery_bytes"],
             group["mean_success_at_1"],
             xerr=group.get("ci_discovery_bytes", 0.0),
             yerr=group.get("ci_success_at_1", 0.0),
-            fmt=f"{MARKERS.get(scheme, 'o')}-",
-            markersize=6.5,
-            linewidth=1.8,
+            fmt=f"{MARKERS.get(scheme, 'o')}{'--' if is_reference else '-'}",
+            markersize=7.0 if is_hiroute else 6.0,
+            linewidth=2.7 if is_hiroute else 1.7,
             capsize=3,
+            alpha=1.0 if is_hiroute else 0.68 if is_reference else 0.9,
+            zorder=4 if is_hiroute else 2,
             color=_scheme_color(scheme),
             label=_scheme_label(scheme),
         )
@@ -468,18 +515,29 @@ def _plot_object_manifest_sweep() -> None:
     fig, axes = plt.subplots(1, 3, figsize=(11.2, 3.35), sharex=True)
     schemes = [scheme for scheme in COMPACT_OBJECT_MAIN_SCHEMES if scheme in set(frame["scheme"])]
 
+    terminal_column = (
+        "terminal_strong_success_rate"
+        if "terminal_strong_success_rate" in frame.columns
+        else "mean_success_at_1"
+    )
+    first_fetch_column = (
+        "first_fetch_strong_relevant_rate"
+        if "first_fetch_strong_relevant_rate" in frame.columns
+        else "first_fetch_relevant_rate"
+    )
+
     _line_panel(
         axes[0],
         frame,
         schemes,
         "manifest_size",
-        "mean_success_at_1",
+        terminal_column,
         "ci_success_at_1",
-        "Terminal success",
+        "Terminal strong success",
         "Manifest size",
     )
     axes[0].set_xticks(sorted(frame["manifest_size"].unique().tolist()))
-    axes[0].set_ylim(0.5, 1.03)
+    axes[0].set_ylim(0.0, 1.03)
     _add_panel_label(axes[0], "A")
 
     _line_panel(
@@ -487,9 +545,9 @@ def _plot_object_manifest_sweep() -> None:
         frame,
         schemes,
         "manifest_size",
-        "first_fetch_relevant_rate",
+        first_fetch_column,
         "ci_first_fetch_relevant_rate",
-        "First-fetch relevant rate",
+        "First-fetch strong relevance",
         "Manifest size",
     )
     axes[1].set_xticks(sorted(frame["manifest_size"].unique().tolist()))
@@ -615,16 +673,20 @@ def plot_candidate_shrinkage() -> None:
     )
     ordered_schemes = [scheme for scheme in MAIN_SCHEME_ORDER if scheme in set(main_frame["scheme"])]
     probe_rows = main_frame.set_index("scheme").reindex(ordered_schemes).dropna(subset=["mean_num_remote_probes"])
-    right.bar(
-        [_scheme_label(scheme) for scheme in probe_rows.index],
+    positions = list(range(len(probe_rows.index)))
+    bars = right.barh(
+        positions,
         probe_rows["mean_num_remote_probes"],
-        yerr=probe_rows.get("ci_num_remote_probes", pd.Series(0.0, index=probe_rows.index)),
+        xerr=probe_rows.get("ci_num_remote_probes", pd.Series(0.0, index=probe_rows.index)),
         color=[_scheme_color(scheme) for scheme in probe_rows.index],
         capsize=3,
         alpha=0.92,
     )
-    right.set_ylabel("Remote probes / query")
-    right.grid(axis="y", alpha=0.25)
+    _apply_bar_emphasis(bars, list(probe_rows.index))
+    right.set_yticks(positions)
+    right.set_yticklabels([_scheme_label(scheme) for scheme in probe_rows.index])
+    right.set_xlabel("Remote probes / query")
+    right.grid(axis="x", alpha=0.25)
     _save(fig, "fig_candidate_shrinkage.pdf")
 
 
@@ -648,12 +710,18 @@ def plot_deadlines() -> None:
     ordered_schemes = [scheme for scheme in MAIN_SCHEME_ORDER if scheme in set(frame["scheme"])]
     for scheme in ordered_schemes:
         group = frame[frame["scheme"] == scheme].sort_values("deadline_ms")
+        is_hiroute = _is_hiroute_scheme(scheme)
+        is_reference = _is_reference_scheme(scheme)
         left.plot(
             group["deadline_ms"],
             group["success_before_deadline_rate"],
             marker=MARKERS.get(scheme, "o"),
-            linewidth=2.0,
+            linestyle="--" if is_reference else "-",
+            linewidth=2.7 if is_hiroute else 1.8 if is_reference else 2.0,
+            markersize=6.2 if is_hiroute else 5.5,
             color=_scheme_color(scheme),
+            alpha=1.0 if is_hiroute else 0.68 if is_reference else 0.9,
+            zorder=4 if is_hiroute else 2,
             label=_scheme_label(scheme),
         )
     left.set_xlabel("Deadline (ms)")
@@ -670,12 +738,13 @@ def plot_deadlines() -> None:
     )
     labels = [_scheme_label(scheme) for scheme in latency_rows.index]
     positions = list(range(len(latency_rows.index)))
-    right.barh(
+    bars = right.barh(
         positions,
         latency_rows["median_success_latency_ms"],
         color=[_scheme_color(scheme) for scheme in latency_rows.index],
         alpha=0.92,
     )
+    _apply_bar_emphasis(bars, list(latency_rows.index))
     right.set_yticks(positions)
     right.set_yticklabels(labels)
     right.set_xlabel("Median successful latency (ms)")
@@ -702,12 +771,18 @@ def plot_state_scaling() -> None:
             continue
         for scheme, group in axis_rows.groupby("scheme", sort=False):
             ordered = group.sort_values("scaling_value")
+            is_hiroute = _is_hiroute_scheme(scheme)
+            is_reference = _is_reference_scheme(scheme)
             axis.plot(
                 ordered["scaling_value"],
                 ordered["mean_total_exported_summaries"],
                 marker=MARKERS.get(scheme, "o"),
-                linewidth=2,
+                linestyle="--" if is_reference else "-",
+                linewidth=2.7 if is_hiroute else 1.8 if is_reference else 2.0,
+                markersize=6.2 if is_hiroute else 5.5,
                 color=_scheme_color(scheme),
+                alpha=1.0 if is_hiroute else 0.68 if is_reference else 0.9,
+                zorder=4 if is_hiroute else 2,
                 label=_scheme_label(scheme),
             )
         axis.set_xlabel(xlabel)
@@ -737,12 +812,18 @@ def plot_robustness() -> None:
         subset = frame[frame["scenario_variant"] == variant].copy()
         for scheme in [scheme for scheme in MAIN_SCHEME_ORDER if scheme in set(subset["scheme"])]:
             group = subset[subset["scheme"] == scheme].sort_values("time_bin_s")
+            is_hiroute = _is_hiroute_scheme(scheme)
+            is_reference = _is_reference_scheme(scheme)
             axis.plot(
                 group["time_bin_s"],
                 group["success_at_1_rate"],
                 marker=MARKERS.get(scheme, "o"),
-                linewidth=2,
+                linestyle="--" if is_reference else "-",
+                linewidth=2.7 if is_hiroute else 1.8 if is_reference else 2.0,
+                markersize=6.2 if is_hiroute else 5.5,
                 color=_scheme_color(scheme),
+                alpha=1.0 if is_hiroute else 0.68 if is_reference else 0.9,
+                zorder=4 if is_hiroute else 2,
                 label=_scheme_label(scheme),
             )
         if "failure_time_s" in subset.columns and not subset["failure_time_s"].dropna().empty:
@@ -773,7 +854,7 @@ def plot_ablation() -> None:
     output_filename = _ablation_filename()
     frame = _read_csv(_aggregate_path("ablation_summary.csv"))
     if frame.empty:
-        _placeholder(output_filename, "Figure 10", "Awaiting ablation aggregate")
+        _placeholder(output_filename, "Figure 3", "Awaiting ablation aggregate")
         return
 
     selected_manifest = _selected_manifest(1)
@@ -787,7 +868,7 @@ def plot_ablation() -> None:
     schemes = [scheme for scheme in COMPACT_ABLATION_SCHEMES if scheme in set(frame["scheme"])]
     frame = _ordered_rows(frame[frame["scheme"].isin(schemes)].copy(), COMPACT_ABLATION_SCHEMES)
     if frame.empty:
-        _placeholder(output_filename, "Figure 10", "No ablation slice found at manifest size 1")
+        _placeholder(output_filename, "Figure 3", f"No ablation slice found at manifest size {selected_manifest}")
         return
 
     fig, axes = plt.subplots(1, 3, figsize=(11.6, 3.4), sharex=True)
@@ -795,13 +876,25 @@ def plot_ablation() -> None:
     labels = [_scheme_label(scheme) for scheme in frame["scheme"]]
     colors = [_scheme_color(scheme) for scheme in frame["scheme"]]
 
+    terminal_column = (
+        "terminal_strong_success_rate"
+        if "terminal_strong_success_rate" in frame.columns
+        else "mean_success_at_1"
+    )
+    first_fetch_column = (
+        "first_fetch_strong_relevant_rate"
+        if "first_fetch_strong_relevant_rate" in frame.columns
+        else "first_fetch_relevant_rate"
+    )
+    max_terminal = float((frame[terminal_column] + frame.get("ci_success_at_1", 0.0)).max())
+    max_first_fetch = float((frame[first_fetch_column] + frame.get("ci_first_fetch_relevant_rate", 0.0)).max())
     panels = [
-        ("mean_success_at_1", "ci_success_at_1", "Terminal success", (0.0, 1.02)),
-        ("first_fetch_relevant_rate", "ci_first_fetch_relevant_rate", "First-fetch relevant rate", (0.0, 1.02)),
+        (terminal_column, "ci_success_at_1", "Terminal strong success", (0.0, min(1.02, max(0.2, max_terminal * 1.35)))),
+        (first_fetch_column, "ci_first_fetch_relevant_rate", "First-fetch strong relevance", (0.0, min(1.02, max(0.2, max_first_fetch * 1.35)))),
         ("mean_discovery_bytes", "ci_discovery_bytes", "Discovery bytes / query", None),
     ]
     for index, (axis, (column, error_column, ylabel, ylim)) in enumerate(zip(axes, panels)):
-        axis.bar(
+        bars = axis.bar(
             x_positions,
             frame[column],
             yerr=frame.get(error_column, pd.Series(0.0, index=frame.index)),
@@ -810,6 +903,12 @@ def plot_ablation() -> None:
             width=0.68,
             capsize=3,
         )
+        _apply_bar_emphasis(bars, frame["scheme"].tolist())
+        if column in {terminal_column, first_fetch_column}:
+            value_labels = [f"{float(value) * 100:.1f}%" for value in frame[column]]
+        else:
+            value_labels = [f"{float(value):.0f}" for value in frame[column]]
+        axis.bar_label(bars, labels=value_labels, padding=2, fontsize=7)
         axis.set_ylabel(ylabel)
         if ylim is not None:
             axis.set_ylim(*ylim)
@@ -818,7 +917,8 @@ def plot_ablation() -> None:
         axis.set_xticks(x_positions)
         axis.set_xticklabels(labels, rotation=18, ha="right")
         _add_panel_label(axis, chr(ord("A") + index))
-    _save(fig, output_filename)
+    fig.suptitle(f"Manifest size {selected_manifest}", fontsize=10, y=1.02)
+    _save(fig, output_filename, rect=(0, 0, 1, 0.96))
 
 
 def main() -> int:

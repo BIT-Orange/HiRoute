@@ -1,4 +1,4 @@
-"""Build Figure 8 scaling summary from state logs and canonical query logs."""
+"""Build Figure 8 scaling summary from exported state logs."""
 
 from __future__ import annotations
 
@@ -48,6 +48,8 @@ def main() -> int:
     rows = require_rows(experiment, args.registry_source)
     query_frame = log_frame(rows, "query_log.csv")
     state_frame = log_frame(rows, "state_log.csv")
+    if experiment.get("measurement_mode") == "state_only":
+        query_frame = query_frame.iloc[0:0].copy()
     if state_frame.empty:
         print("ERROR: state logs are missing")
         return 1

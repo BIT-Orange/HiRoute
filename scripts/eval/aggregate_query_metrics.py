@@ -34,9 +34,13 @@ OUTPUT_FIELDS = [
     "run_count",
     "query_count",
     "mean_success_at_1",
+    "terminal_strong_success_rate",
+    "terminal_loose_success_rate",
     "final_end_to_end_success_rate",
     "ci_success_at_1",
     "first_fetch_relevant_rate",
+    "first_fetch_strong_relevant_rate",
+    "first_fetch_loose_relevant_rate",
     "first_manifest_top1_correct_rate",
     "ci_first_fetch_relevant_rate",
     "mean_manifest_fetch_index_success_only",
@@ -94,6 +98,10 @@ def main() -> int:
     qrels_maps = qrels_maps_by_topology(experiment)
     frame = frame.copy()
     frame["success_at_1"] = pd.to_numeric(frame["success_at_1"], errors="coerce").fillna(0.0)
+    frame["terminal_strong_success"] = frame["success_at_1"]
+    frame["terminal_loose_success"] = pd.to_numeric(
+        frame.get("terminal_loose_success", frame["success_at_1"]), errors="coerce"
+    ).fillna(0.0)
     frame["manifest_hit_at_5"] = pd.to_numeric(frame["manifest_hit_at_5"], errors="coerce").fillna(0.0)
     frame["ndcg_at_5"] = pd.to_numeric(frame["ndcg_at_5"], errors="coerce").fillna(0.0)
     frame["num_remote_probes"] = pd.to_numeric(frame["num_remote_probes"], errors="coerce").fillna(0.0)
@@ -101,6 +109,11 @@ def main() -> int:
     frame["discovery_tx_bytes"] = pd.to_numeric(frame["discovery_tx_bytes"], errors="coerce").fillna(0.0)
     frame["discovery_rx_bytes"] = pd.to_numeric(frame["discovery_rx_bytes"], errors="coerce").fillna(0.0)
     frame["first_fetch_relevant"] = pd.to_numeric(frame.get("first_fetch_relevant", 0), errors="coerce").fillna(0.0)
+    frame["first_fetch_strong_relevant"] = frame["first_fetch_relevant"]
+    frame["first_fetch_loose_relevant"] = pd.to_numeric(
+        frame.get("first_fetch_loose_relevant", frame["first_fetch_relevant"]),
+        errors="coerce",
+    ).fillna(0.0)
     frame["manifest_fetch_index"] = pd.to_numeric(frame.get("manifest_fetch_index", 0), errors="coerce").fillna(0.0)
     frame["first_probe_relevant_domain_hit"] = pd.to_numeric(
         frame.get("first_probe_relevant_domain_hit", 0), errors="coerce"
@@ -216,11 +229,23 @@ def main() -> int:
                 "run_count": len(run_ids),
                 "query_count": int(len(group)),
                 "mean_success_at_1": round(group["success_at_1"].mean(), 6),
+                "terminal_strong_success_rate": round(
+                    group["terminal_strong_success"].mean(), 6
+                ),
+                "terminal_loose_success_rate": round(
+                    group["terminal_loose_success"].mean(), 6
+                ),
                 "final_end_to_end_success_rate": round(group["success_at_1"].mean(), 6),
                 "ci_success_at_1": round(
                     bootstrap_mean_ci(group["success_at_1"], bootstrap_replicates), 6
                 ),
                 "first_fetch_relevant_rate": round(group["first_fetch_relevant"].mean(), 6),
+                "first_fetch_strong_relevant_rate": round(
+                    group["first_fetch_strong_relevant"].mean(), 6
+                ),
+                "first_fetch_loose_relevant_rate": round(
+                    group["first_fetch_loose_relevant"].mean(), 6
+                ),
                 "first_manifest_top1_correct_rate": round(group["first_fetch_relevant"].mean(), 6),
                 "ci_first_fetch_relevant_rate": round(
                     bootstrap_mean_ci(group["first_fetch_relevant"], bootstrap_replicates, seed=6), 6

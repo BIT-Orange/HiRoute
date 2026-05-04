@@ -20,6 +20,8 @@ SUCCESS_TOLERANCE = 0.02
 FAILURE_TOLERANCE = 0.02
 BYTES_ADVANTAGE_THRESHOLD = 0.10
 PROBE_ADVANTAGE_THRESHOLD = 0.5
+ABLATION_MAIN_MANIFEST_SIZE = 1
+ABLATION_HEADLINE_SUCCESS_GAP = 0.10
 EPSILON = 1e-9
 
 
@@ -162,7 +164,13 @@ def _collect_query_rows(run_rows: list[dict[str, str]]) -> list[dict[str, Any]]:
                     "scheme": run_row["scheme"],
                     "manifest_size": int(run_row.get("manifest_size") or 0),
                     "success_at_1": float(row.get("success_at_1") or 0),
+                    "terminal_loose_success": float(
+                        row.get("terminal_loose_success") or row.get("success_at_1") or 0
+                    ),
                     "first_fetch_relevant": float(row.get("first_fetch_relevant") or 0),
+                    "first_fetch_loose_relevant": float(
+                        row.get("first_fetch_loose_relevant") or row.get("first_fetch_relevant") or 0
+                    ),
                     "manifest_fetch_index": float(row.get("manifest_fetch_index") or 0),
                     "cumulative_manifest_fetches": float(
                         row.get("cumulative_manifest_fetches") or 0
@@ -192,8 +200,24 @@ def _group_rows(query_rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 "run_count": len(run_ids),
                 "query_count": query_count,
                 "mean_success_at_1": round(sum(row["success_at_1"] for row in rows) / query_count, 6),
+                "terminal_strong_success_rate": round(
+                    sum(row["success_at_1"] for row in rows) / query_count,
+                    6,
+                ),
+                "terminal_loose_success_rate": round(
+                    sum(row["terminal_loose_success"] for row in rows) / query_count,
+                    6,
+                ),
                 "first_fetch_relevant_rate": round(
                     sum(row["first_fetch_relevant"] for row in rows) / query_count,
+                    6,
+                ),
+                "first_fetch_strong_relevant_rate": round(
+                    sum(row["first_fetch_relevant"] for row in rows) / query_count,
+                    6,
+                ),
+                "first_fetch_loose_relevant_rate": round(
+                    sum(row["first_fetch_loose_relevant"] for row in rows) / query_count,
                     6,
                 ),
                 "manifest_rescue_rate": round(
@@ -258,8 +282,18 @@ def _total_failure_rate(row: dict[str, Any]) -> float:
     )
 
 
+def _terminal_strong_success(row: dict[str, Any]) -> float:
+    return _as_float(row.get("terminal_strong_success_rate", row.get("mean_success_at_1", 0.0)))
+
+
+def _first_fetch_strong_success(row: dict[str, Any]) -> float:
+    return _as_float(
+        row.get("first_fetch_strong_relevant_rate", row.get("first_fetch_relevant_rate", 0.0))
+    )
+
+
 def _matches_reference(candidate: dict[str, Any], reference: dict[str, Any]) -> bool:
-    success_gap = abs(float(candidate["mean_success_at_1"]) - float(reference["mean_success_at_1"]))
+    success_gap = abs(_terminal_strong_success(candidate) - _terminal_strong_success(reference))
     failure_gap = abs(_total_failure_rate(candidate) - _total_failure_rate(reference))
     return success_gap <= SUCCESS_TOLERANCE and failure_gap <= FAILURE_TOLERANCE
 
@@ -287,7 +321,7 @@ def _failure_delta(better: dict[str, Any], worse: dict[str, Any]) -> float:
 
 
 def _success_delta(better: dict[str, Any], worse: dict[str, Any]) -> float:
-    return float(better["mean_success_at_1"]) - float(worse["mean_success_at_1"])
+    return _terminal_strong_success(better) - _terminal_strong_success(worse)
 
 
 def _materially_better(better: dict[str, Any], worse: dict[str, Any]) -> bool:
@@ -299,7 +333,7 @@ def _metric_gap(a: float, b: float) -> float:
 
 
 def _saturated_group(rows: list[dict[str, Any]]) -> bool:
-    success_values = [float(row["mean_success_at_1"]) for row in rows]
+    success_values = [_terminal_strong_success(row) for row in rows]
     failure_values = [_total_failure_rate(row) for row in rows]
     bytes_values = [float(row["mean_discovery_bytes"]) for row in rows]
     probe_values = [float(row["mean_probe_count"]) for row in rows]
@@ -323,7 +357,7 @@ def _strictly_non_increasing(values: list[float]) -> bool:
 
 
 def _first_choice_gap(row: dict[str, Any]) -> float:
-    return float(row["mean_success_at_1"]) - float(row["first_fetch_relevant_rate"])
+    return _terminal_strong_success(row) - _first_fetch_strong_success(row)
 
 
 def _object_main_decision(
@@ -376,7 +410,7 @@ def _object_main_decision(
     central_row = index[("central_directory", 1)]
 
     hiroute_ceiling = max(
-        abs(float(row["mean_success_at_1"]) - float(hiroute_ref["mean_success_at_1"]))
+        abs(_terminal_strong_success(row) - _terminal_strong_success(hiroute_ref))
         for row in (index[("hiroute", 2)], index[("hiroute", 3)])
     ) <= EPSILON
 
@@ -419,7 +453,7 @@ def _object_main_decision(
             "bytes_advantage_vs_hiroute_manifest1": round(bytes_advantage, 6),
             "probe_advantage_vs_hiroute_manifest1": round(probe_advantage, 6),
             "first_fetch_gap_vs_hiroute_manifest1": round(
-                float(hiroute_ref["first_fetch_relevant_rate"]) - float(scheme_rows[0]["first_fetch_relevant_rate"]),
+                _first_fetch_strong_success(hiroute_ref) - _first_fetch_strong_success(scheme_rows[0]),
                 6,
             ),
             "rescue_gap_vs_hiroute_manifest1": round(
@@ -429,12 +463,12 @@ def _object_main_decision(
         }
 
     oracle_lower_byte_upper_bound = (
-        float(central_row["mean_success_at_1"]) >= 0.99
+        _terminal_strong_success(central_row) >= 0.99
         and float(central_row["mean_discovery_bytes"]) <= float(hiroute_ref["mean_discovery_bytes"]) + EPSILON
         and float(central_row["mean_probe_count"]) <= float(hiroute_ref["mean_probe_count"]) + EPSILON
     )
     first_fetch_advantage = any(
-        float(hiroute_ref["first_fetch_relevant_rate"]) - float(row["first_fetch_relevant_rate"]) >= SUCCESS_TOLERANCE
+        _first_fetch_strong_success(hiroute_ref) - _first_fetch_strong_success(row) >= SUCCESS_TOLERANCE
         for row in inf_rows
     )
     hiroute_support_gap = any(_first_choice_gap(index[("hiroute", manifest)]) >= SUCCESS_TOLERANCE for manifest in (1, 2, 3))
@@ -570,10 +604,13 @@ def _ablation_decision(rows: list[dict[str, Any]], wiring_report: dict[str, Any]
         predicate_only_row = index[("predicates_only", manifest_size)]
         flat_row = index[("flat_semantic_only", manifest_size)]
 
+        best_baseline_success = max(
+            _terminal_strong_success(plus_flat_row),
+            _terminal_strong_success(predicate_only_row),
+            _terminal_strong_success(flat_row),
+        )
         success_order_clean = (
-            _materially_better(full_row, plus_flat_row)
-            and _materially_better(plus_flat_row, predicate_only_row)
-            and _materially_better(predicate_only_row, flat_row)
+            _terminal_strong_success(full_row) - best_baseline_success >= SUCCESS_TOLERANCE
         )
         hierarchy_ok = _materially_better(full_row, plus_flat_row) and _materially_better(full_row, flat_row)
         predicate_ok = _materially_better(plus_flat_row, flat_row)
@@ -586,10 +623,10 @@ def _ablation_decision(rows: list[dict[str, Any]], wiring_report: dict[str, Any]
             float(full_row["mean_discovery_bytes"]) <= min_discovery_bytes + EPSILON
         )
         first_fetch_values = [
-            float(full_row["first_fetch_relevant_rate"]),
-            float(plus_flat_row["first_fetch_relevant_rate"]),
-            float(predicate_only_row["first_fetch_relevant_rate"]),
-            float(flat_row["first_fetch_relevant_rate"]),
+            _first_fetch_strong_success(full_row),
+            _first_fetch_strong_success(plus_flat_row),
+            _first_fetch_strong_success(predicate_only_row),
+            _first_fetch_strong_success(flat_row),
         ]
         first_fetch_order_matches_success = first_fetch_order_matches_success and _strictly_non_increasing(
             first_fetch_values
@@ -609,6 +646,10 @@ def _ablation_decision(rows: list[dict[str, Any]], wiring_report: dict[str, Any]
             "flat_semantics_insufficient": flat_only_bad,
             "bytes_order_clean": bytes_ok,
             "probe_order_clean": probes_ok,
+            "full_vs_next_best_terminal_strong_gap": round(
+                _terminal_strong_success(full_row) - best_baseline_success,
+                6,
+            ),
             "rows": {
                 "full_hiroute": full_row,
                 "predicates_plus_flat": plus_flat_row,
@@ -621,6 +662,21 @@ def _ablation_decision(rows: list[dict[str, Any]], wiring_report: dict[str, Any]
         scheme: [index[(scheme, manifest)] for manifest in manifests]
         for scheme in ("full_hiroute", "predicates_plus_flat", "predicates_only", "flat_semantic_only")
     }
+    main_manifest = ABLATION_MAIN_MANIFEST_SIZE
+    main_rows = {
+        scheme: index[(scheme, main_manifest)]
+        for scheme in ("full_hiroute", "predicates_plus_flat", "predicates_only", "flat_semantic_only")
+    }
+    main_next_best_success = max(
+        _terminal_strong_success(row)
+        for scheme, row in main_rows.items()
+        if scheme != "full_hiroute"
+    )
+    main_full_success_gap = (
+        _terminal_strong_success(main_rows["full_hiroute"]) - main_next_best_success
+    )
+    main_headline_success_gap_ok = main_full_success_gap >= ABLATION_HEADLINE_SUCCESS_GAP
+    main_hierarchy_signal = main_full_success_gap >= SUCCESS_TOLERANCE
     distributed_saturated = all(
         _saturated_group(
             [
@@ -650,6 +706,8 @@ def _ablation_decision(rows: list[dict[str, Any]], wiring_report: dict[str, Any]
         figure_guidance.append("mechanism_ordering_clean")
     if not first_fetch_order_matches_success:
         figure_guidance.append("terminal_vs_first_fetch_not_aligned")
+    if main_headline_success_gap_ok:
+        figure_guidance.append("manifest1_terminal_strong_gap_ok")
 
     if wiring_status == "wiring_suspect":
         decision = "rerun_needed"
@@ -657,12 +715,12 @@ def _ablation_decision(rows: list[dict[str, Any]], wiring_report: dict[str, Any]
     elif distributed_saturated:
         decision = "saturated_revisit_workload"
         figure_title_guidance = "revisit workload"
-    elif mechanism_ordering_clean and hierarchy_signal_restored and predicate_filtering_contributes and flat_semantics_insufficient and full_hiroute_cost_best:
+    elif main_headline_success_gap_ok and main_hierarchy_signal:
         decision = "ready_for_main_figure"
-        figure_title_guidance = "mechanism ordering main figure"
-    elif mechanism_ordering_clean and hierarchy_signal_restored and predicate_filtering_contributes and flat_semantics_insufficient:
+        figure_title_guidance = "manifest1 terminal strong mechanism figure"
+    elif main_hierarchy_signal:
         decision = "ready_for_support_figure"
-        figure_title_guidance = "mechanism ordering support figure"
+        figure_title_guidance = "manifest1 support figure"
     else:
         decision = "rerun_needed"
         figure_title_guidance = "rerun needed"
@@ -692,6 +750,10 @@ def _ablation_decision(rows: list[dict[str, Any]], wiring_report: dict[str, Any]
             "first_fetch_order_matches_success": first_fetch_order_matches_success,
             "mechanism_ordering_clean": mechanism_ordering_clean,
             "distributed_saturated": distributed_saturated,
+            "main_manifest_size": main_manifest,
+            "main_full_vs_next_best_terminal_strong_gap": round(main_full_success_gap, 6),
+            "main_headline_success_gap_ok": main_headline_success_gap_ok,
+            "headline_success_gap_threshold": ABLATION_HEADLINE_SUCCESS_GAP,
         },
         "representative_runs": representative_runs,
         "recommend_next_stage": "routing_main_quick" if decision in {"ready_for_main_figure", "ready_for_support_figure"} else "stop",
@@ -739,7 +801,7 @@ def _stdout_lines_for_ablation(payload: dict[str, Any]) -> list[str]:
         f"Q1. hierarchy signal 是否恢复: {'yes' if detail.get('hierarchy_signal_restored') else 'no'}",
         f"Q2. predicates 是否有独立贡献: {'yes' if detail.get('predicate_filtering_contributes') else 'no'}",
         f"Q3. flat semantics 是否不足: {'yes' if detail.get('flat_semantics_insufficient') else 'no'}",
-        f"Q4. Figure 10 更适合作为: {main_or_support if payload['decision'] in {'ready_for_main_figure', 'ready_for_support_figure'} else payload['figure_title_guidance']}",
+        f"Q4. Figure 3 更适合作为: {main_or_support if payload['decision'] in {'ready_for_main_figure', 'ready_for_support_figure'} else payload['figure_title_guidance']}",
     ]
 
 

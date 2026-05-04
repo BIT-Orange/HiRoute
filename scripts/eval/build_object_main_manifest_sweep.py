@@ -29,9 +29,13 @@ OUTPUT_FIELDS = [
     "run_count",
     "query_count",
     "mean_success_at_1",
+    "terminal_strong_success_rate",
+    "terminal_loose_success_rate",
     "final_end_to_end_success_rate",
     "ci_success_at_1",
     "first_fetch_relevant_rate",
+    "first_fetch_strong_relevant_rate",
+    "first_fetch_loose_relevant_rate",
     "first_manifest_top1_correct_rate",
     "ci_first_fetch_relevant_rate",
     "manifest_rescue_rate",
@@ -77,8 +81,18 @@ def main() -> int:
 
     frame = frame.copy()
     frame["success_at_1"] = frame["success_at_1"].astype(float)
+    frame["terminal_strong_success"] = frame["success_at_1"]
+    frame["terminal_loose_success"] = frame.get("terminal_loose_success", frame["success_at_1"])
+    frame["terminal_loose_success"] = frame["terminal_loose_success"].replace("", 0).astype(float)
     frame["first_fetch_relevant"] = frame.get("first_fetch_relevant", 0)
     frame["first_fetch_relevant"] = frame["first_fetch_relevant"].replace("", 0).astype(float)
+    frame["first_fetch_strong_relevant"] = frame["first_fetch_relevant"]
+    frame["first_fetch_loose_relevant"] = frame.get(
+        "first_fetch_loose_relevant", frame["first_fetch_relevant"]
+    )
+    frame["first_fetch_loose_relevant"] = (
+        frame["first_fetch_loose_relevant"].replace("", 0).astype(float)
+    )
     frame["manifest_fetch_index"] = frame.get("manifest_fetch_index", 0)
     frame["manifest_fetch_index"] = frame["manifest_fetch_index"].replace("", 0).astype(float)
     frame["first_probe_relevant_domain_hit"] = frame.get("first_probe_relevant_domain_hit", 0)
@@ -132,11 +146,23 @@ def main() -> int:
                 "run_count": len(run_ids),
                 "query_count": int(len(group)),
                 "mean_success_at_1": round(group["success_at_1"].mean(), 6),
+                "terminal_strong_success_rate": round(
+                    group["terminal_strong_success"].mean(), 6
+                ),
+                "terminal_loose_success_rate": round(
+                    group["terminal_loose_success"].mean(), 6
+                ),
                 "final_end_to_end_success_rate": round(group["success_at_1"].mean(), 6),
                 "ci_success_at_1": round(
                     bootstrap_mean_ci(group["success_at_1"], bootstrap_replicates, seed=10), 6
                 ),
                 "first_fetch_relevant_rate": round(group["first_fetch_relevant"].mean(), 6),
+                "first_fetch_strong_relevant_rate": round(
+                    group["first_fetch_strong_relevant"].mean(), 6
+                ),
+                "first_fetch_loose_relevant_rate": round(
+                    group["first_fetch_loose_relevant"].mean(), 6
+                ),
                 "first_manifest_top1_correct_rate": round(group["first_fetch_relevant"].mean(), 6),
                 "ci_first_fetch_relevant_rate": round(
                     bootstrap_mean_ci(group["first_fetch_relevant"], bootstrap_replicates, seed=13), 6

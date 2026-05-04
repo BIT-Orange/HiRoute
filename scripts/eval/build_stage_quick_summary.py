@@ -25,7 +25,11 @@ OBJECT_MAIN_FIELDS = [
     "run_count",
     "query_count",
     "mean_success_at_1",
+    "terminal_strong_success_rate",
+    "terminal_loose_success_rate",
     "first_fetch_relevant_rate",
+    "first_fetch_strong_relevant_rate",
+    "first_fetch_loose_relevant_rate",
     "manifest_rescue_rate",
     "within_reply_manifest_rescue_rate",
     "cross_probe_manifest_rescue_rate",
@@ -47,7 +51,11 @@ ABLATION_FIELDS = [
     "run_count",
     "query_count",
     "mean_success_at_1",
+    "terminal_strong_success_rate",
+    "terminal_loose_success_rate",
     "first_fetch_relevant_rate",
+    "first_fetch_strong_relevant_rate",
+    "first_fetch_loose_relevant_rate",
     "manifest_rescue_rate",
     "within_reply_manifest_rescue_rate",
     "cross_probe_manifest_rescue_rate",
@@ -103,7 +111,13 @@ def _collect_query_rows(run_rows: list[dict[str, str]]) -> list[dict[str, Any]]:
                     "budget": int(run_row.get("budget") or 0),
                     "manifest_size": int(run_row.get("manifest_size") or 0),
                     "success_at_1": float(row.get("success_at_1") or 0),
+                    "terminal_loose_success": float(
+                        row.get("terminal_loose_success") or row.get("success_at_1") or 0
+                    ),
                     "first_fetch_relevant": float(row.get("first_fetch_relevant") or 0),
+                    "first_fetch_loose_relevant": float(
+                        row.get("first_fetch_loose_relevant") or row.get("first_fetch_relevant") or 0
+                    ),
                     "manifest_fetch_index": float(row.get("manifest_fetch_index") or 0),
                     "cumulative_manifest_fetches": float(
                         row.get("cumulative_manifest_fetches") or 0
@@ -135,8 +149,24 @@ def _group_rows(query_rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 "run_count": len(run_ids),
                 "query_count": query_count,
                 "mean_success_at_1": round(sum(row["success_at_1"] for row in rows) / query_count, 6),
+                "terminal_strong_success_rate": round(
+                    sum(row["success_at_1"] for row in rows) / query_count,
+                    6,
+                ),
+                "terminal_loose_success_rate": round(
+                    sum(row["terminal_loose_success"] for row in rows) / query_count,
+                    6,
+                ),
                 "first_fetch_relevant_rate": round(
                     sum(row["first_fetch_relevant"] for row in rows) / query_count,
+                    6,
+                ),
+                "first_fetch_strong_relevant_rate": round(
+                    sum(row["first_fetch_relevant"] for row in rows) / query_count,
+                    6,
+                ),
+                "first_fetch_loose_relevant_rate": round(
+                    sum(row["first_fetch_loose_relevant"] for row in rows) / query_count,
                     6,
                 ),
                 "manifest_rescue_rate": round(
@@ -204,8 +234,16 @@ def _total_key_failure_rate(row: dict[str, Any]) -> float:
     )
 
 
+def _terminal_strong_success(row: dict[str, Any]) -> float:
+    return float(row.get("terminal_strong_success_rate", row["mean_success_at_1"]))
+
+
+def _first_fetch_strong_success(row: dict[str, Any]) -> float:
+    return float(row.get("first_fetch_strong_relevant_rate", row["first_fetch_relevant_rate"]))
+
+
 def _has_useful_separation(reference: dict[str, Any], baseline: dict[str, Any]) -> bool:
-    success_gap = float(reference["mean_success_at_1"]) - float(baseline["mean_success_at_1"])
+    success_gap = _terminal_strong_success(reference) - _terminal_strong_success(baseline)
     failure_gap = _total_key_failure_rate(baseline) - _total_key_failure_rate(reference)
     if success_gap >= 0.02 or failure_gap >= 0.02:
         return True
@@ -221,9 +259,9 @@ def _has_useful_separation(reference: dict[str, Any], baseline: dict[str, Any]) 
 
 
 def _has_route_b_object_signal(reference: dict[str, Any], baseline: dict[str, Any]) -> bool:
-    first_fetch_gap = float(reference["first_fetch_relevant_rate"]) - float(baseline["first_fetch_relevant_rate"])
+    first_fetch_gap = _first_fetch_strong_success(reference) - _first_fetch_strong_success(baseline)
     rescue_gap = float(reference["manifest_rescue_rate"]) - float(baseline["manifest_rescue_rate"])
-    first_choice_gap = float(reference["mean_success_at_1"]) - float(reference["first_fetch_relevant_rate"])
+    first_choice_gap = _terminal_strong_success(reference) - _first_fetch_strong_success(reference)
     return first_fetch_gap >= 0.02 or rescue_gap >= 0.02 or first_choice_gap >= 0.02
 
 
@@ -242,10 +280,10 @@ def _object_main_decision(rows: list[dict[str, Any]]) -> tuple[str, dict[str, An
 
     hiroute_sweep = [index[("hiroute", manifest)] for manifest in (1, 2, 3)]
     monotonic = all(
-        float(hiroute_sweep[i]["mean_success_at_1"]) <= float(hiroute_sweep[i + 1]["mean_success_at_1"]) + 1e-9
+        _terminal_strong_success(hiroute_sweep[i]) <= _terminal_strong_success(hiroute_sweep[i + 1]) + 1e-9
         for i in range(len(hiroute_sweep) - 1)
     )
-    central_ok = float(index[("central_directory", 1)]["mean_success_at_1"]) >= 0.99
+    central_ok = _terminal_strong_success(index[("central_directory", 1)]) >= 0.99
     hiroute_m1 = index[("hiroute", 1)]
     inf_m1 = index[("inf_tag_forwarding", 1)]
 
@@ -254,7 +292,7 @@ def _object_main_decision(rows: list[dict[str, Any]]) -> tuple[str, dict[str, An
     if not central_ok:
         return "stop_object_regressed", {"reason": "central_directory_failed_sanity"}
     if (
-        float(hiroute_m1["mean_success_at_1"]) <= float(inf_m1["mean_success_at_1"]) - 0.05
+        _terminal_strong_success(hiroute_m1) <= _terminal_strong_success(inf_m1) - 0.05
     ):
         return "stop_object_regressed", {"reason": "hiroute_loses_to_distributed_baseline"}
 
@@ -263,7 +301,7 @@ def _object_main_decision(rows: list[dict[str, Any]]) -> tuple[str, dict[str, An
         or _has_route_b_object_signal(hiroute_m1, inf_m1),
     }
     distributed_rows = [hiroute_m1, inf_m1, index[("central_directory", 1)]]
-    all_high_success = all(float(row["mean_success_at_1"]) >= 0.99 for row in distributed_rows)
+    all_high_success = all(_terminal_strong_success(row) >= 0.99 for row in distributed_rows)
     hiroute_support_signal = any(
         max(
             float(row.get("within_reply_manifest_rescue_rate", 0.0)),
@@ -271,7 +309,7 @@ def _object_main_decision(rows: list[dict[str, Any]]) -> tuple[str, dict[str, An
             float(row["manifest_rescue_rate"]),
         )
         >= 0.02
-        or (float(row["mean_success_at_1"]) - float(row["first_fetch_relevant_rate"])) >= 0.02
+        or (_terminal_strong_success(row) - _first_fetch_strong_success(row)) >= 0.02
         for row in hiroute_sweep
     )
 
@@ -311,7 +349,7 @@ def _ablation_decision(rows: list[dict[str, Any]]) -> tuple[str, dict[str, Any]]
     predicate_only = index[("predicates_only", 1)]
     flat_only = index[("flat_semantic_only", 1)]
 
-    if float(full["mean_success_at_1"]) <= float(predicate_plus_flat["mean_success_at_1"]) - 0.05:
+    if _terminal_strong_success(full) <= _terminal_strong_success(predicate_plus_flat) - 0.05:
         return "stop_ablation_signal_collapsed", {"reason": "full_hiroute_underperforms_predicates_plus_flat"}
 
     separated = {
@@ -320,7 +358,7 @@ def _ablation_decision(rows: list[dict[str, Any]]) -> tuple[str, dict[str, Any]]
         "flat_semantic_only": _has_useful_separation(full, flat_only),
     }
     all_high_success = all(
-        float(index[key]["mean_success_at_1"]) >= 0.99
+        _terminal_strong_success(index[key]) >= 0.99
         for key in required_keys
     )
     if separated["predicates_plus_flat"] or separated["predicates_only"] or separated["flat_semantic_only"]:
