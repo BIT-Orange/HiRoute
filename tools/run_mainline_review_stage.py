@@ -121,8 +121,11 @@ COMMON_STAGE_CONTRACT_FILES = [
     "tools/run_mainline_review_stage.py",
     "tools/validate_run.py",
     "tools/validate_runtime_slice.py",
+    "tools/validate_query_count_gate.py",
     "tools/validate_aggregate_traceability.py",
     "tools/validate_figures.py",
+    "tools/audit_mainline_figure_readiness.py",
+    "tools/audit_paper_claim_hygiene.py",
     "tools/validate_manifest_regression.py",
     "tools/validate_manifest_wiring.py",
     "scripts/eval/promote_runs.py",
@@ -972,6 +975,23 @@ def _validate_runtime_slice(experiment_path: Path, output_path: Path, run_ids_fi
     )
 
 
+def _validate_query_count_gate(experiment_path: Path, output_path: Path, run_ids_file: Path, dry_run: bool) -> None:
+    _run(
+        [
+            PYTHON,
+            str(repo_root() / "tools/validate_query_count_gate.py"),
+            "--experiment",
+            str(experiment_path),
+            "--registry-source",
+            "runs",
+            "--run-ids-file",
+            str(run_ids_file),
+        ],
+        output_path=output_path,
+        dry_run=dry_run,
+    )
+
+
 def _validate_manifest_regression(experiment_id: str, scheme: str | None, output_path: Path, run_ids_file: Path, dry_run: bool) -> None:
     cmd = [
         PYTHON,
@@ -1106,6 +1126,14 @@ def _validate_figures(experiment_path: Path, experiment: dict[str, Any], output_
 def _plot_mainline_figures(output_path: Path, dry_run: bool) -> None:
     _run(
         [PYTHON, str(repo_root() / "scripts/plots/plot_main_figures.py")],
+        output_path=output_path,
+        dry_run=dry_run,
+    )
+
+
+def _audit_mainline_figure_readiness(output_path: Path, dry_run: bool) -> None:
+    _run(
+        [PYTHON, str(repo_root() / "tools/audit_mainline_figure_readiness.py"), "--markdown"],
         output_path=output_path,
         dry_run=dry_run,
     )
@@ -1587,6 +1615,15 @@ def _object_main_full(args: argparse.Namespace) -> dict[str, Any]:
     status["validation_status"]["validate_runtime_slice"] = "PASS"
     checks.append("object_main.validate_runtime_slice.py PASS")
 
+    _validate_query_count_gate(
+        experiment_path,
+        paths["validation"] / "object_main_validate_query_count_gate.txt",
+        run_ids_file,
+        args.dry_run,
+    )
+    status["validation_status"]["validate_query_count_gate"] = "PASS"
+    checks.append("object_main.validate_query_count_gate.py PASS")
+
     _validate_manifest_regression("object_main", None, paths["validation"] / "object_main_validate_manifest_regression.txt", run_ids_file, args.dry_run)
     status["validation_status"]["validate_manifest_regression"] = "PASS"
     checks.append("object_main.validate_manifest_regression.py PASS")
@@ -1993,6 +2030,15 @@ def _ablation_full(args: argparse.Namespace) -> dict[str, Any]:
     status["validation_status"]["validate_runtime_slice"] = "PASS"
     checks.append("ablation.validate_runtime_slice.py PASS")
 
+    _validate_query_count_gate(
+        experiment_path,
+        paths["validation"] / "ablation_validate_query_count_gate.txt",
+        run_ids_file,
+        args.dry_run,
+    )
+    status["validation_status"]["validate_query_count_gate"] = "PASS"
+    checks.append("ablation.validate_query_count_gate.py PASS")
+
     _validate_manifest_regression(
         "ablation",
         None,
@@ -2078,7 +2124,7 @@ def _ablation_full(args: argparse.Namespace) -> dict[str, Any]:
         paths,
         status,
         checks,
-        change_scope="Full ablation stage after ablation_quick inheritance, with official aggregate refresh and stage-local Figure 10 decision artifacts.",
+        change_scope="Full ablation stage after ablation_quick inheritance, with official aggregate refresh and stage-local Figure 3 decision artifacts.",
         completed_experiments="ablation",
         known_incomplete_items="routing_main, state_scaling, robustness, paper_freeze",
         dry_run=args.dry_run,
@@ -2211,6 +2257,15 @@ def _generic_full_experiment_stage(
     _validate_runtime_slice(experiment_path, paths["validation"] / f"{stage}_validate_runtime_slice.txt", run_ids_file, args.dry_run)
     status["validation_status"]["validate_runtime_slice"] = "PASS"
     checks.append(f"{stage}.validate_runtime_slice.py PASS")
+
+    _validate_query_count_gate(
+        experiment_path,
+        paths["validation"] / f"{stage}_validate_query_count_gate.txt",
+        run_ids_file,
+        args.dry_run,
+    )
+    status["validation_status"]["validate_query_count_gate"] = "PASS"
+    checks.append(f"{stage}.validate_query_count_gate.py PASS")
 
     if experiment.get("manifest_sizes") and len(experiment.get("manifest_sizes", [])) > 1:
         _validate_manifest_regression(experiment["experiment_id"], None, paths["validation"] / f"{stage}_validate_manifest_regression.txt", run_ids_file, args.dry_run)
@@ -2565,14 +2620,18 @@ def main() -> int:
                 _ablation_full(args)
             _run_full_mainline_tail(args, known_incomplete_items="")
             _finalize_full_mainline_figures("paper_freeze", args.dry_run)
+            _audit_mainline_figure_readiness(
+                _stage_paths("paper_freeze")["validation"] / "paper_freeze_audit_mainline_figure_readiness.txt",
+                args.dry_run,
+            )
             _finalize_meta_stage(
                 "paper_freeze",
                 change_scope="Paper-freeze refresh after full dataset rebuild and all five mainline experiments.",
                 completed_experiments="paper_freeze",
                 known_incomplete_items="",
                 dry_run=args.dry_run,
-                extra_validation_status={"build_all": "PASS"},
-                extra_checks=["paper_freeze.build_all.py PASS"],
+                extra_validation_status={"build_all": "PASS", "audit_mainline_figure_readiness": "PASS"},
+                extra_checks=["paper_freeze.build_all.py PASS", "paper_freeze.audit_mainline_figure_readiness.py PASS"],
             )
 
         if (not args.skip_package or args.package) and args.stage in PACKAGEABLE_STAGES:

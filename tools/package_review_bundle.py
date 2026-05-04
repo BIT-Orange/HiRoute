@@ -123,7 +123,7 @@ BUNDLE_CONFIG = {
         ],
         "diagnostic_stage_notes": [
             "routing_support is included as diagnostic/support evidence only.",
-            "Figure 5 and Figure 10 authority comes from latest stage decisions, not stale paper notes.",
+            "Figure 3 and Figure 5 authority comes from latest stage decisions, not stale paper notes.",
         ],
     },
     "chatgpt_review": {
@@ -521,7 +521,7 @@ def _build_result_status(stage_status: dict[str, Any]) -> str:
         f"- `object_main_manifest_wiring = {wiring['object_main_manifest_wiring']}`\n"
         f"- `ablation_manifest_wiring = {wiring['ablation_manifest_wiring']}`\n"
         "- `routing_support = diagnostic/support only`\n\n"
-        "Figure 5 and Figure 10 should be interpreted from the latest sealed stage decisions, not from stale paper notes.\n"
+        "Figure 3 and Figure 5 should be interpreted from the latest sealed stage decisions, not from stale paper notes.\n"
     )
 
 
