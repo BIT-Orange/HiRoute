@@ -63,7 +63,7 @@
     "type": "ndnsim",
     "ns3_root": "ns-3",
     "params": {
-      "stopSeconds": 32,
+      "stopSeconds": 48,
       "manifestSize": 5,
       "probeBudget": 5,
       "queryLimitPerIngress": 0,
