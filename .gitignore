@@ -37,6 +37,11 @@ venv/
 tmp/
 dist/
 
+# Other AI-CLI scratch directories (not part of the HiRoute evidence chain)
+.agents/
+.codex/
+AGENTS.md
+
 # ns-3 and vendored dependency build artifacts
 /ns-3/.lock-waf_*
 /ns-3/.waf*
