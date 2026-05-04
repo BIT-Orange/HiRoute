@@ -89,7 +89,11 @@ private:
     size_t manifestFetchIndex = 0;
     size_t cumulativeManifestFetches = 0;
     bool firstFetchRelevant = false;
+    bool firstFetchLooseRelevant = false;
     bool firstFetchRecorded = false;
+    bool everReceivedManifest = false;
+    bool everFetchedObject = false;
+    bool everFetchedLooseRelevant = false;
     uint32_t remoteProbes = 0;
     uint64_t discoveryBytes = 0;
     bool manifestHit = false;
@@ -166,6 +170,9 @@ private:
 
   bool
   isStrongRelevantObject(const std::string& queryId, const std::string& objectId) const;
+
+  uint32_t
+  objectRelevanceGrade(const std::string& queryId, const std::string& objectId) const;
 
   std::string
   topRelevantObject(const std::string& queryId) const;

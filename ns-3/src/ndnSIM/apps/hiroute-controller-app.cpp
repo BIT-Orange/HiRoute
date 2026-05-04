@@ -71,6 +71,13 @@ MatchesZoneConstraint(const std::string& objectZoneId, const std::string& constr
 }
 
 bool
+IsExactIntentFacetMatch(const HiRouteObjectRecord& object,
+                        const HiRouteDiscoveryRequest& request)
+{
+  return !request.intentFacet.empty() && object.semanticFacet == request.intentFacet;
+}
+
+bool
 FileNeedsHeader(const std::string& path)
 {
   std::ifstream input(path.c_str());
@@ -568,7 +575,11 @@ HiRouteControllerApp::evaluateCandidates(const HiRouteDiscoveryRequest& request,
       continue;
     }
 
-    double score = 2.5 * semanticVectorScore(object, request);
+    double score = 0.0;
+    if (IsExactIntentFacetMatch(object, request)) {
+      score += 3.0;
+    }
+    score += 2.5 * semanticVectorScore(object, request);
     score += 0.3 * localRankScore(objectId, lookup.bestRankByObjectId);
     score += 0.08 * semanticFacetScore(object, request);
     if (!request.predicate.serviceConstraint.empty() &&

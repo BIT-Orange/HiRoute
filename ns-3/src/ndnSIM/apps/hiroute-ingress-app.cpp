@@ -400,6 +400,8 @@ HiRouteIngressApp::openLogs()
                            "success_at_1", "final_end_to_end_success", "manifest_hit_at_r",
                            "ndcg_at_r", "failure_type", "failure_stage", "fetched_object_id",
                            "first_fetch_relevant", "first_manifest_top1_correct",
+                           "terminal_loose_success", "first_fetch_loose_relevant",
+                           "final_object_relevance_grade",
                            "manifest_fetch_index", "manifest_rescue_rank",
                            "cumulative_manifest_fetches",
                            "first_probe_relevant_domain_hit", "first_probe_domain_rank",
@@ -945,6 +947,9 @@ HiRouteIngressApp::classifyFailureStage(bool success) const
     return "local_resolution";
   }
   if (m_activeQuery.failureType == "predicate_miss") {
+    if (relevantProbeRank > 0) {
+      return "local_resolution";
+    }
     return "domain_selection";
   }
   if (relevantProbeRank > 0) {
@@ -1121,6 +1126,9 @@ HiRouteIngressApp::handleDiscoveryReply(shared_ptr<const Data> data)
   m_activeQuery.lastDiscoverySelectedCellId = reply.selectedCellId;
   m_activeQuery.lastDiscoveryLocalConfidence = reply.localConfidence;
   m_activeQuery.manifest = reply.manifest;
+  if (!reply.manifest.empty()) {
+    m_activeQuery.everReceivedManifest = true;
+  }
   m_activeQuery.manifestFetchIndex = 0;
   m_activeQuery.manifestHit = false;
   for (const auto& entry : reply.manifest) {
@@ -1182,9 +1190,14 @@ HiRouteIngressApp::handleFetchReply(shared_ptr<const Data> data)
   // Phase 2 semantics (grade >= 2): this one boolean drives firstFetchRelevant,
   // sequential manifest fallback, and the terminal finishActiveQuery outcome. See
   // docs/metrics/metric_semantics.md section "Strict relevance at 3 call sites".
-  const bool relevant = isStrongRelevantObject(m_activeQuery.query.queryId, objectId);
+  const auto relevanceGrade = objectRelevanceGrade(m_activeQuery.query.queryId, objectId);
+  const bool relevant = relevanceGrade >= 2;
+  const bool looseRelevant = relevanceGrade > 0;
+  m_activeQuery.everFetchedObject = true;
+  m_activeQuery.everFetchedLooseRelevant = m_activeQuery.everFetchedLooseRelevant || looseRelevant;
   if (!m_activeQuery.firstFetchRecorded) {
     m_activeQuery.firstFetchRelevant = relevant;
+    m_activeQuery.firstFetchLooseRelevant = looseRelevant;
     m_activeQuery.firstFetchRecorded = true;
   }
   if (usesAdaptiveReliability() && relevant &&
@@ -1232,6 +1245,9 @@ HiRouteIngressApp::finishActiveQuery(bool success, const std::string& fetchedObj
   const auto confuserDomainCount = m_confuserDomainCountByQuery[m_activeQuery.query.queryId];
   const auto confuserObjectCount = m_confuserObjectCountByQuery[m_activeQuery.query.queryId];
   const auto failureStage = classifyFailureStage(success);
+  const auto finalObjectRelevanceGrade =
+    objectRelevanceGrade(m_activeQuery.query.queryId, fetchedObjectId);
+  const bool terminalLooseSuccess = success || m_activeQuery.everFetchedLooseRelevant;
 
   appendRow(m_queryLog,
             {m_activeQuery.query.queryId,
@@ -1251,6 +1267,9 @@ HiRouteIngressApp::finishActiveQuery(bool success, const std::string& fetchedObj
              fetchedObjectId,
              m_activeQuery.firstFetchRecorded ? (m_activeQuery.firstFetchRelevant ? "1" : "0") : "",
              m_activeQuery.firstFetchRecorded ? (m_activeQuery.firstFetchRelevant ? "1" : "0") : "",
+             terminalLooseSuccess ? "1" : "0",
+             m_activeQuery.firstFetchRecorded ? (m_activeQuery.firstFetchLooseRelevant ? "1" : "0") : "",
+             std::to_string(finalObjectRelevanceGrade),
              std::to_string(m_activeQuery.manifestFetchIndex),
              std::to_string(m_activeQuery.manifestFetchIndex),
              std::to_string(m_activeQuery.cumulativeManifestFetches),
@@ -1314,25 +1333,26 @@ HiRouteIngressApp::logProbePlanDebug(const HiRouteQueryRecord& query, const Prob
 bool
 HiRouteIngressApp::isRelevantObject(const std::string& queryId, const std::string& objectId) const
 {
-  auto it = m_rankedQrels.find(queryId);
-  if (it == m_rankedQrels.end()) {
-    return false;
-  }
-  return std::any_of(it->second.begin(), it->second.end(), [&] (const auto& item) {
-    return item.first == objectId && item.second > 0;
-  });
+  return objectRelevanceGrade(queryId, objectId) > 0;
 }
 
 bool
 HiRouteIngressApp::isStrongRelevantObject(const std::string& queryId, const std::string& objectId) const
 {
+  return objectRelevanceGrade(queryId, objectId) >= 2;
+}
+
+uint32_t
+HiRouteIngressApp::objectRelevanceGrade(const std::string& queryId, const std::string& objectId) const
+{
   auto it = m_rankedQrels.find(queryId);
   if (it == m_rankedQrels.end()) {
-    return false;
+    return 0;
   }
-  return std::any_of(it->second.begin(), it->second.end(), [&] (const auto& item) {
-    return item.first == objectId && item.second >= 2;
+  auto match = std::find_if(it->second.begin(), it->second.end(), [&] (const auto& item) {
+    return item.first == objectId;
   });
+  return match == it->second.end() ? 0 : match->second;
 }
 
 std::string
