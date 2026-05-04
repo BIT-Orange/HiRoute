@@ -42,6 +42,14 @@ dist/
 .codex/
 AGENTS.md
 
+# Paper figure drafts and external reference images (not committed; the
+# canonical figure files live under results/figures/ or are produced by
+# scripts/plots/). fig_query.png is the current local PNG draft used for
+# composing fig:query; it is intentionally not committed yet.
+paper/figures/*_gpt_draft.*
+paper/figures/*_reference.*
+paper/figures/fig_query.png
+
 # ns-3 and vendored dependency build artifacts
 /ns-3/.lock-waf_*
 /ns-3/.waf*
