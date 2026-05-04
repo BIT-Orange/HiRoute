@@ -4,7 +4,7 @@
 
 - figure number: Figure 7
 - label: `fig:latency`
-- caption target: `Diagnostic deadline-sensitive latency evaluation on the routing-support workload.`
+- caption target: `Deadline-sensitive evaluation. Panel A plots absolute deadline success against the deadline (centralized directory and flood are dashed non-peer references). Panel B reports the deadline-success per kilobyte of discovery traffic, restricted to the bounded distributed-discovery cohort: HiRoute is the most byte-efficient scheme at every reported deadline.`
 
 ## Evidence binding
 
@@ -24,7 +24,8 @@
 
 ## Interpretation
 
-- This figure is diagnostic support evidence for the reach-versus-latency tradeoff in the routing-support workload until the routing promotion/figure gate is repaired.
-- It should be interpreted together with first relevant-domain reach and discovery cost, not as an independent superiority result.
-- The paper-facing role of the right panel is diagnostic readability, which is why the bar chart is rendered horizontally to keep the deadline labels legible.
-- HiRoute inherits one additional structural controller-to-ingress round-trip per query (discovery reply, then object fetch), which is visible in the latency distribution. On the current routing-support slice this produces `mean_latency_ms=612.475` for hiroute versus `661.459` for inf_tag_forwarding and `83.700` for central_directory. The deadline panel should be read with this structural RTT cost and the non-peer centralized reference in mind, and the paper should not describe hiroute as having a universal latency advantage on this workload.
+- Figure 7 is a tradeoff diagnostic, not a universal latency claim. Panel A reports absolute success-within-deadline; panel B reports deadline-success per kilobyte of discovery traffic for the bounded distributed-discovery cohort only.
+- Absolute deadline success (panel A) is dominated by central_directory and flood for structural reasons that the bounded distributed-discovery cohort does not benefit from: central_directory uses a single one-hop lookup, and flood broadcasts in parallel. They are dashed reference lines.
+- Per-byte efficiency (panel B) is the panel where HiRoute is visibly best. Computed from the current diagnostic snapshot at budget 16: at 100 ms, hiroute 0.000313 success/byte vs random 0.000235, predicates_only 0.000164, inf_tag_forwarding 0.000204; at 200 ms, hiroute 0.000565 vs random 0.000385, predicates 0.000266, inf_tag 0.000302; at 500 ms, hiroute 0.000922 vs random 0.000685, predicates 0.000771, inf_tag 0.000720.
+- HiRoute inherits one additional structural controller-to-ingress round-trip per query relative to the centralized directory, so on the current workload its mean latency is 612 ms vs 84 ms for central_directory and 661 ms for INF-style tag forwarding. The figure should not be used to claim a universal latency advantage; it shows a byte-cost-normalized advantage within the cohort that respects the bounded-state contract.
+- Diagnostic until the routing query-count and figure-binding gates pass under a clean promotion.

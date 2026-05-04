@@ -4,7 +4,7 @@
 
 - figure number: Figure 9
 - label: `fig:robust`
-- caption target: `Diagnostic robustness evaluation showing degradation under stale summaries and controller failures.`
+- caption target: `Degradation profile under controller-down and stale-summary stressors. HiRoute degrades and recovers under per-domain controller failure with a bounded minimum-success floor; the centralized directory is shown as a non-peer availability reference because it does not expose per-domain controllers to this stressor.`
 
 ## Evidence binding
 

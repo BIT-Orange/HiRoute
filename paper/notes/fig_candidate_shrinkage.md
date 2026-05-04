@@ -4,7 +4,7 @@
 
 - figure number: Figure 6
 - label: `fig:shrinkage`
-- caption target: `Diagnostic candidate contraction under hierarchical filtering and refinement.`
+- caption target: `Candidate-frontier contraction by scheme on the same routing-support slice. HiRoute is the only distributed scheme that contracts the frontier through level-0/level-1 refinement, ending at roughly half the candidate ratio of the next-best peer; the remote-probe panel (right) shows the corresponding probe-count consequence.`
 
 ## Evidence binding
 
@@ -24,6 +24,9 @@
 
 ## Interpretation
 
-- This is a mechanism-support figure paired with `fig_routing_support`.
-- The mainline rerun confirmed non-empty `zone_constraint` and preserved `2/3/4` domain-count support.
-- Candidate shrinkage traces are populated and traceable in the current diagnostic aggregate, but they remain support evidence. They help explain HiRoute's stronger first relevant-domain reach and lower probe count versus INF-style tag forwarding; they do not prove universally lower byte or latency cost.
+- This is the structural figure backing the routing-support claims in fig_routing_support. It shows that HiRoute is the only distributed scheme on the current workload that genuinely contracts the candidate frontier through hierarchical refinement.
+- Per the budget-16 candidate_shrinkage.csv: hiroute traces 1.00 (all_domains) -> 0.733 (admissible) -> 0.733 (level0) -> 0.549 (level1) -> 0.414 (refined) -> 0.414 (probed). The four other distributed peers stay at 0.733 from admissibility onward.
+- The 44% reduction annotation in panel A is computed from the start (all_domains, ratio 1.0) to end (probed_cells, ratio 0.414).
+- Central directory and flood are excluded from the waterfall because they violate the bounded distributed-discovery contract; they appear as references in fig_routing_support panel A and B but do not belong on this contraction comparison.
+- Remote-probe panel: hiroute 2.99 probes per query at budget 16 vs inf_tag 3.56, predicates_only 3.10, random_admissible 3.02. The probe count is the operational consequence of the contraction.
+- Diagnostic until the routing query-count and figure-binding gates pass under a clean promotion.

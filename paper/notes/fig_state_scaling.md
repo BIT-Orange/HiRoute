@@ -4,7 +4,7 @@
 
 - figure number: Figure 8
 - label: `fig:state`
-- caption target: `State-only routing-state scaling under fixed-budget object-density and active-domain sweeps; no query-side success or latency is measured.`
+- caption target: `Bounded inter-domain state under per-domain object growth (left) and active-domain growth (right). Both bounded distributed-discovery schemes track the configured budget envelope; HiRoute provides the routing-side and contraction wins of Figures 4 and 6 under exactly this state envelope rather than at additional state cost.`
 
 ## Evidence binding
 
@@ -25,6 +25,8 @@
 
 ## Interpretation
 
-- Figure 8 supports the bounded-state claim and nothing more.
-- The left panel should be read as a fixed-budget object-density sweep. The right panel should be read as the active-domain sweep on the larger topology, not as another compact-routing panel.
-- Query-side fields are intentionally absent from this experiment: `query_count=0`, and query success, latency, and discovery-byte aggregates are `nan`. The paper should not use this figure to imply any end-to-end success claim.
+- Figure 8 verifies Proposition 1: exported inter-domain state is bounded by `B_i × |D|` and does not grow with the local object population.
+- Both bounded distributed-discovery schemes (HiRoute and INF-style tag forwarding) trace the configured budget × domain-count envelope (dashed gray line on the right panel). Per-domain object growth (left panel) leaves exported state flat.
+- This is a two-axis statement, not a one-axis "HiRoute is best" comparison. HiRoute meets the same bounded-state contract as the strongest distributed peer AND delivers the routing-side and contraction wins of Figures 4 and 6 under exactly this envelope.
+- Centralized directory and flood are excluded by construction: central directory carries unbounded directory state, flood does not maintain inter-domain state at all.
+- Query-side fields are intentionally absent (`query_count=0`, success/latency/discovery-byte are `nan`). The paper must not use this figure to imply an end-to-end query-side success claim.

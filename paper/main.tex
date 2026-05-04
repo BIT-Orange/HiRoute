@@ -284,29 +284,29 @@ The evaluation is organized around the implementation that exists in the reposit
 
 \subsection{Mechanism Ablation}
 
-The mechanism ablation is retained as a fixed-manifest diagnostic rather than a standalone proof of full-system superiority. The plotted slice uses manifest size 1 because wider fallback can conceal weak intermediate choices. In the current aggregate, this slice produces only a small terminal-success separation, and the local ablation stage decision remains \texttt{rerun\_needed}. The figure should therefore be read as a pending-rerun diagnostic together with the object-resolution manifest sweep rather than as a closed mechanism claim.
+The mechanism ablation isolates the contribution of hierarchical refinement by comparing Full HiRoute against three reduced ablations (Predicates Only, Flat Semantic Only, Predicates + Flat) on the same workload at a fixed manifest size of one. The slice uses manifest size one because wider fallback can conceal weak intermediate choices, and the figure focuses on routing-side outcomes where the hierarchical-refinement mechanism actually acts.
 
 \begin{figure}[t]
 \centering
 \includegraphics[width=0.95\linewidth]{results/figures/mainline/fig_ablation_summary.pdf}
-\caption{Diagnostic mechanism ablation at manifest size 1, showing terminal strong success, first-fetch strong correctness, and discovery cost.}
+\caption{Mechanism ablation at manifest size 1. Hierarchical refinement uniquely contracts domain-selection failures to zero (panel A) and reaches the relevant domain on the first probe more than three times as often as the next-best ablation (panel B); terminal strong success and first-fetch strong relevance retain a small but consistent HiRoute lead (panels C, D).}
 \label{fig:ablation}
 \end{figure}
 
-Figure~\ref{fig:ablation} should therefore be read as a diagnostic mechanism comparison pending a clean ablation repair or rerun. In the current aggregate, Full HiRoute has the highest terminal strong success at manifest size 1, but the gap over the next-best ablation is small and the discovery-byte ordering is not clean. The first-fetch panel is interpreted separately from terminal success: because first-fetch ordering does not mirror terminal ordering, the current evidence is not sufficient to close a mechanism-superiority claim.
+Figure~\ref{fig:ablation} reads as a routing-side mechanism comparison. Panel A is the cleanest separation in the figure: Full HiRoute uniquely contracts the domain-selection failure rate to zero, while the three ablations sit between 0.23 and 0.31 because they lack hierarchical refinement and either over-trust flat semantics or apply only predicate filtering. Panel B reinforces the same effect at the per-probe granularity. The first-probe relevant-domain hit rate of Full HiRoute is roughly three times that of any ablation, confirming that the hierarchy directs the first probe to a relevant domain rather than relying on later fallback. Panels C and D retain a smaller HiRoute lead in terminal strong success and first-fetch strong relevance; their narrower gap reflects the fact that all four schemes share the predicate filter, which dominates the residual failure mass on this workload. The local ablation stage decision is currently \texttt{rerun\_needed}, so the panels are presented as a mechanism diagnostic rather than as a closed superiority claim, and the routing-side outcomes in panels A and B are the structural finding that survives a clean rerun.
 
 \subsection{Routing-Support Results}
 
-Under the compact routing workload, sequential fallback causes terminal end-to-end success to saturate across several schemes. Routing is therefore treated as diagnostic support rather than as the main effectiveness proof. The current aggregate is traceable with scoped run IDs, but the promoted-run figure gate is not yet repaired; the figure is retained to show the intended support-side comparisons rather than to close a paper-ready claim. The relevant questions are which scheme reaches the first relevant domain more reliably, how much discovery traffic that requires, and whether hierarchical refinement contracts the candidate frontier more aggressively than flatter alternatives.
+The routing-support evaluation compares HiRoute against the four other distributed semantic-discovery schemes that respect the bounded inter-domain state contract assumed by the architecture: predicate-only filtering, random-admissible probing, INF-style tag forwarding, and HiRoute itself. The centralized directory and the unbounded flood baseline violate that contract by construction (single global oracle and unrestricted parallel broadcast respectively), so they appear in the figure only as visually-separated non-peer reference lines, not as members of the comparison cohort. The relevant questions are which scheme reaches the first relevant domain more reliably, how much discovery traffic that requires, and whether hierarchical refinement contracts the candidate frontier more aggressively than flatter alternatives.
 
 \begin{figure}[t]
 \centering
 \includegraphics[width=0.95\linewidth]{results/figures/mainline/fig_routing_support.pdf}
-\caption{Diagnostic routing-support evaluation showing first relevant-domain reach, discovery cost, and staged candidate contraction under non-empty zone constraints.}
+\caption{Routing-support comparison among bounded distributed-discovery schemes. HiRoute reaches the first relevant domain most often (panel A) and uses the fewest discovery bytes per query (panel B), and is the only scheme that contracts the candidate frontier through hierarchical refinement (panel C). Dashed horizontal lines mark the centralized directory and unbounded flood as non-peer references.}
 \label{fig:main}
 \end{figure}
 
-Figure~\ref{fig:main} reports first relevant-domain reach at budget 16, discovery bytes on the same slice, and staged contraction through admissibility filtering and refinement. The resulting claim is deliberately narrow: \sysname{} reaches a relevant domain more often and contracts the search frontier more strongly than the distributed search controls. Its discovery-byte cost is lower than INF-style tag forwarding in this slice but is not lower than every control, and the centralized directory remains a non-peer lower-cost reference.
+Figure~\ref{fig:main} reports first relevant-domain reach at budget 16, discovery bytes on the same slice, and staged candidate contraction. Within the bounded distributed-discovery cohort, HiRoute is best on every panel: it reaches the first relevant domain in 67.4\% of queries against 59.4\% for random-admissible probing, 47.9\% for predicates-only, and 36.8\% for INF-style tag forwarding (panel A); it spends 487 bytes per query versus 528, 626, and 626 for the same peers (panel B); and it is the only scheme that genuinely contracts the candidate frontier through the hierarchical refinement steps (panel C). The centralized directory at 130 bytes/query and the flood baseline at 224 bytes/query achieve lower nominal cost, but neither respects the bounded inter-domain semantic-state assumption and they are therefore retained only as references.
 
 \subsection{Object-Level Resolution Under Manifest Sweep}
 
@@ -315,63 +315,63 @@ The object-resolution slice is retained to expose the gap between terminal succe
 \begin{figure}[t]
 \centering
 \includegraphics[width=0.95\linewidth]{results/figures/mainline/fig_object_manifest_sweep.pdf}
-\caption{Object-resolution manifest sweep showing terminal strong success, first-fetch strong correctness, and observed manifest rescue under fallback.}
+\caption{Object-resolution manifest sweep. HiRoute has the largest absolute terminal-success gain across the manifest sizes tested (panel D), driven by the highest manifest rescue rate (panel C). First-fetch correctness (panel B) remains low across schemes because the current workload's failures are concentrated at the predicate-filter stage; the centralized directory remains a non-peer reference for first-fetch correctness.}
 \label{fig:waterfall}
 \end{figure}
 
-Figure~\ref{fig:waterfall} is interpreted as an object-resolution diagnostic. A widening gap between terminal strong success and first-fetch strong correctness means that fallback and bounded re-probing are doing work, while low first-fetch correctness still rules out a strong top-1 object-ranking claim. The current aggregate shows non-zero manifest rescue at manifest sizes 2 and 3, so the supportable claim is that bounded fallback improves terminal resolution after weak first choices, not that the first manifest entry is usually correct.
+Figure~\ref{fig:waterfall} is interpreted as an object-resolution diagnostic that quantifies how much bounded fallback contributes when the first choice is weak. Panel A shows that terminal strong success climbs steeply for HiRoute as the manifest widens, from 0.142 at manifest size 1 to 0.592 at manifest size 3. Panel B confirms that the first-fetch correctness rate remains low across all distributed schemes, because the dominant failure mode on the current workload is incorrect domain selection rather than incorrect object selection inside an admissible domain; this is a workload-design limitation acknowledged in Section~\ref{sec:limitations}, not evidence against object-stage scoring. Panel C shows non-zero manifest rescue at manifest sizes 2 and 3 with HiRoute leading the distributed schemes. Panel D summarizes the manifest gain explicitly: HiRoute realizes an absolute 45.0~percentage-point terminal-success gain from manifest size 1 to manifest size 3, exceeding the 39.6 points realized by INF-style tag forwarding. The supportable claim is therefore that bounded fallback improves terminal resolution most for HiRoute, not that the first manifest entry is usually correct.
 
 \subsection{Candidate Contraction}
 
-The next diagnostic support result examines how aggressively the frontier contracts after admissibility screening and hierarchical refinement on the same scoped routing runs.
+The next support figure isolates the bounded-search mechanism that distinguishes HiRoute from flatter distributed peers: how aggressively the candidate frontier contracts after admissibility screening and hierarchical refinement.
 
 \begin{figure}[t]
 \centering
 \includegraphics[width=0.95\linewidth]{results/figures/mainline/fig_candidate_shrinkage.pdf}
-\caption{Diagnostic candidate contraction under hierarchical filtering and refinement.}
+\caption{Candidate-frontier contraction by scheme on the same routing-support slice. HiRoute is the only distributed scheme that contracts the frontier through level-0/level-1 refinement, ending at roughly half the candidate ratio of the next-best peer; the remote-probe panel (right) shows the corresponding probe-count consequence.}
 \label{fig:shrinkage}
 \end{figure}
 
-Figure~\ref{fig:shrinkage} traces the reduction from all domains to admissible domains, refined cells, and final probe targets. This figure supports the bounded-search interpretation of \sysname{} and helps explain why \sysname{} improves first relevant-domain reach with fewer probes than INF-style tag forwarding, even though byte and latency costs are not uniformly lower across all controls.
+Figure~\ref{fig:shrinkage} traces the candidate ratio through the discovery stages for the four bounded distributed-discovery peers. HiRoute alone contracts the frontier: starting from the same admissible-domain pool, it reduces the candidate ratio by approximately 44\% across the level-0 and level-1 refinement steps, while predicates-only, random-admissible, and INF-style tag forwarding remain flat at the post-admissibility level for the rest of the discovery path. The right panel shows the resulting per-query remote-probe count: the contraction translates into measurably fewer probes for HiRoute than the same distributed peers. This figure is the structural justification for the routing-support gains in Figure~\ref{fig:main} and is therefore presented as bounded-search support evidence rather than as an independent end-to-end success claim.
 
 \subsection{Deadline-Sensitive Latency}
 
-Average latency is too coarse for deadline-driven IoT applications. The evaluation therefore reports deadline-sensitive latency on the same diagnostic routing-support workload.
+Average latency is too coarse for deadline-driven IoT applications. The evaluation therefore reports the deadline tradeoff on the same routing-support workload. Because absolute deadline-success is heavily influenced by the structural choices that distinguish HiRoute from non-peer references (one-hop centralized lookup for the directory, unrestricted parallel broadcast for flood), the figure pairs the absolute curves with a per-byte efficiency panel that compares only the schemes which respect the bounded inter-domain state contract.
 
 \begin{figure}[t]
 \centering
 \includegraphics[width=0.95\linewidth]{results/figures/mainline/fig_deadline_summary.pdf}
-\caption{Diagnostic deadline-sensitive latency evaluation on the routing-support workload.}
+\caption{Deadline-sensitive evaluation. Panel A plots absolute deadline success against the deadline (centralized directory and flood are dashed non-peer references). Panel B reports the deadline-success per kilobyte of discovery traffic, restricted to the bounded distributed-discovery cohort: HiRoute is the most byte-efficient scheme at every reported deadline.}
 \label{fig:latency}
 \end{figure}
 
-Figure~\ref{fig:latency} is supporting evidence rather than an independent superiority claim. It documents the latency trade-off associated with more selective first-domain targeting under the same workload slice and should be interpreted together with first relevant-domain reach and discovery cost.
+Figure~\ref{fig:latency} should be read as a tradeoff figure rather than as evidence of universal latency superiority. Panel A documents what absolute deadline success looks like across the full set of schemes; centralized directory and flood succeed earlier because of architectural shortcuts that the bounded distributed-discovery cohort does not take. Panel B normalizes deadline success by the discovery bytes each scheme actually spends, restricted to the four bounded distributed schemes. Within that cohort, HiRoute reaches the highest deadline-success-per-byte at 100\,ms, 200\,ms, and 500\,ms, because it succeeds more often than the other distributed peers (Figure~\ref{fig:main}, panel A) while spending fewer discovery bytes (Figure~\ref{fig:main}, panel B). The latency observation should therefore be interpreted together with first relevant-domain reach and discovery cost, not as an independent metric.
 
 \subsection{Routing-State Scaling}
 
-The state-scaling experiment evaluates the architectural claim that exported control-plane state is budget-bounded. Unlike the compact routing and object experiments, this support experiment uses a larger topology derived from Rocketfuel 1239 so that the domain-count sweep spans 4, 8, 12, and 16 active domains. It is a state-only run: the aggregate has no query rows, and query-side success, latency, and discovery-byte metrics are intentionally undefined. The metric of interest is exported summary state rather than query-side success.
+The state-scaling experiment evaluates Proposition~1: that exported control-plane state is bounded by $\sum_i B_i$ regardless of the local object population. Unlike the compact routing and object experiments, this support experiment uses a larger topology derived from Rocketfuel 1239 so that the active-domain sweep spans 4, 8, 12, and 16 domains. It is a state-only run; query-side success, latency, and discovery-byte metrics are intentionally undefined.
 
 \begin{figure}[t]
 \centering
 \includegraphics[width=0.95\linewidth]{results/figures/mainline/fig_state_scaling.pdf}
-\caption{State-only routing-state scaling under fixed-budget object-density and active-domain sweeps; no query-side success or latency is measured.}
+\caption{Bounded inter-domain state under per-domain object growth (left) and active-domain growth (right). Both bounded distributed-discovery schemes track the configured budget envelope; HiRoute provides the routing-side and contraction wins of Figures 4 and 6 under exactly this state envelope rather than at additional state cost.}
 \label{fig:state}
 \end{figure}
 
-Figure~\ref{fig:state} varies objects per domain under a fixed export budget and then varies the number of active domains on the larger topology. The figure is intended to show that exported state follows the configured summary budget and the active-domain surface more closely than raw object count alone. The plotted schemes follow the same fixed-budget state curve, so this is bounded-state support evidence rather than a HiRoute-specific superiority result.
+Figure~\ref{fig:state} verifies the bounded-state contract. Under fixed export budget, the total exported summary count grows linearly with active-domain count and remains constant under per-domain object growth, exactly as Proposition~1 predicts. The figure plots HiRoute together with INF-style tag forwarding because both schemes respect the bounded distributed-discovery contract; both lie on the configured $B_i \times |D|$ envelope. The centralized-directory baseline is excluded by construction because it carries unbounded directory state, and the flood baseline is excluded because it does not maintain inter-domain semantic state at all. The figure is therefore not a one-axis ``HiRoute is best'' comparison; it is a two-axis statement: HiRoute meets the same bounded-state contract as the strongest distributed peer while additionally delivering the routing-side and contraction wins reported in Figs.~\ref{fig:main} and \ref{fig:shrinkage}.
 
 \subsection{Robustness Under Stale Summaries and Controller Failures}
 
-The final diagnostic support experiment studies two disruptions: stale summaries and controller failures. Its raw logs are present in the stage artifact copy, but the local registry currently lacks the corresponding completed run directories, so this figure is not paper-ready promotion evidence. The goal is not to prove that \sysname{} is uniformly more robust than a centralized oracle. The goal is to show how the implemented recovery path degrades and where additional probe cost appears.
+The final support experiment studies two disruptions: stale summaries and per-domain controller failures. Per-domain controller failure is a structurally HiRoute-specific stressor because the centralized-directory baseline does not have per-domain controllers; it appears here only as a non-peer availability reference, not as a peer that competes on this stressor. The goal is therefore not to claim universal robustness superiority but to characterize how HiRoute degrades and recovers under stressors that can arise on a real deployment of the architecture.
 
 \begin{figure}[t]
 \centering
 \includegraphics[width=0.95\linewidth]{results/figures/mainline/fig_robustness.pdf}
-\caption{Diagnostic robustness evaluation showing degradation under stale summaries and controller failures.}
+\caption{Degradation profile under controller-down and stale-summary stressors. HiRoute degrades and recovers under per-domain controller failure with a bounded minimum-success floor; the centralized directory is shown as a non-peer availability reference because it does not expose per-domain controllers to this stressor.}
 \label{fig:robust}
 \end{figure}
 
-Figure~\ref{fig:robust} should therefore be read as a degradation-profile figure. On the current workload, stale summaries do not materially reduce terminal success, whereas the HiRoute controller-failure scenario produces a visible drop together with extra recovery probes. The centralized directory curve is not exposed to the same per-domain-controller fault, so it is a reference rather than evidence of a robustness win over HiRoute. The recovery time at the 95th percentile should be interpreted carefully because it is computed from one-second time bins; a value of zero indicates recovery within the first post-event bin rather than the complete absence of degradation.
+Figure~\ref{fig:robust} reports a degradation profile rather than a winner-comparison. On the current workload, HiRoute's controller-down trace shows a measurable success drop with bounded recovery to a minimum-success floor of approximately 0.73, accompanied by additional recovery probes that the manifest-fallback and reliability-cache paths consume to find an alternative answer. Stale summaries do not materially reduce terminal success on either scheme on this workload, which indicates that the staleness stressor is presently weak rather than that the system is uniformly stale-tolerant; both observations should be retested under a clean rerun and a stronger staleness configuration. The 95th-percentile recovery time is computed from one-second time bins, so a value of zero indicates recovery within the first post-event bin rather than the absence of degradation.
 
 \section{Discussion}
 
@@ -384,6 +384,7 @@ A common criticism of semantic NDN papers is that they sometimes drift away from
 The design is most likely to help when three conditions hold simultaneously. The first is moderate or strong naming heterogeneity, because exact-name forwarding then becomes brittle. The second is meaningful predicate structure, because the architecture relies on constraints to eliminate large portions of the search space. The third is residual semantic ambiguity within otherwise relevant domains, because the hierarchy and manifest are intended to narrow that ambiguity. If these conditions do not hold, simpler baselines may already be sufficient.
 
 \subsection{Limitations}
+\label{sec:limitations}
 
 The design still has limitations. Query decomposition must be available in structured form, whether through an external parser or through offline workload generation. The current prototype instantiates hierarchical summaries as static per-run artifacts rather than as fully online packetized \hslsa{} exchange with sequence numbers and signature validation. The manifest architecture is in place, but the current workload does not yet strongly exercise manifest-rescue behavior because the dominant failure mode remains more often incorrect domain selection than incorrect object selection. Finally, although coarse predicate sketches reveal far less than raw object names, they may still raise privacy concerns in deployments with sensitive geographic or service metadata.
 

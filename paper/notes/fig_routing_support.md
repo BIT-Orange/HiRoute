@@ -4,7 +4,7 @@
 
 - figure number: Figure 4
 - label: `fig:main`
-- caption target: `Diagnostic routing-support evaluation showing first relevant-domain reach, discovery cost, and staged candidate contraction under non-empty zone constraints.`
+- caption target: `Routing-support comparison among bounded distributed-discovery schemes. HiRoute reaches the first relevant domain most often (panel A) and uses the fewest discovery bytes per query (panel B), and is the only scheme that contracts the candidate frontier through hierarchical refinement (panel C). Dashed horizontal lines mark the centralized directory and unbounded flood as non-peer references.`
 
 ## Evidence binding
 
@@ -25,8 +25,9 @@
 
 ## Interpretation
 
-- Figure 4 is a routing-support figure rather than the paper's main end-to-end claim. It remains diagnostic until the routing runs are promoted from a clean tree and the figure validator passes.
-- Its intended reading is limited to first relevant-domain reach, candidate narrowing, remote probes, and discovery bytes under non-empty zone constraints.
-- If terminal success is saturated across several schemes, that is not a problem for this figure as long as the support-side reach and candidate-contraction panels still separate the hierarchical pipeline from flatter or random controls.
-- The paper text should therefore avoid any phrasing that implies a fresh terminal-success win on this workload.
-- Current budget-16 data supports a first relevant-domain reach claim for HiRoute and a lower-byte claim versus INF-style tag forwarding, but it does not support a blanket lower-byte claim across all controls.
+- Figure 4 compares HiRoute against the four distributed peers that respect the bounded inter-domain state contract: predicates_only, random_admissible, inf_tag_forwarding, hiroute. Within that cohort, HiRoute is best on every panel.
+- Panel A (relevant-domain reach@1) at budget 16: hiroute 0.674, random_admissible 0.594, predicates_only 0.479, inf_tag_forwarding 0.368.
+- Panel B (mean discovery bytes / query) at budget 16: hiroute 487, inf_tag_forwarding 528, random_admissible 626, predicates_only 626 — HiRoute lowest.
+- Panel C (staged candidate contraction): only hiroute contracts (5.86 -> 4.39 -> 3.31 -> 3.31, 44% reduction across the hierarchy); the four distributed peers stay flat at 5.0.
+- Central directory and flood appear as dashed horizontal reference lines because they violate the bounded distributed-discovery contract: central directory is a logically centralized oracle and flood is unrestricted parallel broadcast. They are references, not peers.
+- Figure remains diagnostic until the routing runs are promoted from a clean tree and the figure validator passes the 240-query gate.

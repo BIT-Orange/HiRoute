@@ -4,7 +4,7 @@
 
 - figure number: Figure 5
 - label: `fig:waterfall`
-- caption target: `Object-resolution manifest sweep showing terminal strong success, first-fetch strong correctness, and observed manifest rescue under fallback.`
+- caption target: `Object-resolution manifest sweep. HiRoute has the largest absolute terminal-success gain across the manifest sizes tested (panel D), driven by the highest manifest rescue rate (panel C). First-fetch correctness (panel B) remains low across schemes because the current workload's failures are concentrated at the predicate-filter stage; the centralized directory remains a non-peer reference for first-fetch correctness.`
 
 ## Evidence binding
 

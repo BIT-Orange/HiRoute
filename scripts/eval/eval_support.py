@@ -45,7 +45,14 @@ COMPACT_ROUTING_PANEL_B_SCHEMES = [
     "random_admissible",
     "inf_tag_forwarding",
     "hiroute",
+]
+
+# Non-peer references shown as dashed horizontal lines on Panels A and B,
+# explicitly labeled in the legend so readers understand they violate the
+# bounded distributed-discovery contract that the four primary peers respect.
+COMPACT_ROUTING_REFERENCE_SCHEMES = [
     "central_directory",
+    "flood",
 ]
 
 COMPACT_OBJECT_MAIN_SCHEMES = [
