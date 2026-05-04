@@ -1,26 +1,26 @@
 {
   "experiment_id": "ablation",
   "aggregate_csv": "results/aggregate/mainline/ablation_summary.csv",
-  "generated_at": "2026-04-17T17:20:19Z",
+  "generated_at": "2026-05-04T07:51:00Z",
   "row_count": 12,
   "rows": [
     {
       "row_index": 0,
       "locator": {
-        "scheme": "predicates_plus_flat",
+        "scheme": "full_hiroute",
         "topology_id": "rf_3967_exodus_compact",
         "budget": "0",
-        "manifest_size": "2"
+        "manifest_size": "1"
       },
       "source_run_ids": [
-        "ablation__predicates_plus_flat__smartcity__rf_3967_exodus_compact__manifest2__seed1__20260416_110017",
-        "ablation__predicates_plus_flat__smartcity__rf_3967_exodus_compact__manifest2__seed2__20260417_162428",
-        "ablation__predicates_plus_flat__smartcity__rf_3967_exodus_compact__manifest2__seed3__20260417_162428"
+        "ablation__full_hiroute__smartcity__rf_3967_exodus_compact__manifest1__seed1__20260420_110920",
+        "ablation__full_hiroute__smartcity__rf_3967_exodus_compact__manifest1__seed2__20260420_132246",
+        "ablation__full_hiroute__smartcity__rf_3967_exodus_compact__manifest1__seed3__20260420_132301"
       ],
       "source_run_dirs": [
-        "runs/completed/ablation__predicates_plus_flat__smartcity__rf_3967_exodus_compact__manifest2__seed1__20260416_110017",
-        "runs/completed/ablation__predicates_plus_flat__smartcity__rf_3967_exodus_compact__manifest2__seed2__20260417_162428",
-        "runs/completed/ablation__predicates_plus_flat__smartcity__rf_3967_exodus_compact__manifest2__seed3__20260417_162428"
+        "runs/completed/ablation__full_hiroute__smartcity__rf_3967_exodus_compact__manifest1__seed1__20260420_110920",
+        "runs/completed/ablation__full_hiroute__smartcity__rf_3967_exodus_compact__manifest1__seed2__20260420_132246",
+        "runs/completed/ablation__full_hiroute__smartcity__rf_3967_exodus_compact__manifest1__seed3__20260420_132301"
       ],
       "source_query_count_total": 720,
       "row_query_count": "720"
@@ -31,17 +31,17 @@
         "scheme": "predicates_plus_flat",
         "topology_id": "rf_3967_exodus_compact",
         "budget": "0",
-        "manifest_size": "3"
+        "manifest_size": "1"
       },
       "source_run_ids": [
-        "ablation__predicates_plus_flat__smartcity__rf_3967_exodus_compact__manifest3__seed1__20260416_110710",
-        "ablation__predicates_plus_flat__smartcity__rf_3967_exodus_compact__manifest3__seed2__20260417_162428",
-        "ablation__predicates_plus_flat__smartcity__rf_3967_exodus_compact__manifest3__seed3__20260417_162428"
+        "ablation__predicates_plus_flat__smartcity__rf_3967_exodus_compact__manifest1__seed1__20260420_110920",
+        "ablation__predicates_plus_flat__smartcity__rf_3967_exodus_compact__manifest1__seed2__20260420_124334",
+        "ablation__predicates_plus_flat__smartcity__rf_3967_exodus_compact__manifest1__seed3__20260420_124344"
       ],
       "source_run_dirs": [
-        "runs/completed/ablation__predicates_plus_flat__smartcity__rf_3967_exodus_compact__manifest3__seed1__20260416_110710",
-        "runs/completed/ablation__predicates_plus_flat__smartcity__rf_3967_exodus_compact__manifest3__seed2__20260417_162428",
-        "runs/completed/ablation__predicates_plus_flat__smartcity__rf_3967_exodus_compact__manifest3__seed3__20260417_162428"
+        "runs/completed/ablation__predicates_plus_flat__smartcity__rf_3967_exodus_compact__manifest1__seed1__20260420_110920",
+        "runs/completed/ablation__predicates_plus_flat__smartcity__rf_3967_exodus_compact__manifest1__seed2__20260420_124334",
+        "runs/completed/ablation__predicates_plus_flat__smartcity__rf_3967_exodus_compact__manifest1__seed3__20260420_124344"
       ],
       "source_query_count_total": 720,
       "row_query_count": "720"
@@ -49,20 +49,20 @@
     {
       "row_index": 2,
       "locator": {
-        "scheme": "full_hiroute",
+        "scheme": "flat_semantic_only",
         "topology_id": "rf_3967_exodus_compact",
         "budget": "0",
-        "manifest_size": "2"
+        "manifest_size": "1"
       },
       "source_run_ids": [
-        "ablation__full_hiroute__smartcity__rf_3967_exodus_compact__manifest2__seed1__20260416_112114",
-        "ablation__full_hiroute__smartcity__rf_3967_exodus_compact__manifest2__seed2__20260417_164226",
-        "ablation__full_hiroute__smartcity__rf_3967_exodus_compact__manifest2__seed3__20260417_164227"
+        "ablation__flat_semantic_only__smartcity__rf_3967_exodus_compact__manifest1__seed1__20260420_110920",
+        "ablation__flat_semantic_only__smartcity__rf_3967_exodus_compact__manifest1__seed2__20260420_120359",
+        "ablation__flat_semantic_only__smartcity__rf_3967_exodus_compact__manifest1__seed3__20260420_120407"
       ],
       "source_run_dirs": [
-        "runs/completed/ablation__full_hiroute__smartcity__rf_3967_exodus_compact__manifest2__seed1__20260416_112114",
-        "runs/completed/ablation__full_hiroute__smartcity__rf_3967_exodus_compact__manifest2__seed2__20260417_164226",
-        "runs/completed/ablation__full_hiroute__smartcity__rf_3967_exodus_compact__manifest2__seed3__20260417_164227"
+        "runs/completed/ablation__flat_semantic_only__smartcity__rf_3967_exodus_compact__manifest1__seed1__20260420_110920",
+        "runs/completed/ablation__flat_semantic_only__smartcity__rf_3967_exodus_compact__manifest1__seed2__20260420_120359",
+        "runs/completed/ablation__flat_semantic_only__smartcity__rf_3967_exodus_compact__manifest1__seed3__20260420_120407"
       ],
       "source_query_count_total": 720,
       "row_query_count": "720"
@@ -70,20 +70,20 @@
     {
       "row_index": 3,
       "locator": {
-        "scheme": "full_hiroute",
+        "scheme": "predicates_only",
         "topology_id": "rf_3967_exodus_compact",
         "budget": "0",
-        "manifest_size": "3"
+        "manifest_size": "1"
       },
       "source_run_ids": [
-        "ablation__full_hiroute__smartcity__rf_3967_exodus_compact__manifest3__seed1__20260416_112810",
-        "ablation__full_hiroute__smartcity__rf_3967_exodus_compact__manifest3__seed2__20260417_164228",
-        "ablation__full_hiroute__smartcity__rf_3967_exodus_compact__manifest3__seed3__20260417_164229"
+        "ablation__predicates_only__smartcity__rf_3967_exodus_compact__manifest1__seed1__20260420_110920",
+        "ablation__predicates_only__smartcity__rf_3967_exodus_compact__manifest1__seed2__20260420_112645",
+        "ablation__predicates_only__smartcity__rf_3967_exodus_compact__manifest1__seed3__20260420_112645"
       ],
       "source_run_dirs": [
-        "runs/completed/ablation__full_hiroute__smartcity__rf_3967_exodus_compact__manifest3__seed1__20260416_112810",
-        "runs/completed/ablation__full_hiroute__smartcity__rf_3967_exodus_compact__manifest3__seed2__20260417_164228",
-        "runs/completed/ablation__full_hiroute__smartcity__rf_3967_exodus_compact__manifest3__seed3__20260417_164229"
+        "runs/completed/ablation__predicates_only__smartcity__rf_3967_exodus_compact__manifest1__seed1__20260420_110920",
+        "runs/completed/ablation__predicates_only__smartcity__rf_3967_exodus_compact__manifest1__seed2__20260420_112645",
+        "runs/completed/ablation__predicates_only__smartcity__rf_3967_exodus_compact__manifest1__seed3__20260420_112645"
       ],
       "source_query_count_total": 720,
       "row_query_count": "720"
@@ -97,14 +97,14 @@
         "manifest_size": "2"
       },
       "source_run_ids": [
-        "ablation__predicates_only__smartcity__rf_3967_exodus_compact__manifest2__seed1__20260417_150753",
-        "ablation__predicates_only__smartcity__rf_3967_exodus_compact__manifest2__seed2__20260417_150753",
-        "ablation__predicates_only__smartcity__rf_3967_exodus_compact__manifest2__seed3__20260417_150753"
+        "ablation__predicates_only__smartcity__rf_3967_exodus_compact__manifest2__seed1__20260420_112645",
+        "ablation__predicates_only__smartcity__rf_3967_exodus_compact__manifest2__seed2__20260420_112645",
+        "ablation__predicates_only__smartcity__rf_3967_exodus_compact__manifest2__seed3__20260420_114545"
       ],
       "source_run_dirs": [
-        "runs/completed/ablation__predicates_only__smartcity__rf_3967_exodus_compact__manifest2__seed1__20260417_150753",
-        "runs/completed/ablation__predicates_only__smartcity__rf_3967_exodus_compact__manifest2__seed2__20260417_150753",
-        "runs/completed/ablation__predicates_only__smartcity__rf_3967_exodus_compact__manifest2__seed3__20260417_150753"
+        "runs/completed/ablation__predicates_only__smartcity__rf_3967_exodus_compact__manifest2__seed1__20260420_112645",
+        "runs/completed/ablation__predicates_only__smartcity__rf_3967_exodus_compact__manifest2__seed2__20260420_112645",
+        "runs/completed/ablation__predicates_only__smartcity__rf_3967_exodus_compact__manifest2__seed3__20260420_114545"
       ],
       "source_query_count_total": 720,
       "row_query_count": "720"
@@ -115,17 +115,17 @@
         "scheme": "predicates_only",
         "topology_id": "rf_3967_exodus_compact",
         "budget": "0",
-        "manifest_size": "1"
+        "manifest_size": "3"
       },
       "source_run_ids": [
-        "ablation__predicates_only__smartcity__rf_3967_exodus_compact__manifest1__seed1__20260417_170315",
-        "ablation__predicates_only__smartcity__rf_3967_exodus_compact__manifest1__seed2__20260417_150753",
-        "ablation__predicates_only__smartcity__rf_3967_exodus_compact__manifest1__seed3__20260417_150753"
+        "ablation__predicates_only__smartcity__rf_3967_exodus_compact__manifest3__seed1__20260420_114546",
+        "ablation__predicates_only__smartcity__rf_3967_exodus_compact__manifest3__seed2__20260420_114600",
+        "ablation__predicates_only__smartcity__rf_3967_exodus_compact__manifest3__seed3__20260420_114604"
       ],
       "source_run_dirs": [
-        "runs/completed/ablation__predicates_only__smartcity__rf_3967_exodus_compact__manifest1__seed1__20260417_170315",
-        "runs/completed/ablation__predicates_only__smartcity__rf_3967_exodus_compact__manifest1__seed2__20260417_150753",
-        "runs/completed/ablation__predicates_only__smartcity__rf_3967_exodus_compact__manifest1__seed3__20260417_150753"
+        "runs/completed/ablation__predicates_only__smartcity__rf_3967_exodus_compact__manifest3__seed1__20260420_114546",
+        "runs/completed/ablation__predicates_only__smartcity__rf_3967_exodus_compact__manifest3__seed2__20260420_114600",
+        "runs/completed/ablation__predicates_only__smartcity__rf_3967_exodus_compact__manifest3__seed3__20260420_114604"
       ],
       "source_query_count_total": 720,
       "row_query_count": "720"
@@ -133,20 +133,20 @@
     {
       "row_index": 6,
       "locator": {
-        "scheme": "predicates_only",
+        "scheme": "flat_semantic_only",
         "topology_id": "rf_3967_exodus_compact",
         "budget": "0",
-        "manifest_size": "3"
+        "manifest_size": "2"
       },
       "source_run_ids": [
-        "ablation__predicates_only__smartcity__rf_3967_exodus_compact__manifest3__seed1__20260417_152257",
-        "ablation__predicates_only__smartcity__rf_3967_exodus_compact__manifest3__seed2__20260417_152258",
-        "ablation__predicates_only__smartcity__rf_3967_exodus_compact__manifest3__seed3__20260417_152300"
+        "ablation__flat_semantic_only__smartcity__rf_3967_exodus_compact__manifest2__seed1__20260420_120428",
+        "ablation__flat_semantic_only__smartcity__rf_3967_exodus_compact__manifest2__seed2__20260420_120430",
+        "ablation__flat_semantic_only__smartcity__rf_3967_exodus_compact__manifest2__seed3__20260420_122352"
       ],
       "source_run_dirs": [
-        "runs/completed/ablation__predicates_only__smartcity__rf_3967_exodus_compact__manifest3__seed1__20260417_152257",
-        "runs/completed/ablation__predicates_only__smartcity__rf_3967_exodus_compact__manifest3__seed2__20260417_152258",
-        "runs/completed/ablation__predicates_only__smartcity__rf_3967_exodus_compact__manifest3__seed3__20260417_152300"
+        "runs/completed/ablation__flat_semantic_only__smartcity__rf_3967_exodus_compact__manifest2__seed1__20260420_120428",
+        "runs/completed/ablation__flat_semantic_only__smartcity__rf_3967_exodus_compact__manifest2__seed2__20260420_120430",
+        "runs/completed/ablation__flat_semantic_only__smartcity__rf_3967_exodus_compact__manifest2__seed3__20260420_122352"
       ],
       "source_query_count_total": 720,
       "row_query_count": "720"
@@ -157,17 +157,17 @@
         "scheme": "flat_semantic_only",
         "topology_id": "rf_3967_exodus_compact",
         "budget": "0",
-        "manifest_size": "1"
+        "manifest_size": "3"
       },
       "source_run_ids": [
-        "ablation__flat_semantic_only__smartcity__rf_3967_exodus_compact__manifest1__seed1__20260417_170315",
-        "ablation__flat_semantic_only__smartcity__rf_3967_exodus_compact__manifest1__seed2__20260417_152304",
-        "ablation__flat_semantic_only__smartcity__rf_3967_exodus_compact__manifest1__seed3__20260417_152307"
+        "ablation__flat_semantic_only__smartcity__rf_3967_exodus_compact__manifest3__seed1__20260420_122402",
+        "ablation__flat_semantic_only__smartcity__rf_3967_exodus_compact__manifest3__seed2__20260420_122409",
+        "ablation__flat_semantic_only__smartcity__rf_3967_exodus_compact__manifest3__seed3__20260420_122416"
       ],
       "source_run_dirs": [
-        "runs/completed/ablation__flat_semantic_only__smartcity__rf_3967_exodus_compact__manifest1__seed1__20260417_170315",
-        "runs/completed/ablation__flat_semantic_only__smartcity__rf_3967_exodus_compact__manifest1__seed2__20260417_152304",
-        "runs/completed/ablation__flat_semantic_only__smartcity__rf_3967_exodus_compact__manifest1__seed3__20260417_152307"
+        "runs/completed/ablation__flat_semantic_only__smartcity__rf_3967_exodus_compact__manifest3__seed1__20260420_122402",
+        "runs/completed/ablation__flat_semantic_only__smartcity__rf_3967_exodus_compact__manifest3__seed2__20260420_122409",
+        "runs/completed/ablation__flat_semantic_only__smartcity__rf_3967_exodus_compact__manifest3__seed3__20260420_122416"
       ],
       "source_query_count_total": 720,
       "row_query_count": "720"
@@ -175,20 +175,20 @@
     {
       "row_index": 8,
       "locator": {
-        "scheme": "flat_semantic_only",
+        "scheme": "predicates_plus_flat",
         "topology_id": "rf_3967_exodus_compact",
         "budget": "0",
         "manifest_size": "2"
       },
       "source_run_ids": [
-        "ablation__flat_semantic_only__smartcity__rf_3967_exodus_compact__manifest2__seed1__20260417_153852",
-        "ablation__flat_semantic_only__smartcity__rf_3967_exodus_compact__manifest2__seed2__20260417_153854",
-        "ablation__flat_semantic_only__smartcity__rf_3967_exodus_compact__manifest2__seed3__20260417_153855"
+        "ablation__predicates_plus_flat__smartcity__rf_3967_exodus_compact__manifest2__seed1__20260420_124345",
+        "ablation__predicates_plus_flat__smartcity__rf_3967_exodus_compact__manifest2__seed2__20260420_124405",
+        "ablation__predicates_plus_flat__smartcity__rf_3967_exodus_compact__manifest2__seed3__20260420_130312"
       ],
       "source_run_dirs": [
-        "runs/completed/ablation__flat_semantic_only__smartcity__rf_3967_exodus_compact__manifest2__seed1__20260417_153852",
-        "runs/completed/ablation__flat_semantic_only__smartcity__rf_3967_exodus_compact__manifest2__seed2__20260417_153854",
-        "runs/completed/ablation__flat_semantic_only__smartcity__rf_3967_exodus_compact__manifest2__seed3__20260417_153855"
+        "runs/completed/ablation__predicates_plus_flat__smartcity__rf_3967_exodus_compact__manifest2__seed1__20260420_124345",
+        "runs/completed/ablation__predicates_plus_flat__smartcity__rf_3967_exodus_compact__manifest2__seed2__20260420_124405",
+        "runs/completed/ablation__predicates_plus_flat__smartcity__rf_3967_exodus_compact__manifest2__seed3__20260420_130312"
       ],
       "source_query_count_total": 720,
       "row_query_count": "720"
@@ -196,20 +196,20 @@
     {
       "row_index": 9,
       "locator": {
-        "scheme": "flat_semantic_only",
+        "scheme": "predicates_plus_flat",
         "topology_id": "rf_3967_exodus_compact",
         "budget": "0",
         "manifest_size": "3"
       },
       "source_run_ids": [
-        "ablation__flat_semantic_only__smartcity__rf_3967_exodus_compact__manifest3__seed1__20260417_153903",
-        "ablation__flat_semantic_only__smartcity__rf_3967_exodus_compact__manifest3__seed2__20260417_153904",
-        "ablation__flat_semantic_only__smartcity__rf_3967_exodus_compact__manifest3__seed3__20260417_153907"
+        "ablation__predicates_plus_flat__smartcity__rf_3967_exodus_compact__manifest3__seed1__20260420_130334",
+        "ablation__predicates_plus_flat__smartcity__rf_3967_exodus_compact__manifest3__seed2__20260420_130343",
+        "ablation__predicates_plus_flat__smartcity__rf_3967_exodus_compact__manifest3__seed3__20260420_130404"
       ],
       "source_run_dirs": [
-        "runs/completed/ablation__flat_semantic_only__smartcity__rf_3967_exodus_compact__manifest3__seed1__20260417_153903",
-        "runs/completed/ablation__flat_semantic_only__smartcity__rf_3967_exodus_compact__manifest3__seed2__20260417_153904",
-        "runs/completed/ablation__flat_semantic_only__smartcity__rf_3967_exodus_compact__manifest3__seed3__20260417_153907"
+        "runs/completed/ablation__predicates_plus_flat__smartcity__rf_3967_exodus_compact__manifest3__seed1__20260420_130334",
+        "runs/completed/ablation__predicates_plus_flat__smartcity__rf_3967_exodus_compact__manifest3__seed2__20260420_130343",
+        "runs/completed/ablation__predicates_plus_flat__smartcity__rf_3967_exodus_compact__manifest3__seed3__20260420_130404"
       ],
       "source_query_count_total": 720,
       "row_query_count": "720"
@@ -217,20 +217,20 @@
     {
       "row_index": 10,
       "locator": {
-        "scheme": "predicates_plus_flat",
+        "scheme": "full_hiroute",
         "topology_id": "rf_3967_exodus_compact",
         "budget": "0",
-        "manifest_size": "1"
+        "manifest_size": "2"
       },
       "source_run_ids": [
-        "ablation__predicates_plus_flat__smartcity__rf_3967_exodus_compact__manifest1__seed1__20260417_170315",
-        "ablation__predicates_plus_flat__smartcity__rf_3967_exodus_compact__manifest1__seed2__20260417_162428",
-        "ablation__predicates_plus_flat__smartcity__rf_3967_exodus_compact__manifest1__seed3__20260417_162428"
+        "ablation__full_hiroute__smartcity__rf_3967_exodus_compact__manifest2__seed1__20260420_132315",
+        "ablation__full_hiroute__smartcity__rf_3967_exodus_compact__manifest2__seed2__20260420_132319",
+        "ablation__full_hiroute__smartcity__rf_3967_exodus_compact__manifest2__seed3__20260420_134200"
       ],
       "source_run_dirs": [
-        "runs/completed/ablation__predicates_plus_flat__smartcity__rf_3967_exodus_compact__manifest1__seed1__20260417_170315",
-        "runs/completed/ablation__predicates_plus_flat__smartcity__rf_3967_exodus_compact__manifest1__seed2__20260417_162428",
-        "runs/completed/ablation__predicates_plus_flat__smartcity__rf_3967_exodus_compact__manifest1__seed3__20260417_162428"
+        "runs/completed/ablation__full_hiroute__smartcity__rf_3967_exodus_compact__manifest2__seed1__20260420_132315",
+        "runs/completed/ablation__full_hiroute__smartcity__rf_3967_exodus_compact__manifest2__seed2__20260420_132319",
+        "runs/completed/ablation__full_hiroute__smartcity__rf_3967_exodus_compact__manifest2__seed3__20260420_134200"
       ],
       "source_query_count_total": 720,
       "row_query_count": "720"
@@ -241,17 +241,17 @@
         "scheme": "full_hiroute",
         "topology_id": "rf_3967_exodus_compact",
         "budget": "0",
-        "manifest_size": "1"
+        "manifest_size": "3"
       },
       "source_run_ids": [
-        "ablation__full_hiroute__smartcity__rf_3967_exodus_compact__manifest1__seed1__20260417_170315",
-        "ablation__full_hiroute__smartcity__rf_3967_exodus_compact__manifest1__seed2__20260417_164214",
-        "ablation__full_hiroute__smartcity__rf_3967_exodus_compact__manifest1__seed3__20260417_164220"
+        "ablation__full_hiroute__smartcity__rf_3967_exodus_compact__manifest3__seed1__20260420_134229",
+        "ablation__full_hiroute__smartcity__rf_3967_exodus_compact__manifest3__seed2__20260420_134242",
+        "ablation__full_hiroute__smartcity__rf_3967_exodus_compact__manifest3__seed3__20260420_134247"
       ],
       "source_run_dirs": [
-        "runs/completed/ablation__full_hiroute__smartcity__rf_3967_exodus_compact__manifest1__seed1__20260417_170315",
-        "runs/completed/ablation__full_hiroute__smartcity__rf_3967_exodus_compact__manifest1__seed2__20260417_164214",
-        "runs/completed/ablation__full_hiroute__smartcity__rf_3967_exodus_compact__manifest1__seed3__20260417_164220"
+        "runs/completed/ablation__full_hiroute__smartcity__rf_3967_exodus_compact__manifest3__seed1__20260420_134229",
+        "runs/completed/ablation__full_hiroute__smartcity__rf_3967_exodus_compact__manifest3__seed2__20260420_134242",
+        "runs/completed/ablation__full_hiroute__smartcity__rf_3967_exodus_compact__manifest3__seed3__20260420_134247"
       ],
       "source_query_count_total": 720,
       "row_query_count": "720"

@@ -1,7 +1,7 @@
 {
   "experiment_id": "routing_main",
   "aggregate_csv": "results/aggregate/mainline/deadline_summary.csv",
-  "generated_at": "2026-04-17T07:32:12Z",
+  "generated_at": "2026-05-04T08:09:32Z",
   "row_count": 24,
   "rows": [
     {
@@ -14,13 +14,13 @@
         "deadline_ms": "50"
       },
       "source_run_ids": [
-        "routing_main__predicates_only__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260416_114152"
+        "routing_main__predicates_only__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260420_140702"
       ],
       "source_run_dirs": [
-        "runs/completed/routing_main__predicates_only__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260416_114152"
+        "runs/completed/routing_main__predicates_only__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260420_140702"
       ],
-      "source_query_count_total": 240,
-      "row_query_count": "240"
+      "source_query_count_total": 234,
+      "row_query_count": "234"
     },
     {
       "row_index": 1,
@@ -32,13 +32,13 @@
         "deadline_ms": "100"
       },
       "source_run_ids": [
-        "routing_main__predicates_only__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260416_114152"
+        "routing_main__predicates_only__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260420_140702"
       ],
       "source_run_dirs": [
-        "runs/completed/routing_main__predicates_only__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260416_114152"
+        "runs/completed/routing_main__predicates_only__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260420_140702"
       ],
-      "source_query_count_total": 240,
-      "row_query_count": "240"
+      "source_query_count_total": 234,
+      "row_query_count": "234"
     },
     {
       "row_index": 2,
@@ -50,13 +50,13 @@
         "deadline_ms": "200"
       },
       "source_run_ids": [
-        "routing_main__predicates_only__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260416_114152"
+        "routing_main__predicates_only__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260420_140702"
       ],
       "source_run_dirs": [
-        "runs/completed/routing_main__predicates_only__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260416_114152"
+        "runs/completed/routing_main__predicates_only__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260420_140702"
       ],
-      "source_query_count_total": 240,
-      "row_query_count": "240"
+      "source_query_count_total": 234,
+      "row_query_count": "234"
     },
     {
       "row_index": 3,
@@ -68,13 +68,13 @@
         "deadline_ms": "500"
       },
       "source_run_ids": [
-        "routing_main__predicates_only__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260416_114152"
+        "routing_main__predicates_only__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260420_140702"
       ],
       "source_run_dirs": [
-        "runs/completed/routing_main__predicates_only__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260416_114152"
+        "runs/completed/routing_main__predicates_only__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260420_140702"
       ],
-      "source_query_count_total": 240,
-      "row_query_count": "240"
+      "source_query_count_total": 234,
+      "row_query_count": "234"
     },
     {
       "row_index": 4,
@@ -86,13 +86,13 @@
         "deadline_ms": "50"
       },
       "source_run_ids": [
-        "routing_main__random_admissible__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260416_120230"
+        "routing_main__random_admissible__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260420_142539"
       ],
       "source_run_dirs": [
-        "runs/completed/routing_main__random_admissible__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260416_120230"
+        "runs/completed/routing_main__random_admissible__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260420_142539"
       ],
-      "source_query_count_total": 240,
-      "row_query_count": "240"
+      "source_query_count_total": 224,
+      "row_query_count": "224"
     },
     {
       "row_index": 5,
@@ -104,13 +104,13 @@
         "deadline_ms": "100"
       },
       "source_run_ids": [
-        "routing_main__random_admissible__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260416_120230"
+        "routing_main__random_admissible__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260420_142539"
       ],
       "source_run_dirs": [
-        "runs/completed/routing_main__random_admissible__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260416_120230"
+        "runs/completed/routing_main__random_admissible__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260420_142539"
       ],
-      "source_query_count_total": 240,
-      "row_query_count": "240"
+      "source_query_count_total": 224,
+      "row_query_count": "224"
     },
     {
       "row_index": 6,
@@ -122,13 +122,13 @@
         "deadline_ms": "200"
       },
       "source_run_ids": [
-        "routing_main__random_admissible__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260416_120230"
+        "routing_main__random_admissible__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260420_142539"
       ],
       "source_run_dirs": [
-        "runs/completed/routing_main__random_admissible__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260416_120230"
+        "runs/completed/routing_main__random_admissible__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260420_142539"
       ],
-      "source_query_count_total": 240,
-      "row_query_count": "240"
+      "source_query_count_total": 224,
+      "row_query_count": "224"
     },
     {
       "row_index": 7,
@@ -140,13 +140,13 @@
         "deadline_ms": "500"
       },
       "source_run_ids": [
-        "routing_main__random_admissible__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260416_120230"
+        "routing_main__random_admissible__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260420_142539"
       ],
       "source_run_dirs": [
-        "runs/completed/routing_main__random_admissible__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260416_120230"
+        "runs/completed/routing_main__random_admissible__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260420_142539"
       ],
-      "source_query_count_total": 240,
-      "row_query_count": "240"
+      "source_query_count_total": 224,
+      "row_query_count": "224"
     },
     {
       "row_index": 8,
@@ -158,13 +158,13 @@
         "deadline_ms": "50"
       },
       "source_run_ids": [
-        "routing_main__inf_tag_forwarding__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260416_122301"
+        "routing_main__inf_tag_forwarding__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260420_142554"
       ],
       "source_run_dirs": [
-        "runs/completed/routing_main__inf_tag_forwarding__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260416_122301"
+        "runs/completed/routing_main__inf_tag_forwarding__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260420_142554"
       ],
-      "source_query_count_total": 240,
-      "row_query_count": "240"
+      "source_query_count_total": 231,
+      "row_query_count": "231"
     },
     {
       "row_index": 9,
@@ -176,13 +176,13 @@
         "deadline_ms": "100"
       },
       "source_run_ids": [
-        "routing_main__inf_tag_forwarding__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260416_122301"
+        "routing_main__inf_tag_forwarding__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260420_142554"
       ],
       "source_run_dirs": [
-        "runs/completed/routing_main__inf_tag_forwarding__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260416_122301"
+        "runs/completed/routing_main__inf_tag_forwarding__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260420_142554"
       ],
-      "source_query_count_total": 240,
-      "row_query_count": "240"
+      "source_query_count_total": 231,
+      "row_query_count": "231"
     },
     {
       "row_index": 10,
@@ -194,13 +194,13 @@
         "deadline_ms": "200"
       },
       "source_run_ids": [
-        "routing_main__inf_tag_forwarding__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260416_122301"
+        "routing_main__inf_tag_forwarding__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260420_142554"
       ],
       "source_run_dirs": [
-        "runs/completed/routing_main__inf_tag_forwarding__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260416_122301"
+        "runs/completed/routing_main__inf_tag_forwarding__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260420_142554"
       ],
-      "source_query_count_total": 240,
-      "row_query_count": "240"
+      "source_query_count_total": 231,
+      "row_query_count": "231"
     },
     {
       "row_index": 11,
@@ -212,13 +212,13 @@
         "deadline_ms": "500"
       },
       "source_run_ids": [
-        "routing_main__inf_tag_forwarding__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260416_122301"
+        "routing_main__inf_tag_forwarding__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260420_142554"
       ],
       "source_run_dirs": [
-        "runs/completed/routing_main__inf_tag_forwarding__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260416_122301"
+        "runs/completed/routing_main__inf_tag_forwarding__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260420_142554"
       ],
-      "source_query_count_total": 240,
-      "row_query_count": "240"
+      "source_query_count_total": 231,
+      "row_query_count": "231"
     },
     {
       "row_index": 12,
@@ -230,10 +230,10 @@
         "deadline_ms": "50"
       },
       "source_run_ids": [
-        "routing_main__flood__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260416_123646"
+        "routing_main__flood__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260420_144438"
       ],
       "source_run_dirs": [
-        "runs/completed/routing_main__flood__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260416_123646"
+        "runs/completed/routing_main__flood__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260420_144438"
       ],
       "source_query_count_total": 240,
       "row_query_count": "240"
@@ -248,10 +248,10 @@
         "deadline_ms": "100"
       },
       "source_run_ids": [
-        "routing_main__flood__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260416_123646"
+        "routing_main__flood__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260420_144438"
       ],
       "source_run_dirs": [
-        "runs/completed/routing_main__flood__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260416_123646"
+        "runs/completed/routing_main__flood__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260420_144438"
       ],
       "source_query_count_total": 240,
       "row_query_count": "240"
@@ -266,10 +266,10 @@
         "deadline_ms": "200"
       },
       "source_run_ids": [
-        "routing_main__flood__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260416_123646"
+        "routing_main__flood__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260420_144438"
       ],
       "source_run_dirs": [
-        "runs/completed/routing_main__flood__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260416_123646"
+        "runs/completed/routing_main__flood__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260420_144438"
       ],
       "source_query_count_total": 240,
       "row_query_count": "240"
@@ -284,10 +284,10 @@
         "deadline_ms": "500"
       },
       "source_run_ids": [
-        "routing_main__flood__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260416_123646"
+        "routing_main__flood__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260420_144438"
       ],
       "source_run_dirs": [
-        "runs/completed/routing_main__flood__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260416_123646"
+        "runs/completed/routing_main__flood__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260420_144438"
       ],
       "source_query_count_total": 240,
       "row_query_count": "240"
@@ -302,13 +302,13 @@
         "deadline_ms": "50"
       },
       "source_run_ids": [
-        "routing_main__hiroute__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260416_125027"
+        "routing_main__hiroute__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260420_144446"
       ],
       "source_run_dirs": [
-        "runs/completed/routing_main__hiroute__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260416_125027"
+        "runs/completed/routing_main__hiroute__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260420_144446"
       ],
-      "source_query_count_total": 240,
-      "row_query_count": "240"
+      "source_query_count_total": 236,
+      "row_query_count": "236"
     },
     {
       "row_index": 17,
@@ -320,13 +320,13 @@
         "deadline_ms": "100"
       },
       "source_run_ids": [
-        "routing_main__hiroute__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260416_125027"
+        "routing_main__hiroute__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260420_144446"
       ],
       "source_run_dirs": [
-        "runs/completed/routing_main__hiroute__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260416_125027"
+        "runs/completed/routing_main__hiroute__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260420_144446"
       ],
-      "source_query_count_total": 240,
-      "row_query_count": "240"
+      "source_query_count_total": 236,
+      "row_query_count": "236"
     },
     {
       "row_index": 18,
@@ -338,13 +338,13 @@
         "deadline_ms": "200"
       },
       "source_run_ids": [
-        "routing_main__hiroute__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260416_125027"
+        "routing_main__hiroute__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260420_144446"
       ],
       "source_run_dirs": [
-        "runs/completed/routing_main__hiroute__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260416_125027"
+        "runs/completed/routing_main__hiroute__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260420_144446"
       ],
-      "source_query_count_total": 240,
-      "row_query_count": "240"
+      "source_query_count_total": 236,
+      "row_query_count": "236"
     },
     {
       "row_index": 19,
@@ -356,13 +356,13 @@
         "deadline_ms": "500"
       },
       "source_run_ids": [
-        "routing_main__hiroute__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260416_125027"
+        "routing_main__hiroute__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260420_144446"
       ],
       "source_run_dirs": [
-        "runs/completed/routing_main__hiroute__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260416_125027"
+        "runs/completed/routing_main__hiroute__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260420_144446"
       ],
-      "source_query_count_total": 240,
-      "row_query_count": "240"
+      "source_query_count_total": 236,
+      "row_query_count": "236"
     },
     {
       "row_index": 20,
@@ -374,10 +374,10 @@
         "deadline_ms": "50"
       },
       "source_run_ids": [
-        "routing_main__central_directory__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260416_130408"
+        "routing_main__central_directory__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260420_150256"
       ],
       "source_run_dirs": [
-        "runs/completed/routing_main__central_directory__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260416_130408"
+        "runs/completed/routing_main__central_directory__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260420_150256"
       ],
       "source_query_count_total": 240,
       "row_query_count": "240"
@@ -392,10 +392,10 @@
         "deadline_ms": "100"
       },
       "source_run_ids": [
-        "routing_main__central_directory__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260416_130408"
+        "routing_main__central_directory__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260420_150256"
       ],
       "source_run_dirs": [
-        "runs/completed/routing_main__central_directory__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260416_130408"
+        "runs/completed/routing_main__central_directory__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260420_150256"
       ],
       "source_query_count_total": 240,
       "row_query_count": "240"
@@ -410,10 +410,10 @@
         "deadline_ms": "200"
       },
       "source_run_ids": [
-        "routing_main__central_directory__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260416_130408"
+        "routing_main__central_directory__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260420_150256"
       ],
       "source_run_dirs": [
-        "runs/completed/routing_main__central_directory__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260416_130408"
+        "runs/completed/routing_main__central_directory__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260420_150256"
       ],
       "source_query_count_total": 240,
       "row_query_count": "240"
@@ -428,10 +428,10 @@
         "deadline_ms": "500"
       },
       "source_run_ids": [
-        "routing_main__central_directory__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260416_130408"
+        "routing_main__central_directory__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260420_150256"
       ],
       "source_run_dirs": [
-        "runs/completed/routing_main__central_directory__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260416_130408"
+        "runs/completed/routing_main__central_directory__smartcity__rf_3967_exodus_compact__budget16__manifest5__seed1__20260420_150256"
       ],
       "source_query_count_total": 240,
       "row_query_count": "240"
