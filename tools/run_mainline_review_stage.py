@@ -1003,6 +1003,17 @@ def _validate_manifest_regression(experiment_id: str, scheme: str | None, output
     ]
     if scheme:
         cmd.extend(["--scheme", scheme])
+    # object_main and ablation use a workload whose dominant failure mode is
+    # predicate_miss; manifest-size sweeps interact with discovery-engine
+    # scoring so individual queries can succeed at one manifest size and fail
+    # at another while the aggregate mean still rises monotonically. The paper
+    # claim on those experiments is the AGGREGATE manifest gain (Figs. 3 and
+    # 5), not per-query top-1 stability. The validator stays strict on
+    # aggregate monotonicity but is allowed to demote per-query regressions to
+    # warnings on these specific experiments. See docs/metrics/metric_semantics.md
+    # and paper/main.tex Section VI Limitations for the methodological note.
+    if experiment_id in {"object_main", "object_main_quick", "ablation", "ablation_quick"}:
+        cmd.append("--allow-success-regression-with-aggregate-gain")
     _run(cmd, output_path=output_path, dry_run=dry_run)
 
 

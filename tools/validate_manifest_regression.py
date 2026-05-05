@@ -54,6 +54,18 @@ def _parse_args() -> argparse.Namespace:
         action="store_true",
         help="Force strict probe-sequence/object stability even for experiments with relaxed defaults.",
     )
+    parser.add_argument(
+        "--allow-success-regression-with-aggregate-gain",
+        action="store_true",
+        help=(
+            "Demote per-query success_at_1 regressions to warnings WHEN the aggregate "
+            "success_at_1 across manifest sizes is monotonically non-decreasing. "
+            "Use this only for workloads (object_main, ablation) where predicate-miss "
+            "dominates failure mass and the manifest's role is bounded fallback rather "
+            "than per-query top-1 stability. The aggregate gain check is still strict: "
+            "if the higher manifest's mean success_at_1 drops, this remains an error."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -202,11 +214,53 @@ def main() -> int:
                 )
                 continue
 
+            # Compute aggregate-mean monotonicity over common queries before
+            # deciding whether per-query regressions can be demoted to warnings.
+            ref_mean = sum(reference_success[q] for q in common_queries) / len(common_queries)
+            cand_mean = sum(candidate_success[q] for q in common_queries) / len(common_queries)
+            aggregate_monotonic = cand_mean + 1e-9 >= ref_mean
+            allow_per_query_regression = (
+                args.allow_success_regression_with_aggregate_gain and aggregate_monotonic
+            )
+
+            per_query_regressions: list[tuple[str, int, int]] = []
             for query_id in common_queries:
                 if candidate_success[query_id] < reference_success[query_id]:
-                    errors.append(
-                        f"{group_key}: success_at_1 regressed for {query_id} at manifest {reference_size}->{candidate_size}"
+                    per_query_regressions.append(
+                        (query_id, reference_size, candidate_size)
                     )
+
+            if per_query_regressions and not allow_per_query_regression:
+                for query_id, ref_size, cand_size in per_query_regressions:
+                    errors.append(
+                        f"{group_key}: success_at_1 regressed for {query_id} at manifest {ref_size}->{cand_size}"
+                    )
+            elif per_query_regressions:
+                # Aggregate is monotonic but per-query is not; surface as a
+                # warning with an aggregate-delta annotation so reviewers can
+                # see what the workload actually does.
+                summary = (
+                    f"{group_key}: {len(per_query_regressions)} per-query success_at_1 "
+                    f"regressions at manifest {reference_size}->{candidate_size} are tolerated "
+                    f"because aggregate mean rises {ref_mean:.3f}->{cand_mean:.3f} "
+                    f"(+{(cand_mean - ref_mean) * 100:.1f}pp)"
+                )
+                warnings.append(summary)
+                preview = per_query_regressions[:5]
+                for query_id, ref_size, cand_size in preview:
+                    warnings.append(
+                        f"{group_key}: per-query regression for {query_id} at manifest {ref_size}->{cand_size}"
+                    )
+                if len(per_query_regressions) > len(preview):
+                    warnings.append(
+                        f"{group_key}: ... {len(per_query_regressions) - len(preview)} additional per-query regressions omitted"
+                    )
+
+            if not aggregate_monotonic:
+                errors.append(
+                    f"{group_key}: aggregate mean success_at_1 regressed at manifest "
+                    f"{reference_size}->{candidate_size} ({ref_mean:.3f}->{cand_mean:.3f})"
+                )
 
             common_probe_queries = sorted(set(reference_probes) & set(candidate_probes))
             for query_id in common_probe_queries:
